@@ -375,10 +375,22 @@
 
       <article class="panel reveal" data-stagger="2" id="firma">
         <h3>Firma de código</h3>
+
+        <!--
+          Atribución exigida por SignPath Foundation, palabra por palabra y en inglés como ellos la
+          piden. Va aquí arriba y no en una nota al pie porque el formulario dice que la página de
+          descargas tiene que mencionar que el proyecto usa SignPath Foundation para firmar.
+        -->
+        <p class="attribution">
+          Free code signing provided by <a href="https://signpath.io/">SignPath.io</a>,
+          certificate by <a href="https://signpath.org/">SignPath Foundation</a>.
+        </p>
+
         <p>
-          Las versiones publicadas <strong>todavía no están firmadas</strong>. Cada artefacto lleva
-          su <code>.sha256</code> al lado y ésa es hoy la única verificación posible; por eso los
-          hashes están arriba, en esta misma página, y no escondidos.
+          Las versiones publicadas <strong>todavía no están firmadas</strong>: la solicitud está
+          hecha y el certificado aún no está emitido. Cada artefacto lleva su <code>.sha256</code>
+          al lado y ésa es hoy la única verificación posible; por eso los hashes están arriba, en
+          esta misma página, y no escondidos.
         </p>
         <p>
           Los binarios los construye la integración continua a partir del código público de este

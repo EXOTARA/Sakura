@@ -1,57 +1,38 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Responsive vector mark based on the Figma Sakura Premium direction. -->
-    <Geometry x:Key="SakuraPetalGeometry">M12,12 C9.3,9.6 8.6,6.2 12,3.8 C15.4,6.2 14.7,9.6 12,12 Z</Geometry>
+    <!--
+        El sello de Sakura: el icono real de la aplicación, el mismo archivo que Windows enseña en
+        el acceso directo y en la barra de tareas. Cuatro pétalos y el destello de cuatro puntas.
+
+        Antes esto era una flor de cinco pétalos, y durante meses la aplicación se presentó con una
+        marca que no era la suya: el ejecutable decía una cosa y sus propias ventanas decían otra.
+        Los números son los del SVG de 48 tal cual, sin redibujar; el Viewbox se encarga del tamaño.
+
+        **Los colores van fijos y no siguen al acento a propósito.** El acento puede venir del fondo
+        de pantalla, y una marca que cambia de color con el fondo de pantalla deja de ser una marca.
+        Todo lo demás de la interfaz sí sigue al acento; esto no.
+    -->
+    <SolidColorBrush x:Key="BrushMarkPetal" Color="#F5B3CF" />
+    <SolidColorBrush x:Key="BrushMarkSpark" Color="#AC333F" />
 
     <Style x:Key="SakuraFlowerMarkStyle" TargetType="ContentControl">
         <Setter Property="Width" Value="24" />
         <Setter Property="Height" Value="24" />
-        <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
                     <Viewbox Stretch="Uniform">
-                        <Canvas Width="24" Height="24">
-                            <Path Data="{StaticResource SakuraPetalGeometry}"
-                                  Fill="{TemplateBinding Foreground}"
-                                  Opacity="0.12"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="1.25"
-                                  StrokeLineJoin="Round" />
-                            <Path Data="{StaticResource SakuraPetalGeometry}"
-                                  Fill="{TemplateBinding Foreground}"
-                                  Opacity="0.12"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="1.25"
-                                  StrokeLineJoin="Round">
-                                <Path.RenderTransform><RotateTransform Angle="72" CenterX="12" CenterY="12" /></Path.RenderTransform>
-                            </Path>
-                            <Path Data="{StaticResource SakuraPetalGeometry}"
-                                  Fill="{TemplateBinding Foreground}"
-                                  Opacity="0.12"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="1.25"
-                                  StrokeLineJoin="Round">
-                                <Path.RenderTransform><RotateTransform Angle="144" CenterX="12" CenterY="12" /></Path.RenderTransform>
-                            </Path>
-                            <Path Data="{StaticResource SakuraPetalGeometry}"
-                                  Fill="{TemplateBinding Foreground}"
-                                  Opacity="0.12"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="1.25"
-                                  StrokeLineJoin="Round">
-                                <Path.RenderTransform><RotateTransform Angle="216" CenterX="12" CenterY="12" /></Path.RenderTransform>
-                            </Path>
-                            <Path Data="{StaticResource SakuraPetalGeometry}"
-                                  Fill="{TemplateBinding Foreground}"
-                                  Opacity="0.12"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="1.25"
-                                  StrokeLineJoin="Round">
-                                <Path.RenderTransform><RotateTransform Angle="288" CenterX="12" CenterY="12" /></Path.RenderTransform>
-                            </Path>
-                            <Ellipse Width="3.6" Height="3.6" Canvas.Left="10.2" Canvas.Top="10.2"
-                                     Fill="{DynamicResource BrushCoolBlue}" />
+                        <Canvas Width="48" Height="48">
+                            <Path Fill="{DynamicResource BrushMarkPetal}"
+                                  Data="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z" />
+                            <Path Fill="{DynamicResource BrushMarkPetal}"
+                                  Data="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z" />
+                            <Path Fill="{DynamicResource BrushMarkPetal}"
+                                  Data="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z" />
+                            <Path Fill="{DynamicResource BrushMarkPetal}"
+                                  Data="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z" />
+                            <Path Fill="{DynamicResource BrushMarkSpark}"
+                                  Data="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z" />
                         </Canvas>
                     </Viewbox>
                 </ControlTemplate>
