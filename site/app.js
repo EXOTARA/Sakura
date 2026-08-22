@@ -296,7 +296,10 @@
 
       function done(ok) {
         button.setAttribute("data-copied", ok ? "true" : "false");
-        if (label) label.textContent = ok ? "Copiado" : "No se pudo";
+        // Los textos vienen del propio botón: la página existe en dos idiomas y este guion es uno.
+        var okLabel = button.getAttribute("data-copied-label") || "Copied";
+        var failLabel = button.getAttribute("data-failed-label") || "Failed";
+        if (label) label.textContent = ok ? okLabel : failLabel;
         window.setTimeout(function () {
           button.removeAttribute("data-copied");
           if (label) label.textContent = original;
@@ -314,7 +317,70 @@
 
   /* ------------------------------------------------------------------ */
 
+  /* ------------------------------------------------------------------ *
+   * Idioma
+   *
+   * Dos reglas, y la segunda importa más que la primera:
+   *
+   * 1. Si nunca has elegido y tu navegador no está en español, te llevo una vez a la versión en
+   *    inglés. Una vez, la primera, y queda anotado que ya ocurrió.
+   * 2. En cuanto pulsas el conmutador, mando yo y no se vuelve a redirigir nunca. Una página que
+   *    te devuelve a un idioma que acabas de rechazar es una página peleándose contigo.
+   *
+   * Si no hay almacenamiento disponible —modo privado, permisos— no se redirige nada. Perder la
+   * detección automática es mejor que redirigir en bucle sin poder recordar que ya se hizo.
+   * ------------------------------------------------------------------ */
+
+  var LANG_KEY = "sakura.lang";
+  var REDIRECTED_KEY = "sakura.lang.auto";
+
+  function store() {
+    try {
+      var probe = "__t";
+      window.localStorage.setItem(probe, probe);
+      window.localStorage.removeItem(probe);
+      return window.localStorage;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function startLanguage() {
+    var body = document.body;
+    var current = body.getAttribute("data-lang");
+    var altHref = body.getAttribute("data-alt-href");
+    var memory = store();
+
+    var link = document.querySelector(".lang-switch");
+    if (link && memory) {
+      link.addEventListener("click", function () {
+        memory.setItem(LANG_KEY, link.getAttribute("data-lang-pick") || "");
+        memory.setItem(REDIRECTED_KEY, "1");
+      });
+    }
+
+    if (!memory || !altHref) return;
+
+    var chosen = memory.getItem(LANG_KEY);
+    if (chosen) {
+      // Ya eligió. Si está en la otra, se respeta y no se toca.
+      return;
+    }
+
+    if (memory.getItem(REDIRECTED_KEY)) return;
+
+    var preferred = (navigator.language || "").toLowerCase();
+    var speaksSpanish = preferred.indexOf("es") === 0;
+
+    if (current === "es" && !speaksSpanish) {
+      memory.setItem(REDIRECTED_KEY, "1");
+      window.location.replace(altHref);
+    }
+  }
+
   function init() {
+    startLanguage();
+
     var canvas = document.getElementById("petals");
     if (canvas) startPetals(canvas);
 
