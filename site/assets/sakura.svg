@@ -1,13 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <rect x="8" y="8" width="240" height="240" rx="58" fill="#0C0E14"/>
-  <rect x="12" y="12" width="232" height="232" rx="54" fill="none" stroke="#2A303A" stroke-width="4"/>
-  <g transform="translate(0 0)" fill="#C4889A" fill-opacity="0.12" stroke="#C4889A" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M128 128 C98 101 90 63 128 36 C166 63 158 101 128 128 Z"/>
-    <path d="M128 128 C98 101 90 63 128 36 C166 63 158 101 128 128 Z" transform="rotate(72 128 128)"/>
-    <path d="M128 128 C98 101 90 63 128 36 C166 63 158 101 128 128 Z" transform="rotate(144 128 128)"/>
-    <path d="M128 128 C98 101 90 63 128 36 C166 63 158 101 128 128 Z" transform="rotate(216 128 128)"/>
-    <path d="M128 128 C98 101 90 63 128 36 C166 63 158 101 128 128 Z" transform="rotate(288 128 128)"/>
-  </g>
-  <circle cx="128" cy="128" r="18" fill="#6B9CC8"/>
-  <circle cx="128" cy="128" r="7" fill="#DFE1EA"/>
+<!--
+  La marca de Sakura: el icono real de la aplicación, el mismo que Windows enseña en el acceso
+  directo y en la barra de tareas. Es el archivo original que dio Adler, no una reconstrucción.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="Sakura">
+  <path d="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z" fill="#F5B3CF"/>
+  <path d="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z" fill="#F5B3CF"/>
+  <path d="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z" fill="#F5B3CF"/>
+  <path d="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z" fill="#F5B3CF"/>
+  <path d="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z" fill="#AC333F"/>
 </svg>

@@ -198,7 +198,12 @@ section{padding-block:var(--space-7)}
 */
 .mark-stage{perspective:1100px;display:grid;place-items:center}
 .mark{
-  width:min(340px,70vw);aspect-ratio:1;
+  /*
+    Holgura para el giro: un cuadrado que rota barre su diagonal, un 41% más que su lado. Con el
+    icono ocupando el viewBox de borde a borde, sin este margen las puntas rozarían el borde del
+    recuadro en las diagonales.
+  */
+  width:min(320px,64vw);aspect-ratio:1;
   transform-style:preserve-3d;
   transition:transform 600ms var(--ease-out);
   will-change:transform;
@@ -209,19 +214,30 @@ section{padding-block:var(--space-7)}
   animation:spin 72s linear infinite;
 }
 .mark svg{width:100%;height:100%;overflow:visible}
-.mark .petal{
-  transform-box:fill-box;transform-origin:50% 100%;
-  opacity:0;
-  animation:bloom 1200ms var(--ease-out) forwards;
-}
-.mark .core{opacity:0;animation:fade-up 700ms var(--ease-out) 950ms forwards}
 
-@keyframes bloom{
-  from{opacity:0;transform:scale(.18) translateY(16px)}
-  60%{opacity:1}
-  to{opacity:1;transform:scale(1) translateY(0)}
+/*
+  Los cuatro pétalos entran girando hacia su sitio desde el centro del icono, no desde su propio
+  centro: por eso el origen es el del viewBox y no `fill-box`. Con fill-box cada pétalo giraría
+  sobre sí mismo y el conjunto se desarmaría en cuatro cosas sueltas en vez de abrirse como un
+  molinillo.
+*/
+.mark .petal,
+.mark .spark{
+  transform-box:view-box;transform-origin:24px 24px;
+  opacity:0;
+  animation:unfurl 1100ms var(--ease-out) forwards;
 }
-@keyframes fade-up{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.mark .spark{animation:spark-in 800ms var(--ease-out) 520ms forwards}
+
+@keyframes unfurl{
+  from{opacity:0;transform:rotate(-38deg) scale(.42)}
+  to{opacity:1;transform:none}
+}
+@keyframes spark-in{
+  from{opacity:0;transform:rotate(24deg) scale(.3)}
+  to{opacity:1;transform:none}
+}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ---------------- Capacidades ---------------- */
@@ -409,7 +425,7 @@ footer{border-top:1px solid var(--border);padding-block:var(--space-5) var(--spa
     transition-duration:.001ms!important;
   }
   .reveal{opacity:1;transform:none}
-  .mark .petal,.mark .core{opacity:1;animation:none}
+  .mark .petal,.mark .spark{opacity:1;animation:none;transform:none}
   .mark-spin{animation:none}
   .btn:hover,.card:hover{transform:none}
 }
