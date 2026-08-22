@@ -15,6 +15,7 @@ namespace Nexo.Windows.Tests.Storage;
 ///
 /// Se mueven en vez de copiarse: dentro del mismo volumen, mover es renombrar.
 /// </summary>
+[Collection(WindowsDataPathsCollection.Name)]
 public sealed class HeavyFolderConsolidationTests : IDisposable
 {
     private readonly string _root =

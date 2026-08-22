@@ -33,6 +33,7 @@ public partial class SettingsView : UserControl
     public event Action<AccentSource>? AccentSourceChanged;
     public event Action<bool>? AnimationsChanged;
     public event Action<bool>? EdgeRevealChanged;
+    public event Action<bool>? AutomaticUpdateCheckChanged;
     public event Action<string, bool>? ModuleVisibilityChanged;
     public event Action<string, bool>? PeekOptionChanged;
     public event Action<bool>? ConversationHistoryChanged;
@@ -120,6 +121,7 @@ public partial class SettingsView : UserControl
         OpacityValueText.Text = $"{preferences.Opacity:P0}";
         AnimationsCheckBox.IsChecked = preferences.AnimationsEnabled;
         EdgeRevealCheckBox.IsChecked = preferences.EdgeRevealEnabled;
+        AutomaticUpdateCheckBox.IsChecked = preferences.AutomaticUpdateCheckEnabled;
         ApplyAccentSourceToControls(preferences.AccentSource);
         HighlightSelectedTheme(preferences.AccentColor);
         HomeModuleCheckBox.IsChecked = preferences.ShowHomeModule;
@@ -320,6 +322,14 @@ public partial class SettingsView : UserControl
         if (!_isApplyingPreferences)
         {
             EdgeRevealChanged?.Invoke(EdgeRevealCheckBox.IsChecked == true);
+        }
+    }
+
+    private void AutomaticUpdateCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_isApplyingPreferences)
+        {
+            AutomaticUpdateCheckChanged?.Invoke(AutomaticUpdateCheckBox.IsChecked == true);
         }
     }
 

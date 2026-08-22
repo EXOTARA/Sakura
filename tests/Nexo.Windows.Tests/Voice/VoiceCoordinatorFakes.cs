@@ -34,6 +34,12 @@ internal sealed class VoiceCallLog
 
 internal sealed class FakeVoiceInputService : IVoiceInputService
 {
+    /// <summary>Diseño D72 — el doble no captura audio; el nivel se simula cuando hace falta.</summary>
+    public event EventHandler<VoiceLevelEventArgs>? LevelObserved;
+
+    public void RaiseLevel(double level) =>
+        LevelObserved?.Invoke(this, new VoiceLevelEventArgs(level));
+
     private readonly VoiceCallLog _log;
     private readonly object _concurrencySync = new();
     private int _activeStartListeningCalls;
@@ -220,6 +226,12 @@ internal sealed class FakeWakeWordService : IWakeWordService
     public event EventHandler<WakeWordDetectedEventArgs>? WakeWordDetected;
 
     public event EventHandler<WakeWordRecognitionObservedEventArgs>? RecognitionObserved;
+
+    public event EventHandler<VoiceLevelEventArgs>? LevelObserved;
+
+    /// <summary>El doble no captura audio; esto existe para poder simular un nivel si hace falta.</summary>
+    public void RaiseLevel(double level) =>
+        LevelObserved?.Invoke(this, new VoiceLevelEventArgs(level));
 
     public bool IsReady { get; set; } = true;
 

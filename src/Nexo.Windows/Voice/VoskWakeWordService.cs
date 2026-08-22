@@ -72,6 +72,13 @@ public sealed class VoskWakeWordService : IWakeWordService
 
     public event EventHandler<WakeWordRecognitionObservedEventArgs>? RecognitionObserved;
 
+    /// <summary>
+    /// Diseño D72 — el nivel del micrófono para el halo de voz. Se publica desde el hilo de captura
+    /// de NAudio, no desde el de interfaz: quien lo escuche es responsable de volver a su hilo si
+    /// va a tocar la pantalla.
+    /// </summary>
+    public event EventHandler<VoiceLevelEventArgs>? LevelObserved;
+
     public bool IsReady { get; private set; }
 
     public bool IsListening { get; private set; }
@@ -367,6 +374,15 @@ public sealed class VoskWakeWordService : IWakeWordService
 
     private void Recorder_DataAvailable(object? sender, WaveInEventArgs e)
     {
+        // Diseño D72 — la medida va antes de cualquier bloqueo y antes de decidir si hay que
+        // reconocer: es una pasada por el búfer que ya está en memoria caliente, y el halo tiene
+        // que responder aunque la detección esté ocupada.
+        if (e.BytesRecorded > 0 && LevelObserved is { } levelObserved)
+        {
+            levelObserved(this, new VoiceLevelEventArgs(
+                VoiceLevelMeter.Measure(e.Buffer, e.BytesRecorded)));
+        }
+
         VoskRecognizer? recognizer;
         WakeWordPhrase phrase;
         bool detectionRaised;

@@ -165,9 +165,10 @@ Checkpoints portables solo en hitos, no en cada subfase.
   revisar más adelante.
 - **Fase 9:** revisar cuánta información de sistema expone la vista de diagnóstico (posible
   exceso de detalle sensible) — no bloqueante, revisar cuando se retome esta fase.
-- **Fase 10:** ruta de firma sin costo — el repositorio (`EXOTARA/Sakura`) ya es público; falta
-  únicamente el archivo `LICENSE` (MIT, ya decidido en `PRODUCT_VISION` §C) para aplicar a
-  **SignPath Foundation** (firma gratuita para proyectos open source calificados). Con firma,
+- **Fase 10:** ruta de firma sin costo — el repositorio (`EXOTARA/Sakura`) ya es público, el
+  `LICENSE` (MIT) ya está, y desde el 2026-08-22 también están las dos páginas que **SignPath
+  Foundation** exige (firma de código y privacidad) y los metadatos de producto/versión que verifica
+  el flujo de publicación. Queda la solicitud, que la hace Adler. Con firma,
   se habilita auto-actualización real con **Velopack**, cumpliendo la condición que
   `PRODUCT_VISION` §I ya exigía ("automática solo cuando existan firma y rollback probado"). Se
   añade **Microsoft Store (MSIX)** como canal adicional a la distribución directa ya decidida; la

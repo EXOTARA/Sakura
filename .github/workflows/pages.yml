@@ -1,0 +1,61 @@
+name: Pages
+
+# La página de descargas se reconstruye sola. Los enlaces, el tamaño de cada archivo, la fecha y
+# los hashes no están escritos en la plantilla: los trae `build-site.ps1` de la versión publicada.
+# Por eso este flujo se dispara también al publicar una release — si no, el día de la 0.28 la
+# página seguiría ofreciendo la 0.27, y una página que apunta a un archivo viejo no falla: miente.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "scripts/build-site.ps1"
+      - ".github/workflows/pages.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una publicación a la vez, y la última manda. No se cancela la que está en curso: dejar el sitio
+# a medias es peor que esperar treinta segundos.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generar el sitio
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/build-site.ps1 -Repository "${{ github.repository }}"
+
+      - name: Preparar el artefacto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

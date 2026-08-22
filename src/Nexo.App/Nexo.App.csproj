@@ -14,12 +14,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>Sakura</AssemblyName>
     <RootNamespace>Nexo.App</RootNamespace>
-    <Title>Kohana</Title>
-    <Product>Kohana</Product>
-    <Version>0.9.5-beta</Version>
-    <AssemblyVersion>0.9.5.0</AssemblyVersion>
-    <FileVersion>0.9.5.0</FileVersion>
-    <Description>Kohana — Tu Windows, en flor.</Description>
+    <Title>Sakura</Title>
     <ApplicationIcon>Assets\Sakura.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishTrimmed>false</PublishTrimmed>

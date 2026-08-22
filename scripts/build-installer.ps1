@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "0.9.5-beta",
+    [string]$Version = "",
     [string]$Runtime = "win-x64",
     [string]$RepositoryUrl = "https://github.com/EXOTARA/Sakura",
     [switch]$SkipPublish,
@@ -11,6 +11,13 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "SakuraVersion.ps1")
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = Get-SakuraVersion -RepositoryRoot $root
+    Write-Host "==> Versión tomada de Directory.Build.props: $Version"
+}
+
 $publishDirectory = Join-Path $root "artifacts\publish\$Runtime"
 $outputDirectory = Join-Path $root "artifacts\installer"
 $installerScript = Join-Path $root "installer\Sakura.iss"
@@ -41,12 +48,7 @@ if ([string]::IsNullOrWhiteSpace($InnoSetupPath) -or -not (Test-Path $InnoSetupP
     throw "No encontré Inno Setup 6. Instálalo o usa -InnoSetupPath con la ruta de ISCC.exe."
 }
 
-$numericVersion = if ($Version -match '^(?<number>\d+\.\d+\.\d+)') {
-    $Matches.number
-}
-else {
-    throw "La versión '$Version' no tiene el formato X.Y.Z[-sufijo]."
-}
+$numericVersion = Get-SakuraNumericVersion -Version $Version
 
 New-Item $outputDirectory -ItemType Directory -Force | Out-Null
 Remove-Item (Join-Path $outputDirectory "Sakura-*-Setup.exe") -Force -ErrorAction SilentlyContinue
@@ -54,7 +56,7 @@ Remove-Item (Join-Path $outputDirectory "Sakura-*-Setup.exe") -Force -ErrorActio
 Write-Host "==> Creando instalador de Sakura"
 & $InnoSetupPath `
     "/DMyAppVersion=$Version" `
-    "/DMyNumericVersion=$numericVersion.0" `
+    "/DMyNumericVersion=$numericVersion" `
     "/DSourceDir=$publishDirectory" `
     "/DOutputDir=$outputDirectory" `
     $installerScript

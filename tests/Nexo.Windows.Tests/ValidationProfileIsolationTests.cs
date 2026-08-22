@@ -17,10 +17,15 @@ namespace Nexo.Windows.Tests;
 /// explícita (igual que en producción — <c>App.xaml.cs</c> tampoco les pasa una) para ejercer
 /// exactamente el mismo camino que usaría un perfil de validación real.
 ///
-/// Ninguna otra prueba de este ensamblado construye un store sin ruta explícita, así que mutar el
-/// override aquí es seguro incluso con la paralelización por colección de xUnit (confirmado antes
-/// de escribir esto).
+/// **Comparte colección con <see cref="Storage.HeavyFolderConsolidationTests"/>.** Cuando se
+/// escribió esta clase era la única del ensamblado que tocaba el override, y así lo decía este
+/// comentario; la consolidación de carpetas pesadas (2026-08-20) añadió otra que también lo muta, y
+/// xUnit paraleliza por colección. El resultado fue un fallo que aparecía una de cada varias
+/// ejecuciones —<c>OverrideActive_DirectoryIsCreatedLazilyBySaveNotEagerly</c> encontraba su raíz
+/// sin crear porque la otra clase había cambiado el override a mitad de prueba— y que en CI habría
+/// parecido cualquier cosa menos lo que era. El agrupamiento explícito lo cierra.
 /// </summary>
+[Collection(WindowsDataPathsCollection.Name)]
 public sealed class ValidationProfileIsolationTests : IDisposable
 {
     private readonly List<string> _createdRoots = [];

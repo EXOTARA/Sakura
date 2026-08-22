@@ -2,7 +2,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
-    [string]$Version = "0.9.5-beta",
+    [string]$Version = "",
     [string]$RepositoryUrl = "https://github.com/EXOTARA/Sakura",
     [switch]$SkipTests
 )
@@ -11,6 +11,13 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "SakuraVersion.ps1")
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = Get-SakuraVersion -RepositoryRoot $root
+    Write-Host "==> Versión tomada de Directory.Build.props: $Version"
+}
+
 $solution = Join-Path $root "Nexo.slnx"
 $project = Join-Path $root "src\Nexo.App\Nexo.App.csproj"
 $artifactRoot = Join-Path $root "artifacts"
@@ -49,12 +56,7 @@ Write-Host "==> Restaurando dependencias para $Runtime"
 dotnet restore $project -r $Runtime
 if ($LASTEXITCODE -ne 0) { throw "La restauración para $Runtime falló." }
 
-$numericVersion = if ($Version -match '^(?<number>\d+\.\d+\.\d+)') {
-    $Matches.number
-}
-else {
-    throw "La versión '$Version' no tiene el formato X.Y.Z[-sufijo]."
-}
+$numericVersion = Get-SakuraNumericVersion -Version $Version
 
 $publishArguments = @(
     "publish",
@@ -65,8 +67,8 @@ $publishArguments = @(
     "--no-restore",
     "-o", $publishDirectory,
     "/p:Version=$Version",
-    "/p:AssemblyVersion=$numericVersion.0",
-    "/p:FileVersion=$numericVersion.0",
+    "/p:AssemblyVersion=$numericVersion",
+    "/p:FileVersion=$numericVersion",
     "/p:PublishSingleFile=false",
     "/p:PublishTrimmed=false",
     "/p:PublishReadyToRun=false"

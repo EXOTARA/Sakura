@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sakura — Tu Windows, en flor.</title>
+<meta name="description" content="Un asistente para Windows que escucha, mira la pantalla y automatiza tu sistema. Funciona en tu equipo: el audio del micrófono no sale de ahí. Gratis, de código abierto y sin cuenta.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="assets/sakura.svg" type="image/svg+xml">
+<meta property="og:title" content="Sakura — Tu Windows, en flor.">
+<meta property="og:description" content="Un asistente para Windows que escucha, mira la pantalla y automatiza tu sistema. En local, gratis y de código abierto.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://exotara.github.io/Sakura/">
+<link rel="canonical" href="https://exotara.github.io/Sakura/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#contenido">Saltar al contenido</a>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#inicio" aria-label="Sakura, inicio">
+      <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+        <path fill="#F5B3CF" d="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z"/>
+        <path fill="#F5B3CF" d="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z"/>
+        <path fill="#F5B3CF" d="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z"/>
+        <path fill="#F5B3CF" d="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z"/>
+        <path fill="#AC333F" d="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z"/>
+      </svg>
+      <span>Sakura</span>
+    </a>
+
+    <nav aria-label="Secciones">
+      <a href="#capacidades">Qué hace</a>
+      <a href="#descargas">Descargas</a>
+      <a href="#instalar">Instalar</a>
+      <a href="#privacidad">Privacidad</a>
+      <a href="#firma">Firma</a>
+    </nav>
+
+    <a class="btn btn-primary btn-sm" href="{{INSTALLER_URL}}" data-download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+      Descargar
+    </a>
+  </div>
+</header>
+
+<main id="contenido">
+
+<!-- ============================ Portada ============================ -->
+<section class="hero" id="inicio">
+  <canvas id="petals" aria-hidden="true"></canvas>
+  <div class="hero-glow" aria-hidden="true"></div>
+
+  <div class="wrap hero-inner">
+    <div>
+      <h1>
+        <span class="kana" aria-hidden="true">さくら</span>
+        Sakura
+      </h1>
+      <p class="hero-tagline">Tu Windows, en flor.</p>
+      <p class="hero-lead">
+        Un asistente que vive en la bandeja del sistema y aparece cuando lo llamas. Escucha,
+        mira la ventana que tienes delante y hace lo que puede resolver solo, en tu equipo,
+        sin consultar a nadie.
+      </p>
+
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="{{INSTALLER_URL}}" data-download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+          Descargar para Windows
+        </a>
+        <a class="btn btn-ghost" href="#descargas">Ver todas las descargas</a>
+      </div>
+
+      <p class="hero-meta">
+        <span class="chip">{{VERSION}}</span>
+        <span>{{INSTALLER_SIZE}}</span>
+        <span>Windows 10 (2004) y 11, 64 bits</span>
+        <span>Gratis y de código abierto</span>
+      </p>
+    </div>
+
+    <!--
+      La marca es el icono real de la aplicación, calcado de Sakura.ico: el mismo que sale en el
+      acceso directo del escritorio. Los contornos vienen de seguir la frontera de los píxeles del
+      .ico, no de redibujarlo a ojo — un icono parecido habría sido otro icono.
+
+      Tres capas anidadas y no una, porque cada una lleva su propia transformación y en CSS sólo hay
+      un transform por elemento: .mark se inclina hacia el puntero, .mark-spin gira despacio, y cada
+      pétalo entra girando desde el centro. Juntarlas haría que una borrase a la otra.
+    -->
+    <div class="mark-stage" aria-hidden="true">
+      <div class="mark">
+        <div class="mark-spin">
+          <svg viewBox="0 0 48 48" fill="none" focusable="false">
+            <path class="petal" style="animation-delay:60ms" fill="#F5B3CF" d="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z"/>
+            <path class="petal" style="animation-delay:180ms" fill="#F5B3CF" d="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z"/>
+            <path class="petal" style="animation-delay:300ms" fill="#F5B3CF" d="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z"/>
+            <path class="petal" style="animation-delay:420ms" fill="#F5B3CF" d="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z"/>
+            <path class="spark" fill="#AC333F" d="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= Qué hace (requisito de SignPath) ======================= -->
+<section id="capacidades">
+  <div class="wrap">
+    <p class="eyebrow reveal">Qué hace</p>
+    <h2 class="section-title reveal" data-stagger="1">Un asistente, no un chat con esteroides</h2>
+    <p class="section-lead reveal" data-stagger="2">
+      La conversación es una de sus superficies, no la única. Sakura entiende órdenes normales
+      —«abre PowerShell», «pon un temporizador de veinte minutos», «¿qué ventana tengo
+      abierta?»— y usa un modelo de lenguaje sólo cuando hace falta. Para todo lo demás no lo
+      necesita.
+    </p>
+
+    <div class="grid">
+      <article class="card reveal" data-stagger="1">
+        <div class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+        </div>
+        <h3>Habla y escucha en tu equipo</h3>
+        <p>
+          La palabra de activación y el dictado corren en tu máquina. El audio del micrófono no
+          se envía a ningún servidor, ni siquiera cuando usas un modelo en la nube para el texto.
+        </p>
+        <div class="halo-demo" aria-hidden="true">
+          <svg viewBox="0 0 210 126" focusable="false">
+            <path class="arc" d="M15 120 A90 90 0 0 1 195 120"  stroke-width="3"/>
+            <path class="arc" d="M35 120 A70 70 0 0 1 175 120"  stroke-width="2.5"/>
+            <path class="arc" d="M55 120 A50 50 0 0 1 155 120"  stroke-width="2"/>
+            <path class="arc" d="M75 120 A30 30 0 0 1 135 120"  stroke-width="1.5"/>
+          </svg>
+        </div>
+      </article>
+
+      <article class="card is-blue reveal" data-stagger="2">
+        <div class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h3>Mira la pantalla cuando se lo pides</h3>
+        <p>
+          Sakura Lens captura la ventana activa, la lee con OCR y con la información de
+          accesibilidad de Windows, tapa lo que parezca sensible antes de usarlo, y te explica qué
+          estás viendo en modo soporte, estudio o desarrollo.
+        </p>
+      </article>
+
+      <article class="card reveal" data-stagger="3">
+        <div class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10"/><path d="M7 14h6"/></svg>
+        </div>
+        <h3>Dicta en cualquier parte</h3>
+        <p>
+          <code>Ctrl + Shift + D</code> empieza a dictar y la misma combinación termina y escribe
+          el texto donde tenías el cursor: Word, el navegador o una terminal.
+        </p>
+      </article>
+
+      <article class="card is-blue reveal" data-stagger="4">
+        <div class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/></svg>
+        </div>
+        <h3>Acompaña un proyecto</h3>
+        <p>
+          Le autorizas una carpeta y a partir de ahí explica, busca y modifica archivos, siempre
+          con copia previa y confirmación archivo por archivo.
+        </p>
+      </article>
+
+      <article class="card reveal" data-stagger="5">
+        <div class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        </div>
+        <h3>Recuerda sólo lo que le dejes</h3>
+        <p>
+          La memoria viene apagada. Se activa por categorías separadas —preferencias, contexto de
+          conversación, hábitos de uso—, se guarda cifrada con DPAPI y puedes leerla o borrarla
+          entera cuando quieras.
+        </p>
+      </article>
+
+      <article class="card is-blue reveal" data-stagger="6">
+        <div class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6.5v5c0 5 3.4 8.7 8 9.5 4.6-.8 8-4.5 8-9.5v-5L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <h3>Cada capacidad tiene su permiso</h3>
+        <p>
+          Bloqueado, preguntar o permitido. Las confirmaciones no se saltan nunca, ni siquiera
+          cuando tú mismo pediste la acción.
+        </p>
+      </article>
+    </div>
+
+    <p class="section-lead reveal" style="margin-top:var(--space-4)">
+      La lista completa, con cómo se activa cada cosa y ejemplos, está en la
+      <a href="https://github.com/EXOTARA/Sakura/blob/main/docs/product/SAKURA_CAPABILITIES_GUIDE.md">guía de capacidades</a>.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ Descargas ============================ -->
+<section id="descargas">
+  <div class="wrap">
+    <p class="eyebrow reveal">Descargas</p>
+    <h2 class="section-title reveal" data-stagger="1">Sakura {{VERSION}}</h2>
+    <p class="section-lead reveal" data-stagger="2">
+      Publicada el {{RELEASE_DATE}}. Las dos formas traen dentro el .NET que necesitan: no hace
+      falta instalar nada más. Los archivos y sus notas están también en la
+      <a href="{{RELEASE_URL}}">página de la versión en GitHub</a>.
+    </p>
+
+    <div class="dl-grid">
+      <article class="dl is-primary reveal" data-stagger="1">
+        <h3>Instalador</h3>
+        <p class="why">
+          Deja Sakura en el menú Inicio y se desinstala desde Windows como cualquier programa.
+          No pide permisos de administrador: se instala en tu carpeta de usuario.
+        </p>
+        <p class="file"><span>{{INSTALLER_NAME}}</span><span>{{INSTALLER_SIZE}}</span></p>
+        <a class="btn btn-primary" href="{{INSTALLER_URL}}" data-download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+          Descargar el instalador
+        </a>
+        <div class="hash">
+          <span class="hash-label" id="hash-installer-label">SHA-256 del instalador</span>
+          <div class="hash-row">
+            <code id="hash-installer">{{INSTALLER_SHA256}}</code>
+            <button type="button" class="copy" data-copy="hash-installer" aria-describedby="hash-installer-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              <span class="copy-label">Copiar</span>
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <article class="dl reveal" data-stagger="2">
+        <h3>Portable (.zip)</h3>
+        <p class="why">
+          Se descomprime donde quieras y se ejecuta tal cual, sin instalar nada. Útil si prefieres
+          probarlo antes o llevarlo en una memoria. Conserva todos los archivos de la carpeta.
+        </p>
+        <p class="file"><span>{{ZIP_NAME}}</span><span>{{ZIP_SIZE}}</span></p>
+        <a class="btn" href="{{ZIP_URL}}" data-download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+          Descargar el zip
+        </a>
+        <div class="hash">
+          <span class="hash-label" id="hash-zip-label">SHA-256 del zip</span>
+          <div class="hash-row">
+            <code id="hash-zip">{{ZIP_SHA256}}</code>
+            <button type="button" class="copy" data-copy="hash-zip" aria-describedby="hash-zip-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              <span class="copy-label">Copiar</span>
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="notice reveal">
+      <div class="notice-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--blue)"><path d="M12 3 4 6.5v5c0 5 3.4 8.7 8 9.5 4.6-.8 8-4.5 8-9.5v-5L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
+        <h3>Comprobar que el archivo es el que dice ser</h3>
+      </div>
+      <p>
+        Mientras no haya firma digital, el hash es la verificación real. Abre PowerShell en la
+        carpeta donde descargaste y compara el resultado con el de arriba: si coinciden, el archivo
+        llegó entero y sin tocar.
+      </p>
+      <p class="file"><code>Get-FileHash .\{{INSTALLER_NAME}} -Algorithm SHA256</code></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ Instalar / SmartScreen ============================ -->
+<section id="instalar">
+  <div class="wrap">
+    <p class="eyebrow reveal">Instalar</p>
+    <h2 class="section-title reveal" data-stagger="1">Windows te va a avisar. Es normal, y aquí está por qué</h2>
+    <p class="section-lead reveal" data-stagger="2">
+      Preferimos decírtelo antes de que ocurra, y no que te lo encuentres a mitad de la
+      instalación pensando que algo va mal.
+    </p>
+
+    <div class="notice warn reveal" data-stagger="3">
+      <div class="notice-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <h3>«Windows protegió tu PC»</h3>
+      </div>
+      <p>
+        Es SmartScreen, y no dice que el archivo tenga nada malo: dice que todavía no lleva firma
+        digital. Windows avisa igual de cualquier programa sin firmar, sea lo que sea. La solicitud
+        a <a href="https://signpath.org/">SignPath Foundation</a> —que firma gratis proyectos de
+        código abierto— está en marcha; hasta que llegue, el aviso va a seguir apareciendo y
+        preferimos explicarlo a fingir que no pasa.
+      </p>
+      <ol class="steps">
+        <li><span>Abre el archivo que descargaste. Si aparece la pantalla azul, no le des a <strong>«No ejecutar»</strong>.</span></li>
+        <li><span>Pulsa <strong>«Más información»</strong>, en la parte de arriba del aviso.</span></li>
+        <li><span>Aparece un botón nuevo abajo: <strong>«Ejecutar de todas formas»</strong>.</span></li>
+        <li><span>Si quieres asegurarte antes, compara el <a href="#descargas">hash SHA-256</a> con el que publica esta página.</span></li>
+      </ol>
+    </div>
+
+    <dl class="specs reveal" data-stagger="4">
+      <div class="spec"><dt>Sistema</dt><dd>Windows 10 (2004) o 11</dd></div>
+      <div class="spec"><dt>Arquitectura</dt><dd>64 bits (x64)</dd></div>
+      <div class="spec"><dt>Permisos</dt><dd>No hace falta administrador</dd></div>
+      <div class="spec"><dt>Dónde se instala</dt><dd><code>%LocalAppData%\Programs\Sakura</code></dd></div>
+    </dl>
+
+    <p class="section-lead reveal" data-stagger="5" style="margin-top:var(--space-3)">
+      Los modelos de voz se descargan la primera vez que activas el micrófono, porque son grandes y
+      no caben en el instalador. Ollama y sus modelos de lenguaje no van incluidos: Sakura funciona
+      sin ellos y te avisa cuando alguna función los necesita.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ Privacidad y firma ============================ -->
+<section id="privacidad">
+  <div class="wrap">
+    <p class="eyebrow reveal">Privacidad y confianza</p>
+    <h2 class="section-title reveal" data-stagger="1">Lo que sale de tu equipo, dicho entero</h2>
+    <p class="section-lead reveal" data-stagger="2">
+      No hay servidor, no hay cuenta, no hay registro y no hay nadie al otro lado. Tampoco hay
+      telemetría, ni analítica, ni informes de errores: no existen en el código.
+    </p>
+
+    <div class="split">
+      <article class="panel reveal" data-stagger="1">
+        <h3>Se queda en tu equipo</h3>
+        <ul class="list">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
+            <span>El audio del micrófono. La palabra de activación y la transcripción corren en local.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
+            <span>Lo que se lee de la pantalla, el portapapeles y las pulsaciones.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
+            <span>Tareas, rutinas, enfoque, memoria e historial, cifrados con DPAPI en <code>%LocalAppData%\Sakura</code>.</span>
+          </li>
+        </ul>
+
+        <h3 style="font-size:19px">Sale sólo en estos casos</h3>
+        <ul class="list no">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+            <span>La comprobación de si hay versión nueva, una vez al día como mucho. Es lo único automático, y se puede apagar en Ajustes.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+            <span>La descarga de los modelos de voz, cuando los instalas.</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+            <span>Lo que le mandes a un proveedor de IA en la nube, si configuras uno. Nunca el audio.</span>
+          </li>
+        </ul>
+
+        <a class="btn btn-ghost btn-sm" href="https://github.com/EXOTARA/Sakura/blob/main/docs/PRIVACY.md">Leer la política de privacidad</a>
+      </article>
+
+      <article class="panel reveal" data-stagger="2" id="firma">
+        <h3>Firma de código</h3>
+        <p>
+          Las versiones publicadas <strong>todavía no están firmadas</strong>. Cada artefacto lleva
+          su <code>.sha256</code> al lado y ésa es hoy la única verificación posible; por eso los
+          hashes están arriba, en esta misma página, y no escondidos.
+        </p>
+        <p>
+          Los binarios los construye la integración continua a partir del código público de este
+          repositorio. Nada compilado en un equipo personal llega a la página de descargas.
+        </p>
+        <p>
+          Quién puede aprobar una firma, qué se firma y en qué orden está escrito en la política de
+          firma de código, junto con el estado de la solicitud a SignPath Foundation.
+        </p>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/EXOTARA/Sakura/blob/main/docs/CODE_SIGNING_POLICY.md">Leer la política de firma de código</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#inicio" aria-label="Sakura, inicio">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+            <path fill="#F5B3CF" d="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z"/>
+            <path fill="#F5B3CF" d="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z"/>
+            <path fill="#F5B3CF" d="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z"/>
+            <path fill="#F5B3CF" d="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z"/>
+            <path fill="#AC333F" d="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z"/>
+          </svg>
+          <span>Sakura</span>
+        </a>
+        <p class="foot-note">
+          Hecho por EXOTARA. Software libre bajo licencia MIT, sin muro de pago ni funciones
+          bloqueadas.
+        </p>
+      </div>
+
+      <div>
+        <h4>Proyecto</h4>
+        <ul class="foot-links">
+          <li><a href="https://github.com/EXOTARA/Sakura">Código fuente</a></li>
+          <li><a href="{{RELEASE_URL}}">Todas las versiones</a></li>
+          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/docs/product/SAKURA_CAPABILITIES_GUIDE.md">Guía de capacidades</a></li>
+          <li><a href="https://github.com/EXOTARA/Sakura/issues">Informar de un fallo</a></li>
+          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/LICENSE">Licencia MIT</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Confianza</h4>
+        <ul class="foot-links">
+          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/docs/PRIVACY.md">Política de privacidad</a></li>
+          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/docs/CODE_SIGNING_POLICY.md">Política de firma de código</a></li>
+          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/SECURITY.md">Política de seguridad</a></li>
+          <li><a href="https://github.com/EXOTARA/Sakura/security/advisories/new">Reportar una vulnerabilidad</a></li>
+          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/CODE_OF_CONDUCT.md">Código de conducta</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="colophon">
+      <span>Sakura {{VERSION}} · {{RELEASE_DATE}}</span>
+      <span>Tu Windows, en flor.</span>
+    </p>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>

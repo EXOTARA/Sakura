@@ -23,26 +23,43 @@ public sealed class UpdateCheckPolicyTests
 
     [Fact]
     public void TheFirstTime_ItAlwaysChecks() =>
-        Assert.True(UpdateCheckPolicy.ShouldCheck(lastCheckedAt: null, Now));
+        Assert.True(UpdateCheckPolicy.ShouldCheck(
+            lastCheckedAt: null, Now, automaticChecksEnabled: true));
 
     [Fact]
     public void JustAfterChecking_ItDoesNotCheckAgain()
     {
         // En un programa que arranca con el sistema, comprobar en cada arranque multiplica el
         // tráfico por algo que nadie pidió.
-        Assert.False(UpdateCheckPolicy.ShouldCheck(Now.AddHours(-1), Now));
+        Assert.False(UpdateCheckPolicy.ShouldCheck(
+            Now.AddHours(-1), Now, automaticChecksEnabled: true));
     }
 
     [Fact]
     public void AfterADay_ItChecks() =>
-        Assert.True(UpdateCheckPolicy.ShouldCheck(Now.AddHours(-25), Now));
+        Assert.True(UpdateCheckPolicy.ShouldCheck(
+            Now.AddHours(-25), Now, automaticChecksEnabled: true));
 
     [Fact]
     public void AClockThatWentBackwards_DoesNotBlockCheckingForever()
     {
         // Un cambio de zona horaria o una hora corregida dejaría la marca en el futuro, y comparar
         // a secas mantendría la comprobación bloqueada hasta que el tiempo la alcanzara.
-        Assert.True(UpdateCheckPolicy.ShouldCheck(Now.AddDays(30), Now));
+        Assert.True(UpdateCheckPolicy.ShouldCheck(
+            Now.AddDays(30), Now, automaticChecksEnabled: true));
+    }
+
+    [Fact]
+    public void WhenAutomaticChecksAreOff_ItNeverChecks()
+    {
+        // Es la única petición de red que Sakura hace sin que nadie la pida en ese momento, y la
+        // política de privacidad promete que se puede apagar. Aquí es donde esa promesa se cumple
+        // o se rompe: si esta puerta se abre, da igual lo que diga el ajuste.
+        Assert.False(UpdateCheckPolicy.ShouldCheck(
+            lastCheckedAt: null, Now, automaticChecksEnabled: false));
+
+        Assert.False(UpdateCheckPolicy.ShouldCheck(
+            Now.AddDays(-100), Now, automaticChecksEnabled: false));
     }
 
     // ---------- qué ofrecer ----------

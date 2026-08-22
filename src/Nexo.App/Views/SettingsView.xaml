@@ -1101,6 +1101,17 @@
                         </StackPanel>
                     </Border>
 
+                    <CheckBox x:Name="AutomaticUpdateCheckBox"
+                              Margin="0,16,0,0"
+                              Content="Buscar versiones nuevas automáticamente"
+                              AutomationProperties.Name="Buscar versiones nuevas automáticamente"
+                              Checked="AutomaticUpdateCheckBox_Changed"
+                              Unchecked="AutomaticUpdateCheckBox_Changed" />
+                    <TextBlock Margin="24,4,0,0"
+                               Text="Una vez al día como mucho, Sakura mira en GitHub si hay una versión nueva. Es lo único que sale de tu equipo sin que tú lo pidas, y nunca instala nada sola. Si lo apagas, el botón de aquí abajo sigue funcionando."
+                               TextWrapping="Wrap"
+                               Style="{StaticResource MutedTextStyle}" />
+
                     <WrapPanel Margin="0,16,0,0">
                         <Button x:Name="UpdateCheckButton"
                                 Content="Buscar actualizaciones"

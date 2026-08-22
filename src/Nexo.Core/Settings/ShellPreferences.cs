@@ -89,6 +89,18 @@ public sealed class ShellPreferences
     /// </summary>
     public string SkippedUpdateVersion { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Si Sakura puede mirar sola si hay versión nueva.
+    ///
+    /// Es lo único que sale del equipo sin que nadie lo pida en ese momento, así que tiene que
+    /// poder apagarse: una aplicación que promete que todo pasa en local no puede tener una
+    /// petición de red que no se pueda quitar. Apagarlo no esconde las actualizaciones — el botón
+    /// «Buscar actualizaciones» de Ajustes sigue ahí y sigue funcionando.
+    ///
+    /// Viene encendido porque una beta que nadie actualiza es una beta con fallos ya resueltos.
+    /// </summary>
+    public bool AutomaticUpdateCheckEnabled { get; set; } = true;
+
     public double Opacity { get; set; } = 0.96;
 
     public string AccentColor { get; set; } = "#E98AAF";

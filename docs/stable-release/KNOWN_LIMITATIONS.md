@@ -127,8 +127,17 @@ segundo `WaitOne` es una adquisición recursiva del mismo dueño.
 **Para estable:** tenerlo presente si la fase 1.2 comparte o reutiliza el componente.
 
 ### L8 — Sin firma Authenticode
-**Qué:** No hay certificado.
+**Qué:** No hay certificado. SmartScreen avisa en cada instalación.
 **Aislamiento:** Sin actualización silenciosa. El usuario ve versión, notas y hash, y confirma.
+**Ruta abierta (2026-08-22):** SignPath Foundation firma gratis proyectos de código abierto que
+cumplan sus condiciones. Del lado del repositorio ya está todo: licencia MIT sin doble licencia
+comercial, sin componentes propietarios, artefactos construidos solo por CI, metadatos de producto y
+versión verificados en cada publicación por `verify-release.ps1`, y las dos páginas que exigen —
+[política de firma de código](../CODE_SIGNING_POLICY.md) y [política de privacidad](../PRIVACY.md)—
+publicadas y enlazadas desde el README. **Falta la solicitud**, que es de Adler: hay que crear la
+cuenta en SignPath con 2FA y enviar el formulario. Después, cablear el flujo de firma en
+`release.yml` (firmar los binarios antes de armar el instalador, firmar el instalador, y calcular
+los `.sha256` al final, sobre los archivos ya firmados).
 **Para estable:** no bloquea RC. La automática se habilita solo con firma + rollback probado.
 
 ## Fuera de alcance de 1.0 (decidido, no es limitación)

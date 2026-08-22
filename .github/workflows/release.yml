@@ -43,7 +43,7 @@ jobs:
 
       - name: Verificar publicación
         shell: pwsh
-        run: .\scripts\verify-release.ps1
+        run: .\scripts\verify-release.ps1 -Version "${{ steps.version.outputs.value }}"
 
       - name: Guardar artefactos
         uses: actions/upload-artifact@v4

@@ -67,6 +67,27 @@ public sealed class VoiceCoordinator : IDisposable
         remove => _wakeWordService.RecognitionObserved -= value;
     }
 
+    /// <summary>
+    /// Diseño D72 — el nivel del micrófono para el halo de voz, venga de donde venga.
+    ///
+    /// Se suscribe a las dos capturas porque son dos y se turnan: la de vigilancia oye la palabra de
+    /// activación y se pausa justo cuando arranca la de la orden. Quien escuche esto no tiene por
+    /// qué saber cuál de las dos está abierta en cada momento; solo hay una que hable a la vez.
+    /// </summary>
+    public event EventHandler<VoiceLevelEventArgs>? LevelObserved
+    {
+        add
+        {
+            _wakeWordService.LevelObserved += value;
+            _voiceInputService.LevelObserved += value;
+        }
+        remove
+        {
+            _wakeWordService.LevelObserved -= value;
+            _voiceInputService.LevelObserved -= value;
+        }
+    }
+
     public bool IsVoiceInputReady => _voiceInputService.IsReady;
 
     public bool IsVoiceInputListening => _voiceInputService.IsListening;

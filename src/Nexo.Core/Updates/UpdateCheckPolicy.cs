@@ -54,9 +54,22 @@ public static class UpdateCheckPolicy
     /// <summary>
     /// Si toca mirar. Se separa de <see cref="Evaluate"/> porque esto decide si se hace una
     /// petición de red, y eso tiene que poder decidirse sin haberla hecho todavía.
+    ///
+    /// <paramref name="automaticChecksEnabled"/> es el ajuste de Ajustes → Actualizaciones. Se pasa
+    /// aquí y no se comprueba en la ventana para que la única puerta a esa petición de red sea esta
+    /// función, que es la que está probada.
     /// </summary>
-    public static bool ShouldCheck(DateTimeOffset? lastCheckedAt, DateTimeOffset now)
+    public static bool ShouldCheck(
+        DateTimeOffset? lastCheckedAt,
+        DateTimeOffset now,
+        bool automaticChecksEnabled)
     {
+        // Quien lo apagó no quiere que se mire menos, quiere que no se mire.
+        if (!automaticChecksEnabled)
+        {
+            return false;
+        }
+
         if (lastCheckedAt is not { } last)
         {
             return true;

@@ -259,6 +259,8 @@ public partial class QuickControlsWindow : Window
             track.Child = layers;
 
             track.MouseLeftButtonDown += OnTrackPressed;
+            track.MouseLeftButtonUp += OnTrackReleased;
+            track.LostMouseCapture += OnTrackLostCapture;
             track.MouseWheel += OnTrackWheel;
 
             ControlsPanel.Children.Add(track);
@@ -266,6 +268,21 @@ public partial class QuickControlsWindow : Window
         }
     }
 
+    /// <summary>
+    /// Diseño D71 — pulsar en cualquier punto del carril es el principio de un arrastre, no un
+    /// salto animado.
+    ///
+    /// Antes esta pulsación se trataba como un cambio suelto: la barra **se animaba** hacia el punto
+    /// pulsado y, en cuanto el ratón se movía un píxel, el siguiente evento cancelaba esa animación
+    /// y la pegaba al cursor. Animar y luego saltar es lo que Adler describió como "actúa raro" al
+    /// pulsar fuera del círculo. Una barra que se agarra tiene que ir donde está el dedo desde el
+    /// primer fotograma.
+    ///
+    /// Y se captura el ratón. El carril mide cincuenta y dos píxeles de ancho: soltar el botón un
+    /// poco a la derecha era soltarlo fuera de la ventana, así que el <c>MouseLeftButtonUp</c> no
+    /// llegaba nunca y el arrastre se quedaba abierto. El siguiente movimiento del puntero por
+    /// encima del panel volvía a mover el volumen sin que nadie hubiera pulsado nada.
+    /// </summary>
     private void OnTrackPressed(object sender, MouseButtonEventArgs e)
     {
         if (sender is not Border { Tag: QuickControlKind kind } track)
@@ -274,7 +291,58 @@ public partial class QuickControlsWindow : Window
         }
 
         _dragging = kind;
-        ApplyFromPointer(kind, track, e.GetPosition(track).Y, dragging: false);
+        track.CaptureMouse();
+        e.Handled = true;
+
+        // Sigue al dedo sin animación, pero escribe al hardware ya: una pulsación suelta es una
+        // orden completa, no un tramo intermedio de arrastre.
+        SetLevel(kind, PercentFromPointer(track, e.GetPosition(track).Y), animate: false);
+        WriteNow(kind);
+    }
+
+    private void OnTrackReleased(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border track && track.IsMouseCaptured)
+        {
+            track.ReleaseMouseCapture();
+        }
+
+        _dragging = null;
+        FlushPendingWrite();
+    }
+
+    /// <summary>
+    /// Si algo le quita la captura al carril —otra ventana, un cambio de escritorio, Alt+Tab— el
+    /// arrastre termina aquí. Sin esto, la captura perdida dejaba <see cref="_dragging"/> puesto.
+    /// </summary>
+    private void OnTrackLostCapture(object sender, MouseEventArgs e)
+    {
+        _dragging = null;
+        FlushPendingWrite();
+    }
+
+    private static double PercentFromPointer(Border track, double pointerY)
+    {
+        // Arriba del carril es el 100%: la coordenada crece hacia abajo, así que se invierte.
+        var height = track.ActualHeight > 0 ? track.ActualHeight : TrackHeight;
+        return (1 - (pointerY / height)) * 100.0;
+    }
+
+    private void WriteNow(QuickControlKind kind)
+    {
+        if (!_fills.TryGetValue(kind, out var fill))
+        {
+            return;
+        }
+
+        _lastHardwareWrite = DateTime.UtcNow;
+        _pendingWrite = null;
+        RestartIdle();
+        ControlChanged?.Invoke(
+            this,
+            new QuickControlChangedEventArgs(
+                kind,
+                QuickControlsPolicy.NormalizePercent(fill.Height / TrackHeight * 100.0)));
     }
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -308,12 +376,8 @@ public partial class QuickControlsWindow : Window
         Apply(kind, current + step, dragging: false);
     }
 
-    private void ApplyFromPointer(QuickControlKind kind, Border track, double pointerY, bool dragging)
-    {
-        // Arriba del carril es el 100%: la coordenada crece hacia abajo, así que se invierte.
-        var percent = (1 - (pointerY / track.ActualHeight)) * 100.0;
-        Apply(kind, percent, dragging);
-    }
+    private void ApplyFromPointer(QuickControlKind kind, Border track, double pointerY, bool dragging) =>
+        Apply(kind, PercentFromPointer(track, pointerY), dragging);
 
     /// <summary>
     /// Diseño D38 — la otra mitad del tirón, y la más grave: escribir al hardware en cada

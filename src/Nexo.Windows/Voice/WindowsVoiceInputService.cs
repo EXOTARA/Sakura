@@ -673,8 +673,17 @@ public sealed class WhisperVoiceInputService : IVoiceInputService
         factory?.Dispose();
     }
 
+    /// <summary>Diseño D72 — ver <see cref="IVoiceInputService.LevelObserved"/>.</summary>
+    public event EventHandler<VoiceLevelEventArgs>? LevelObserved;
+
     private void Recorder_DataAvailable(object? sender, WaveInEventArgs e)
     {
+        if (e.BytesRecorded > 0 && LevelObserved is { } levelObserved)
+        {
+            levelObserved(this, new VoiceLevelEventArgs(
+                VoiceLevelMeter.Measure(e.Buffer, e.BytesRecorded)));
+        }
+
         lock (_sync)
         {
             if (_writer is null || e.BytesRecorded <= 0)

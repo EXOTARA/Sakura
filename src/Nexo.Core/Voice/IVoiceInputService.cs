@@ -2,6 +2,15 @@ namespace Nexo.Core.Voice;
 
 public interface IVoiceInputService : IDisposable
 {
+    /// <summary>
+    /// Diseño D72 — nivel del micrófono mientras se escucha una orden, de 0 a 1.
+    ///
+    /// Hace falta aquí además de en la palabra de activación porque son dos capturas distintas: la
+    /// de vigilancia se pausa justo cuando empieza la de la orden, y el halo tiene que seguir
+    /// respirando durante la segunda, que es cuando la persona está hablando de verdad.
+    /// </summary>
+    event EventHandler<VoiceLevelEventArgs>? LevelObserved;
+
     bool IsReady { get; }
 
     bool IsListening { get; }

@@ -44,8 +44,12 @@ portable, que se descomprime donde quieras y se ejecuta tal cual. No hace falta 
 el .NET necesario va dentro de los dos.
 
 Windows va a mostrar un aviso de SmartScreen diciendo que el programa no está firmado, porque no lo
-está: la firma de código cuesta dinero y todavía no la hay. Hay que darle a "Más información" →
-"Ejecutar de todas formas". Es un inconveniente real y está en la lista de cosas por resolver.
+está. Hay que darle a "Más información" → "Ejecutar de todas formas". Es un inconveniente real y
+está en la lista de cosas por resolver: la vía es
+[SignPath Foundation](https://signpath.org/), que firma gratis proyectos de código abierto, y lo que
+se firmará y quién lo aprueba está escrito en la
+[política de firma de código](docs/CODE_SIGNING_POLICY.md). Mientras tanto, cada versión publica su
+`.sha256` al lado del archivo.
 
 Sakura guarda sus datos en `%LocalAppData%\Sakura` y sus modelos de voz en la misma carpeta. Al
 desinstalar puedes elegir si esa carpeta se va contigo o se queda.
@@ -69,6 +73,10 @@ tú activas Lens o compartes una ventana a propósito.
 Si conectas un proveedor de IA en la nube, las conversaciones que le mandes salen de tu equipo,
 como es evidente. La clave se guarda en una variable de entorno tuya, no en el repositorio ni en
 `settings.json`.
+
+No hay telemetría, ni analítica, ni informes de errores. Lo único que sale de tu equipo sin que tú
+lo pidas es la comprobación diaria de si hay versión nueva, y se puede apagar en Ajustes. La lista
+completa, sin excepciones, está en la [política de privacidad](docs/PRIVACY.md).
 
 ## Cómo está hecho
 
@@ -110,6 +118,10 @@ El trabajo va en ramas cortas contra `main`, con CI en verde antes de fusionar.
 | Ver el estado real por fase | [Roadmap técnico](docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md) |
 | Permisos, autonomía y confirmaciones | [Modelo de confianza](docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md) |
 | Lo que se sabe que falla o falta | [Limitaciones conocidas](docs/stable-release/KNOWN_LIMITATIONS.md) |
+| Qué sale de tu equipo y qué no | [Política de privacidad](docs/PRIVACY.md) |
+| Quién firma los binarios y con qué | [Política de firma de código](docs/CODE_SIGNING_POLICY.md) |
+| Cómo informar de una vulnerabilidad | [Política de seguridad](SECURITY.md) |
+| Qué se espera de quien participa | [Código de conducta](CODE_OF_CONDUCT.md) |
 
 ## Licencia
 

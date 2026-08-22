@@ -288,6 +288,9 @@ public partial class MainWindow : Window
     /// </summary>
     private TaskCompletionSource<bool>? _flowStopSignal;
     private readonly SakuraPillWindow _sakuraPillWindow = new();
+
+    /// <summary>Diseño D72 — el halo que aparece cuando Sakura oye su nombre.</summary>
+    private readonly VoiceHaloWindow _voiceHaloWindow = new();
     private readonly HomeView _homeView = new();
     private readonly AssistantView _assistantView = new();
     private readonly TasksView _tasksView;
@@ -577,6 +580,11 @@ public partial class MainWindow : Window
         // Los eventos de wake word se suscriben a través del coordinador (paso directo al
         // servicio subyacente): MainWindow ya no necesita una referencia al servicio.
         _voiceCoordinator.WakeWordDetected += WakeWordService_WakeWordDetected;
+
+        // Diseño D72 — el nivel llega desde el hilo de captura de NAudio. Escribir un double desde
+        // otro hilo no necesita marshalling; el fotograma siguiente lo recoge. Cualquier otra cosa
+        // que se tocara aquí sí lo necesitaría.
+        _voiceCoordinator.LevelObserved += (_, e) => _voiceHaloWindow.ReportLevel(e.Level);
         _voiceCoordinator.RecognitionObserved += WakeWordService_RecognitionObserved;
         _voiceCoordinator.WakeWordCustomAliases = _preferences.WakeWordAliases;
         _audioView.ActionCompleted += AudioView_ActionCompleted;
@@ -787,6 +795,12 @@ public partial class MainWindow : Window
             _quickControlsWatcher.Configure(
                 enabled,
                 QuickControlsPolicy.ControlsEdgeFor(_preferences.Position));
+            SavePreferences();
+        };
+
+        _settingsView.AutomaticUpdateCheckChanged += enabled =>
+        {
+            _preferences.AutomaticUpdateCheckEnabled = enabled;
             SavePreferences();
         };
 
@@ -1892,6 +1906,36 @@ public partial class MainWindow : Window
         var registry = new SakuraCommandRegistry();
 
         registry.RegisterRange(BuildNavigationCommands());
+
+        // Diseño D72 — poder ver el halo sin hablar.
+        //
+        // La primera vez que se publicó, Adler no lo vio y no había forma de saber si el fallo
+        // estaba en el halo o en el camino de la voz. Una orden que lo enciende cinco segundos
+        // separa las dos preguntas, y de paso deja probarlo sin micrófono.
+        registry.Register(new SakuraCommandDescriptor(
+            "voice.halo.preview",
+            "Probar el halo de voz",
+            "Enciende el halo cinco segundos, sin hablar, para ver cómo se ve.",
+            SakuraCommandCategory.Shell,
+            async _ =>
+            {
+                ShowVoiceHalo();
+
+                // Sin micrófono el nivel no se mueve, así que se simula una frase: sube, se sostiene
+                // con altibajos y baja. Es lo que hace visible que reacciona en vez de parpadear.
+                var aleatorio = new Random();
+                for (var i = 0; i < 100; i++)
+                {
+                    var fase = i / 100.0;
+                    var envolvente = fase < 0.15 ? fase / 0.15 : fase > 0.8 ? (1 - fase) / 0.2 : 1;
+                    _voiceHaloWindow.ReportLevel(
+                        Math.Clamp(envolvente * (0.45 + (aleatorio.NextDouble() * 0.5)), 0, 1));
+                    await Task.Delay(50);
+                }
+
+                _voiceHaloWindow.HideHalo();
+                return CommandExecutionResult.Success();
+            }));
 
         registry.Register(new SakuraCommandDescriptor(
             "shell.sidebar.toggle",
@@ -4327,7 +4371,10 @@ public partial class MainWindow : Window
     /// </summary>
     private async Task CheckForUpdateInBackgroundAsync()
     {
-        if (!UpdateCheckPolicy.ShouldCheck(_preferences.LastUpdateCheckAt, DateTimeOffset.UtcNow))
+        if (!UpdateCheckPolicy.ShouldCheck(
+                _preferences.LastUpdateCheckAt,
+                DateTimeOffset.UtcNow,
+                _preferences.AutomaticUpdateCheckEnabled))
         {
             return;
         }
@@ -4420,6 +4467,7 @@ public partial class MainWindow : Window
         _dashboardWindow.PrepareForShutdown();
         _dashboardWindow.HideImmediately();
         _sakuraPillWindow.Hide();
+        _voiceHaloWindow.HideImmediately();
 
         if (_preferences.SaveConversationHistory)
         {
@@ -6597,11 +6645,10 @@ public partial class MainWindow : Window
             _assistantView.SetVoiceState(
                 AssistantVoiceState.Listening,
                 $"{e.Phrase.ToSpokenText()} detectado. Habla con calma; no cortaré las pausas breves.");
-            _capsuleWindow.ShowMessage(
-                CapsuleKind.Processing,
-                "Te escucho",
-                "Habla con naturalidad. Terminaré después de 1.5 segundos de silencio.",
-                _preferences.Position);
+            // Diseño D74 — el halo sustituye a la cápsula "Te escucho". Salían las dos a la vez,
+            // una arriba y otra abajo, diciendo lo mismo con distinta voz. El halo lo dice mejor:
+            // no solo avisa de que escucha, sino de que te está oyendo a ti.
+            ShowVoiceHalo();
 
             var result = await voiceScope.ListenForUtteranceAsync(
                 maximumDuration: TimeSpan.FromSeconds(20),
@@ -6626,12 +6673,41 @@ public partial class MainWindow : Window
         }
         finally
         {
+            // Se apaga aquí y no en cada camino de salida: el halo tiene que irse tanto si hubo
+            // respuesta como si se canceló, se agotó el tiempo o falló la transcripción.
+            _voiceHaloWindow.HideHalo();
             await ResumeWakeWordIfEnabledAsync();
         }
     }
 
+    /// <summary>
+    /// Diseño D72 — enciende el halo con la marca y el acento vigentes.
+    ///
+    /// La geometría y el color se pasan desde aquí para que la ventana del halo no tenga que
+    /// conocer los diccionarios de recursos: recibe qué dibujar, no dónde buscarlo.
+    /// </summary>
+    private void ShowVoiceHalo()
+    {
+        if (FindResource("IconSakuraMark") is not Geometry mark ||
+            FindResource("BrushAccent") is not SolidColorBrush accent)
+        {
+            return;
+        }
+
+        _voiceHaloWindow.ShowHalo(mark, accent.Color);
+    }
+
     private async Task HandleVoiceRecognitionResultAsync(VoiceRecognitionResult result)
     {
+        // Diseño D74 — decir "nada" cierra la escucha sin hacer nada. Es lo que uno le diría a una
+        // persona al arrepentirse a mitad de frase, y hasta ahora la única salida era esperar el
+        // silencio y arriesgarse a que Sakura entendiera algo.
+        if (result.IsRecognized && VoiceDismissalPolicy.IsDismissal(result.Text))
+        {
+            _assistantView.SetVoiceState(AssistantVoiceState.Idle, "Listo, no hago nada.");
+            return;
+        }
+
         if (!result.IsRecognized)
         {
             _assistantView.SetVoiceState(AssistantVoiceState.Error, result.Detail);
