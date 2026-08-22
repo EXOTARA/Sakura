@@ -96,6 +96,9 @@ public partial class MainWindow : Window
     /// <summary>Diseño D6.3 (Fase 3 — Sakura Flow) — atajo global de dictado.</summary>
     private const int FlowHotkeyId = 0x4E5C;
 
+    /// <summary>Alt + V — abrir y cerrar la escucha sin decir el nombre.</summary>
+    private const int VoiceHotkeyId = 0x4E5E;
+
     /// <summary>
     /// Diseño D58 — Escape cierra el shell aunque el teclado esté en otra aplicación.
     ///
@@ -117,6 +120,7 @@ public partial class MainWindow : Window
     private const uint VirtualKeyA = 0x41;
     private const uint VirtualKeySpace = 0x20;
     private const uint VirtualKeyD = 0x44;
+    private const uint VirtualKeyV = 0x56;
     private const uint VirtualKeyEscape = 0x1B;
     private const uint ModNone = 0x0000;
     private const int WmHotkey = 0x0312;
@@ -439,6 +443,11 @@ public partial class MainWindow : Window
     private bool _silentVisualContext;
     private bool _resourceGovernorWakeWordPaused;
     private bool _wakeWordTestActive;
+
+    /// <summary>
+    /// La escucha en curso, si la hay. Sirve para saber si ya se está escuchando y para cortarla.
+    /// </summary>
+    private CancellationTokenSource? _voiceListenCancellation;
     private CancellationTokenSource? _wakeWordTestCancellation;
     private WakeWordRecognitionObservedEventArgs? _lastWakeWordObservation;
     private string _runtimeAiStatus = "Desactivada";
@@ -4319,6 +4328,12 @@ public partial class MainWindow : Window
                 "Ctrl + Shift + Espacio ya está siendo utilizado por otra aplicación.");
         }
 
+        if (!RegisterHotKey(windowHandle, VoiceHotkeyId, ModAlt, VirtualKeyV))
+        {
+            _assistantView.AddSakuraMessage(
+                "Alt + V ya está siendo utilizado por otra aplicación; el atajo de voz no quedó disponible.");
+        }
+
         // Diseño D6.3 — el dictado global se registra igual que los demás atajos: como atajo de
         // sistema, para que funcione con Sakura sin foco (que es todo el sentido de dictar en otra
         // aplicación).
@@ -4515,6 +4530,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(windowHandle, PeekHotkeyId);
             UnregisterHotKey(windowHandle, CommandPaletteHotkeyId);
             UnregisterHotKey(windowHandle, LookHotkeyId);
+            UnregisterHotKey(windowHandle, VoiceHotkeyId);
             UnregisterHotKey(windowHandle, FlowHotkeyId);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
         }
@@ -4564,6 +4580,11 @@ public partial class MainWindow : Window
         {
             RememberForegroundWindow();
             _ = LookAtForegroundWindowAsync();
+            handled = true;
+        }
+        else if (wParam.ToInt32() == VoiceHotkeyId)
+        {
+            _ = ToggleVoiceListeningAsync();
             handled = true;
         }
         else if (wParam.ToInt32() == EscapeHotkeyId)
@@ -6626,7 +6647,64 @@ public partial class MainWindow : Window
             return;
         }
 
+        await ListenForCommandAsync(
+            $"{e.Phrase.ToSpokenText()} detectado. Habla con calma; no cortaré las pausas breves.",
+            e.PreRollAudio,
+            e.PostWakeAudio);
+    }
+
+    /// <summary>
+    /// Alt + V: empieza a escuchar sin decir el nombre, y vuelve a pulsarse para dejarlo.
+    ///
+    /// Existe por dos motivos distintos. Uno, no siempre se puede hablar en voz alta pero sí se
+    /// quiere dictar una orden. Y dos, y más importante: **da una forma de cortar**. Antes, una
+    /// escucha abierta sólo se iba sola; ahora la misma tecla que la abre la cierra.
+    /// </summary>
+    private async Task ToggleVoiceListeningAsync()
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        var active = _voiceListenCancellation;
+        if (active is not null)
+        {
+            try
+            {
+                await active.CancelAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Terminó sola entre la comprobación y la cancelación.
+            }
+
+            return;
+        }
+
+        await ListenForCommandAsync(
+            "Escuchando. Pulsa Alt + V otra vez para dejarlo.",
+            default,
+            default);
+    }
+
+    /// <summary>
+    /// La escucha de una orden, venga de la palabra de activación o del atajo.
+    ///
+    /// Estaba dentro de <see cref="HandleWakeWordDetectedAsync"/> y salió aquí cuando el atajo
+    /// necesitó exactamente lo mismo: pausar la vigilancia, encender el halo, escuchar y transcribir.
+    /// </summary>
+    private async Task ListenForCommandAsync(
+        string announcement,
+        ReadOnlyMemory<byte> preRollAudio,
+        ReadOnlyMemory<byte> postWakeAudio)
+    {
         RememberForegroundWindow();
+
+        using var listening = CancellationTokenSource.CreateLinkedTokenSource(
+            _lifetimeCancellation.Token);
+        _voiceListenCancellation = listening;
+
         await using var voiceScope = await _voiceCoordinator.AcquireVoiceInputScopeAsync();
         try
         {
@@ -6642,9 +6720,7 @@ public partial class MainWindow : Window
                 }
             }
 
-            _assistantView.SetVoiceState(
-                AssistantVoiceState.Listening,
-                $"{e.Phrase.ToSpokenText()} detectado. Habla con calma; no cortaré las pausas breves.");
+            _assistantView.SetVoiceState(AssistantVoiceState.Listening, announcement);
             // Diseño D74 — el halo sustituye a la cápsula "Te escucho". Salían las dos a la vez,
             // una arriba y otra abajo, diciendo lo mismo con distinta voz. El halo lo dice mejor:
             // no solo avisa de que escucha, sino de que te está oyendo a ti.
@@ -6653,9 +6729,9 @@ public partial class MainWindow : Window
             var result = await voiceScope.ListenForUtteranceAsync(
                 maximumDuration: TimeSpan.FromSeconds(20),
                 trailingSilence: TimeSpan.FromMilliseconds(1_500),
-                initialPcmAudio: e.PreRollAudio,
-                initialSpeechPcmAudio: e.PostWakeAudio,
-                cancellationToken: _lifetimeCancellation.Token);
+                initialPcmAudio: preRollAudio,
+                initialSpeechPcmAudio: postWakeAudio,
+                cancellationToken: listening.Token);
 
             _assistantView.SetVoiceState(
                 AssistantVoiceState.Processing,
@@ -6673,6 +6749,8 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _voiceListenCancellation = null;
+
             // Se apaga aquí y no en cada camino de salida: el halo tiene que irse tanto si hubo
             // respuesta como si se canceló, se agotó el tiempo o falló la transcripción.
             _voiceHaloWindow.HideHalo();

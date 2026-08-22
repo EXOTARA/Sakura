@@ -794,6 +794,24 @@ public sealed class WhisperVoiceInputService : IVoiceInputService
         {
             _automaticConsecutiveSpeechMilliseconds = 0;
             _automaticSpeechMilliseconds = 0;
+
+            // Nadie ha hablado todavía. Antes esto se limitaba a poner los contadores a cero y
+            // salir, así que una activación en falso dejaba la escucha —y el halo— en pantalla
+            // hasta agotar la duración máxima. Ahora se rinde a los tres segundos.
+            if (VoiceUtteranceEndPolicy.ShouldAbandon(
+                    new VoiceUtteranceTimingSnapshot(
+                        SpeechDetected: false,
+                        SpeechMilliseconds: 0,
+                        TrailingSilenceMilliseconds: _automaticSilentMilliseconds,
+                        LiveAudioMilliseconds: _automaticLiveAudioMilliseconds),
+                    TimeSpan.FromMilliseconds(
+                        VoiceUtteranceEndPolicy.SilenceBeforeSpeechMilliseconds)))
+            {
+                // false: no hubo frase. Quien espera esta tarea vuelve a mirar
+                // _automaticSpeechDetected y responde NoSpeech, igual que al agotarse el tiempo.
+                _automaticUtteranceCompleted?.TrySetResult(false);
+            }
+
             return;
         }
 

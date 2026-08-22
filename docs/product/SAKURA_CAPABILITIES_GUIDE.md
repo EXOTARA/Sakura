@@ -42,8 +42,13 @@ Los nombres entre comillas (`"algo así"`) son los títulos exactos que aparecen
 |---|---|---|---|
 | **Wake word local** | Vosk detecta `Oye Sakura` / `Sakura` / `Hey Sakura` sin enviar audio a ningún lado. | Personalizar → Voz. Sensibilidad ajustable. | Di «Oye Sakura, ¿qué hora es?» |
 | **Push-to-talk** | Whisper local transcribe lo que dictas. | Botón de micrófono en Asistente. | — |
+| **Escucha por atajo** | Empieza a escuchar una orden sin decir el nombre, y **la misma tecla la corta**. Útil cuando no puedes hablar en voz alta o cuando la activación saltó sola. | Atajo global `Alt + V`. | Pulsa `Alt + V`, di «abre PowerShell». Pulsa otra vez para dejarlo. |
 | **Respuestas en voz alta** | Sakura lee sus respuestas con SAPI. | Personalizar → «Sakura lee sus respuestas en voz alta». | — |
 | **Sakura Flow (dictado global)** | Dicta en CUALQUIER aplicación de Windows, no solo en Sakura. Tres estilos: Texto, Correo, Código. Diccionario y atajos personales. | Atajo global `Ctrl + Shift + D`, on/off en Personalizar → Dictado global. | Abre el Bloc de notas, pulsa `Ctrl+Shift+D`, dicta, vuelve a pulsar para insertar. |
+
+**Cuándo se rinde la escucha:** si nadie habla, a los **3 segundos** — no espera los veinte del
+máximo. Ese máximo sigue existiendo, pero sólo cuenta una vez que ya empezaste a hablar: una
+pausa a mitad de una orden no la corta.
 
 **Lo que Flow NO hace:** insertar texto si cambiaste de ventana a mitad del dictado, o si la ventana activa está marcada como sensible (gestor de contraseñas). En esos casos copia al portapapeles en vez de escribir a ciegas.
 
