@@ -23,7 +23,8 @@
 param(
     [string]$Tag = "",
     [string]$Repository = "EXOTARA/Sakura",
-    [string]$OutputDirectory = ""
+    [string]$OutputDirectory = "",
+    [string]$SiteRoot = "https://exotara.github.io/Sakura/"
 )
 
 $ErrorActionPreference = "Stop"
@@ -114,7 +115,6 @@ function Format-Size {
     else { "{0:N0} KB" -f ($Bytes / 1KB) }
 }
 
-$culture = [System.Globalization.CultureInfo]::GetCultureInfo("es-MX")
 # ConvertFrom-Json ya devuelve un DateTime cuando reconoce la fecha ISO, y volver a pasarla por
 # Parse la convierte antes a texto con la cultura local — que Parse rechaza. Se aceptan las dos.
 $published = if ($release.published_at -is [datetime]) {
@@ -126,10 +126,10 @@ else {
 
 $published = $published.ToUniversalTime()
 
-$replacements = @{
+# Datos de la versión. Son los mismos en los dos idiomas salvo la fecha, que se escribe en cada uno.
+$release_tokens = @{
     "{{VERSION}}"          = $Tag.TrimStart("v")
     "{{RELEASE_URL}}"      = $release.html_url
-    "{{RELEASE_DATE}}"     = $published.ToString("d 'de' MMMM 'de' yyyy", $culture)
     "{{INSTALLER_NAME}}"   = $installer.name
     "{{INSTALLER_URL}}"    = $installer.browser_download_url
     "{{INSTALLER_SIZE}}"   = Format-Size -Bytes $installer.size
@@ -140,7 +140,59 @@ $replacements = @{
     "{{ZIP_SHA256}}"       = Get-PublishedHash -Asset $portableChecksum
 }
 
-# ---------------------------------------------------------------- copiar y rellenar
+# ---------------------------------------------------------------- textos
+
+$stringsPath = Join-Path $sourceDirectory "strings.json"
+if (-not (Test-Path $stringsPath)) {
+    throw "No encontré los textos en $stringsPath."
+}
+
+$strings = Get-Content $stringsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+# Un idioma traducido a medias no se publica. Cualquier clave que exista en uno y falte en el otro
+# para el flujo aquí, y no en la cara de quien abra la página y encuentre media frase en español.
+$languages = @("es", "en")
+$keysByLanguage = @{}
+
+foreach ($language in $languages) {
+    if (-not $strings.PSObject.Properties.Name.Contains($language)) {
+        throw "strings.json no tiene el idioma '$language'."
+    }
+    $keysByLanguage[$language] = @($strings.$language.PSObject.Properties.Name)
+}
+
+$missing = foreach ($language in $languages) {
+    $others = $languages | Where-Object { $_ -ne $language }
+    foreach ($other in $others) {
+        foreach ($key in $keysByLanguage[$other]) {
+            if ($keysByLanguage[$language] -notcontains $key) {
+                "'$key' está en '$other' y falta en '$language'"
+            }
+        }
+    }
+}
+
+if ($missing) {
+    throw "Los textos no están completos:`n  $(($missing | Sort-Object -Unique) -join "`n  ")"
+}
+
+# Claves que nadie usa: no rompen la página, pero son texto que alguien mantiene para nada.
+$templateText = Get-Content (Join-Path $sourceDirectory "index.html") -Raw -Encoding UTF8
+$usedKeys = [regex]::Matches($templateText, '\{\{t:([^}]+)\}\}') |
+    ForEach-Object { $_.Groups[1].Value } |
+    Sort-Object -Unique
+
+$unused = $keysByLanguage["es"] | Where-Object { $_ -notlike "_*" -and $usedKeys -notcontains $_ }
+if ($unused) {
+    Write-Warning ("Textos que la plantilla no usa: {0}" -f (($unused | Sort-Object) -join ", "))
+}
+
+$orphans = $usedKeys | Where-Object { $keysByLanguage["es"] -notcontains $_ }
+if ($orphans) {
+    throw "La plantilla pide textos que no existen: $(($orphans | Sort-Object) -join ", ")"
+}
+
+# ---------------------------------------------------------------- generar
 
 Write-Host "==> Generando el sitio en $OutputDirectory"
 
@@ -149,38 +201,74 @@ if (Test-Path $OutputDirectory) {
 }
 New-Item $OutputDirectory -ItemType Directory -Force | Out-Null
 
-Copy-Item (Join-Path $sourceDirectory "*") $OutputDirectory -Recurse -Force
+# Lo compartido va en la raíz una sola vez; /en/ lo alcanza con ../ vía {{BASE}}.
+foreach ($shared in @("styles.css", "app.js")) {
+    Copy-Item (Join-Path $sourceDirectory $shared) $OutputDirectory -Force
+}
+Copy-Item (Join-Path $sourceDirectory "assets") $OutputDirectory -Recurse -Force
 
 # Sin esto, GitHub Pages pasa el sitio por Jekyll y se come cualquier carpeta que empiece por _.
 New-Item (Join-Path $OutputDirectory ".nojekyll") -ItemType File -Force | Out-Null
 
-$templates = Get-ChildItem $OutputDirectory -Recurse -File -Include *.html, *.css, *.js
+$cultures = @{ es = "es-MX"; en = "en-US" }
+$dateFormats = @{ es = "d 'de' MMMM 'de' yyyy"; en = "d MMMM yyyy" }
+# El español va en la raíz porque es el idioma en el que está escrito el producto.
+$paths = @{ es = ""; en = "en/" }
+$bases = @{ es = ""; en = "../" }
 
-foreach ($file in $templates) {
-    $text = Get-Content $file.FullName -Raw -Encoding UTF8
-    foreach ($key in $replacements.Keys) {
-        $text = $text.Replace($key, $replacements[$key])
+foreach ($language in $languages) {
+    # @() alrededor del filtro: con dos idiomas devuelve una sola cadena, y [0] sobre una cadena
+    # da su primer carácter, no la cadena.
+    $other = @($languages | Where-Object { $_ -ne $language })[0]
+    $culture = [System.Globalization.CultureInfo]::GetCultureInfo($cultures[$language])
+
+    $text = $templateText
+
+    foreach ($property in $strings.$language.PSObject.Properties) {
+        $text = $text.Replace("{{t:$($property.Name)}}", $property.Value)
     }
-    Set-Content $file.FullName -Value $text -Encoding UTF8 -NoNewline
-}
 
-# Ninguna marca puede sobrevivir: una que quede es un dato que la página estaría inventando.
-$leftovers = Select-String -Path (Join-Path $OutputDirectory "*.html") -Pattern "\{\{[A-Z_]+\}\}" -AllMatches
+    $tokens = $release_tokens.Clone()
+    $tokens["{{RELEASE_DATE}}"]  = $published.ToString($dateFormats[$language], $culture)
+    $tokens["{{BASE}}"]          = $bases[$language]
+    $tokens["{{ALT_HREF}}"]      = if ($language -eq "es") { "en/" } else { "../" }
+    $tokens["{{ALT_CODE}}"]      = $other.ToUpperInvariant()
+    $tokens["{{SITE_ROOT}}"]     = $SiteRoot
+    $tokens["{{CANONICAL}}"]     = $SiteRoot + $paths[$language]
+    $tokens["{{ALT_CANONICAL}}"] = $SiteRoot + $paths[$other]
 
-if ($leftovers) {
-    $names = ($leftovers.Matches.Value | Sort-Object -Unique) -join ", "
-    throw "Quedaron marcas sin rellenar en el sitio: $names"
+    foreach ($key in $tokens.Keys) {
+        $text = $text.Replace($key, $tokens[$key])
+    }
+
+    $target = Join-Path $OutputDirectory $paths[$language]
+    if (-not (Test-Path $target)) {
+        New-Item $target -ItemType Directory -Force | Out-Null
+    }
+
+    $file = Join-Path $target "index.html"
+    Set-Content $file -Value $text -Encoding UTF8 -NoNewline
+
+    # Ninguna marca puede sobrevivir: una que quede es un dato que la página estaría inventando.
+    $leftovers = [regex]::Matches($text, '\{\{[A-Za-z_:.]+\}\}')
+    if ($leftovers.Count -gt 0) {
+        $names = ($leftovers.Value | Sort-Object -Unique) -join ", "
+        throw "Quedaron marcas sin rellenar en '$language': $names"
+    }
+
+    Write-Host ("  {0,-3} -> {1}" -f $language, $file)
 }
 
 Write-Host ""
 Write-Host "Sitio listo:"
 Write-Host "  Carpeta:     $OutputDirectory"
-Write-Host "  Versión:     $($replacements['{{VERSION}}'])"
-Write-Host "  Instalador:  $($replacements['{{INSTALLER_NAME}}']) ($($replacements['{{INSTALLER_SIZE}}']))"
-Write-Host "  Portable:    $($replacements['{{ZIP_NAME}}']) ($($replacements['{{ZIP_SIZE}}']))"
+Write-Host "  Idiomas:     $($languages -join ', ')"
+Write-Host "  Versión:     $($release_tokens['{{VERSION}}'])"
+Write-Host "  Instalador:  $($release_tokens['{{INSTALLER_NAME}}']) ($($release_tokens['{{INSTALLER_SIZE}}']))"
+Write-Host "  Portable:    $($release_tokens['{{ZIP_NAME}}']) ($($release_tokens['{{ZIP_SIZE}}']))"
 
 [pscustomobject]@{
     OutputDirectory = $OutputDirectory
-    Version = $replacements["{{VERSION}}"]
+    Version = $release_tokens["{{VERSION}}"]
     Tag = $Tag
 }

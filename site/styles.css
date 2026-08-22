@@ -116,7 +116,27 @@ section{padding-block:var(--space-7)}
 @media(min-width:920px){.topbar nav{display:flex}}
 .topbar nav a{color:var(--text-2);font-size:15px;border:0}
 .topbar nav a:hover{color:var(--text)}
-.topbar .btn{margin-left:auto}
+/*
+  Conmutador de idioma. Enseña el idioma AL QUE VAS, no en el que estás: un botón que dice «ES»
+  estando en español no le sirve a nadie, y quien busca su idioma busca el suyo, no el ajeno.
+*/
+.lang-switch{
+  margin-left:auto;
+  display:inline-flex;align-items:center;gap:7px;
+  min-height:40px;padding:6px 14px;
+  border:1px solid var(--border);border-radius:999px;
+  color:var(--text-2);font-size:14px;font-weight:500;letter-spacing:.04em;
+  transition:color var(--dur) var(--ease-out),border-color var(--dur) var(--ease-out),background var(--dur) var(--ease-out);
+}
+.lang-switch:hover{color:var(--text);border-color:var(--text-3);background:var(--surface-hover)}
+.lang-switch svg{width:17px;height:17px;flex:none;opacity:.8}
+@media(min-width:920px){.lang-switch{margin-left:0}}
+
+.topbar .btn{margin-left:0}
+@media(max-width:919px){
+  /* Sin la barra de secciones, el conmutador es quien empuja al botón hacia la derecha. */
+  .topbar nav{display:none}
+}
 @media(min-width:920px){.topbar .btn{margin-left:0}}
 
 /* ---------------- Botones ---------------- */
