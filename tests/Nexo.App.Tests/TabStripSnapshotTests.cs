@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Nexo.App.Views;
 using Nexo.App.Views.Controls;
 
 namespace Nexo.App.Tests;
@@ -67,6 +68,48 @@ public sealed class TabStripSnapshotTests
 
             var bitmap = new RenderTargetBitmap(
                 (int)(width * 2), (int)(height * 2), 192, 192, PixelFormats.Pbgra32);
+            bitmap.Render(host);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+            using var stream = File.Create(output);
+            encoder.Save(stream);
+        });
+
+        Assert.True(File.Exists(output));
+        Assert.True(new FileInfo(output).Length > 1_000, "El PNG salió vacío; no se dibujó nada.");
+    }
+
+    [Fact]
+    public void Panel_RendersToAnImageSomeoneCanLookAt()
+    {
+        // El panel entero, para juzgar la retícula y no una pieza suelta. El ancho es el que tiene
+        // de verdad la ventana del panel; el alto, holgado, para que nada quede recortado.
+        const double width = 920;
+        const double height = 560;
+
+        var output = Path.Combine(
+            Path.GetTempPath(), "claude", "C--Dev-Nexo", "panel.png");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+
+        _wpf.Invoke(() =>
+        {
+            var host = new Border
+            {
+                Background = (Brush)Application.Current.FindResource("BrushBackground"),
+                Width = width,
+                Height = height,
+                Child = new DashboardView()
+            };
+
+            host.Measure(new Size(width, height));
+            host.Arrange(new Rect(0, 0, width, height));
+            host.UpdateLayout();
+
+            var bitmap = new RenderTargetBitmap(
+                (int)(width * 1.5), (int)(height * 1.5), 144, 144, PixelFormats.Pbgra32);
             bitmap.Render(host);
 
             var encoder = new PngBitmapEncoder();
