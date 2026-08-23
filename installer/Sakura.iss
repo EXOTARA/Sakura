@@ -1,4 +1,4 @@
-#ifndef MyAppVersion
+﻿#ifndef MyAppVersion
   #define MyAppVersion "0.29.0-beta"
 #endif
 
@@ -70,6 +70,20 @@ Name: "startup"; Description: "Iniciar Sakura con Windows"; GroupDescription: "I
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; L13 — el desinstalador barre la carpeta entera, no solo lo que él anotó.
+;
+; Inno borra lo que su propio registro dice que puso. El actualizador no pasa por el instalador:
+; sustituye la carpeta entera por el contenido del zip portable, así que tras cualquier
+; actualización los archivos que hay dentro **no son** los que Inno anotó. Los que coinciden de
+; nombre se borran igual; los que llegaron después —una DLL nueva, un modelo, un recurso— no
+; estaban en el registro y se quedaban para siempre.
+;
+; Barrer {app} es correcto aquí porque {app} es una carpeta propia y exclusiva de Sakura
+; (…\Programs\Sakura). Los datos de la persona viven en %LOCALAPPDATA%\Sakura, que es otra carpeta
+; y esta línea no toca.
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
 
 [Icons]
 Name: "{group}\Sakura"; Filename: "{app}\{#MyAppExeName}"

@@ -1,4 +1,4 @@
-using Nexo.Core.Updates;
+﻿using Nexo.Core.Updates;
 using Nexo.Windows.Updates;
 
 namespace Nexo.Windows.Tests.Updates;
@@ -96,6 +96,55 @@ public sealed class UpdateHelperScriptTests
 
         Assert.True(promote >= 0);
         Assert.True(discard > promote);
+    }
+
+    [Fact]
+    public void TheUninstallerIsCarriedIntoTheNewFolder()
+    {
+        // L13 — sin esto, actualizar borraba el desinstalador.
+        //
+        // El intercambio sustituye la carpeta entera, y la que entra sale del zip portable, que es
+        // la salida de `dotnet publish`: no trae `unins000.exe` ni `unins000.dat`, porque esos los
+        // escribe Inno al instalar. La entrada del registro sobrevivía apuntando a un archivo que
+        // ya no existía.
+        var script = Build();
+
+        Assert.Contains("-Filter 'unins*'", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "Copy-Item -LiteralPath $u.FullName -Destination $staged",
+            script,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheUninstallerIsCopiedBeforeAnythingMoves()
+    {
+        // Se copia de la instalación a la carpeta preparada, así que tiene que ocurrir mientras las
+        // dos siguen donde estaban. Después del primer movimiento, $install ya no es una carpeta.
+        var script = Build();
+
+        var copy = script.IndexOf("-Filter 'unins*'", StringComparison.Ordinal);
+        var firstMove = script.IndexOf("Move-Item", StringComparison.Ordinal);
+
+        Assert.True(copy >= 0, "El desinstalador tiene que conservarse.");
+        Assert.True(firstMove > copy, "Copiarlo después de mover sería copiarlo de una carpeta que ya no está.");
+    }
+
+    [Fact]
+    public void AnInstallWithNoUninstallerStillUpdates()
+    {
+        // Quien usa el zip portable nunca tuvo desinstalador. Que no haya nada que copiar no puede
+        // ser un fallo: `@()` para que contar cero funcione, y sin `exit` por el camino.
+        var script = Build();
+
+        var copyBlock = script.IndexOf("$desinstalador = @(", StringComparison.Ordinal);
+        var afterBlock = script.IndexOf("$moved = $false", StringComparison.Ordinal);
+
+        Assert.True(copyBlock >= 0);
+        Assert.DoesNotContain(
+            "exit",
+            script[copyBlock..afterBlock],
+            StringComparison.Ordinal);
     }
 
     [Fact]
