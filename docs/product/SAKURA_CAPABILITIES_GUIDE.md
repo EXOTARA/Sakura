@@ -42,6 +42,7 @@ Los nombres entre comillas (`"algo así"`) son los títulos exactos que aparecen
 |---|---|---|---|
 | **Wake word local** | Vosk detecta `Oye Sakura` / `Sakura` / `Hey Sakura` sin enviar audio a ningún lado. | Personalizar → Voz. Sensibilidad ajustable. | Di «Oye Sakura, ¿qué hora es?» |
 | **Push-to-talk** | Whisper local transcribe lo que dictas. | Botón de micrófono en Asistente. | — |
+| **Traducir un trozo de pantalla** | Arrastras un recuadro sobre cualquier texto —un menú de un juego, un error dentro de una imagen, un PDF que no deja seleccionar— y sale traducido. Usa el modelo que ya tengas configurado; con Ollama no sale nada del equipo. Lo que el redactor tapa por sensible sigue tapado. | Atajo global `Ctrl + Shift + T`. | Pulsa `Ctrl+Shift+T`, arrastra sobre un mensaje en inglés. |
 | **Escucha por atajo** | Empieza a escuchar una orden sin decir el nombre, y **la misma tecla la corta**. Útil cuando no puedes hablar en voz alta o cuando la activación saltó sola. | Atajo global `Alt + V`. | Pulsa `Alt + V`, di «abre PowerShell». Pulsa otra vez para dejarlo. |
 | **Respuestas en voz alta** | Sakura lee sus respuestas con SAPI. | Personalizar → «Sakura lee sus respuestas en voz alta». | — |
 | **Sakura Flow (dictado global)** | Dicta en CUALQUIER aplicación de Windows, no solo en Sakura. Tres estilos: Texto, Correo, Código. Diccionario y atajos personales. | Atajo global `Ctrl + Shift + D`, on/off en Personalizar → Dictado global. | Abre el Bloc de notas, pulsa `Ctrl+Shift+D`, dicta, vuelve a pulsar para insertar. |

@@ -43,7 +43,9 @@ public sealed class WindowsScreenCaptureService : IScreenCaptureService
 
             return target.Kind switch
             {
-                VisionCaptureKind.Monitor => CaptureMonitor(target),
+                // La zona y el monitor comparten implementación porque son la misma operación: un
+                // rectángulo de la pantalla. Lo que cambia es de dónde salen sus medidas.
+                VisionCaptureKind.Monitor or VisionCaptureKind.Region => CaptureMonitor(target),
                 VisionCaptureKind.Window => CaptureWindow(target),
                 _ => VisionCaptureResult.Failed("El tipo de captura no es compatible.")
             };
