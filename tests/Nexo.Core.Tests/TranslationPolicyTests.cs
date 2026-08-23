@@ -75,12 +75,33 @@ public sealed class TranslationPolicyTests
         Assert.DoesNotContain("hunter2", request.Prompt);
     }
 
-    [Fact]
-    public void TheTargetLanguageIsNamed_NotCoded()
+    [Theory]
+    [InlineData("es", "español")]
+    [InlineData("en", "English")]
+    [InlineData("fr", "français")]
+    public void TheTargetLanguageIsNamed_NotCoded_AndNotInTheMachinesLanguage(
+        string code,
+        string expected)
     {
-        var request = TranslationPolicy.Build(Read("Hello"), "es", hasProvider: true);
+        // El nombre tiene que ser el mismo en cualquier equipo. La primera versión usaba
+        // DisplayName, que está traducido al idioma de Windows: en el runner en inglés de la CI
+        // salía «Traduce al spanish». NativeName no depende de la máquina.
+        var request = TranslationPolicy.Build(Read("Hello"), code, hasProvider: true);
 
-        Assert.Contains("español", request.Prompt);
+        Assert.Contains(expected, request.Prompt);
+    }
+
+    [Fact]
+    public void AnUnrecognisedLanguageCode_StillProducesAnOrder()
+    {
+        // .NET no lanza con un código inventado: fabrica una cultura y devuelve algo. No es un caso
+        // que pueda darse hoy —el idioma sale de la cultura de Windows— pero el día que alguien lo
+        // escriba a mano, lo que no puede pasar es que esto reviente o mande una orden vacía.
+        var request = TranslationPolicy.Build(Read("Hello"), "xx-YY", hasProvider: true);
+
+        Assert.True(request.CanTranslate);
+        Assert.Contains("Traduce al", request.Prompt);
+        Assert.Contains("Hello", request.Prompt);
     }
 
     [Fact]

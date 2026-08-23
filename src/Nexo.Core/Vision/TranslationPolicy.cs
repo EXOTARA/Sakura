@@ -90,9 +90,16 @@ public static class TranslationPolicy
     }
 
     /// <summary>
-    /// El nombre del idioma en español, para que la orden se lea como una frase y no como un
-    /// código. Si la cultura no se reconoce se manda el código tal cual, que un modelo entiende
-    /// igual — pero se intenta lo legible primero.
+    /// El nombre del idioma, para que la orden se lea como una frase y no como un código.
+    ///
+    /// Se usa <c>NativeName</c> —el nombre del idioma EN ese idioma: «español», «English»,
+    /// «français»— y no <c>DisplayName</c>. Lo destapó la integración continua: `DisplayName` está
+    /// traducido al idioma de la máquina, así que en el Windows en inglés del runner devolvía
+    /// «Spanish» y el prompt salía como «Traduce al spanish». `NativeName` da lo mismo en cualquier
+    /// equipo, que es justo lo que necesita un texto que se manda a un modelo.
+    ///
+    /// Si la cultura no se reconoce se manda el código tal cual: un modelo entiende «pt-BR» de
+    /// sobra, y es mejor eso que adivinar.
     /// </summary>
     private static string Describe(string targetLanguage)
     {
@@ -103,10 +110,12 @@ public static class TranslationPolicy
 
         try
         {
-            var culture = CultureInfo.GetCultureInfo(targetLanguage);
-            var name = culture.DisplayName;
+            var name = CultureInfo.GetCultureInfo(targetLanguage).NativeName;
+
+            // «español (México)» se queda en «español»: al modelo le sobra la región y la frase
+            // queda más limpia.
             var cut = name.IndexOf(' ');
-            return cut > 0 ? name[..cut].ToLowerInvariant() : name.ToLowerInvariant();
+            return cut > 0 ? name[..cut] : name;
         }
         catch (CultureNotFoundException)
         {
