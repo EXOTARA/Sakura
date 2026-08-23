@@ -15,6 +15,7 @@ restricción de uso no comercial queda descartada por decisión de producto, no 
 | [Whisper.net](https://github.com/sandrohanea/whisper.net) | 1.9.1 | MIT | Transcripción de voz, en local |
 | Whisper.net.Runtime | 1.9.1 | MIT | Binarios nativos de whisper.cpp que usa lo anterior |
 | [NAudio](https://github.com/naudio/NAudio) | 2.3.0 | MIT | Captura de micrófono, mezclador de audio y visualizador |
+| [WpfAnimatedGif](https://github.com/XamlAnimatedGif/WpfAnimatedGif) | 2.0.2 | Apache-2.0 | Reproducir un GIF animado en el hueco del panel |
 | System.Speech | 10.0.10 | MIT | Voz sintetizada del sistema |
 | Microsoft.Extensions.DependencyInjection | 10.0.10 | MIT | Contenedor de servicios |
 

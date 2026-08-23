@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using WpfAnimatedGif;
 using Nexo.App.Motion;
 using Nexo.App.Views.Controls;
 using Nexo.Core.Ambient;
@@ -31,9 +32,6 @@ public partial class DashboardView : UserControl
 
     private DateOnly _calendarMonth = DateOnly.FromDateTime(DateTime.Now);
     private MediaSnapshot _media = MediaSnapshot.Nothing;
-
-    /// <summary>Diseño D83 — qué pata toca. El ritmo lo decide Core; aquí solo se pinta.</summary>
-    private readonly BongoBeatPolicy _bongo = new();
     private DashboardTab _activeTab = DashboardTab.Panel;
 
     /// <summary>
@@ -129,20 +127,58 @@ public partial class DashboardView : UserControl
     /// algo que la persona hizo a propósito en otro sitio sería un castigo, no una ayuda. Vuelve a
     /// salir el hueco vacío, que ya dice qué hacer.
     /// </summary>
+    /// <summary>
+    /// Diseño D85 — el hueco acepta también un GIF animado.
+    ///
+    /// Un GIF no es «una imagen más»: sus fotogramas suelen ser PARCIALES —solo el trozo que
+    /// cambia— y cada uno trae un modo de descarte que dice qué hacer con el anterior. Enseñarlos
+    /// tal cual, que es lo que sale de decodificarlos a mano sin componer, deja rastros y parpadeos
+    /// en buena parte de los GIF reales. Por eso esto lo hace WpfAnimatedGif (Apache-2.0) y no
+    /// código propio: la parte difícil de un GIF no es leerlo, es componerlo.
+    ///
+    /// La animación se para con «menos movimiento» del sistema. Un hueco decorativo es justo lo que
+    /// esa opción viene a apagar.
+    /// </summary>
     public void SetPanelImage(string? path)
     {
-        var image = TryLoadPanelImage(path);
+        var animated = IsAnimatedGif(path) && SakuraMotion.AnimationsEnabled;
 
-        PanelUserImage.Source = image;
+        // Se limpian SIEMPRE los dos caminos antes de poner nada: cambiar de un GIF a una imagen
+        // fija dejaría el temporizador del anterior corriendo sobre un control que ya enseña otra
+        // cosa, y lo que se ve entonces es una imagen que parpadea sin motivo.
+        ImageBehavior.SetAnimatedSource(PanelUserImage, null);
+        PanelUserImage.Source = null;
+
+        var image = TryLoadPanelImage(path, decode: !animated);
+
+        if (image is not null && animated)
+        {
+            ImageBehavior.SetRepeatBehavior(PanelUserImage, RepeatBehavior.Forever);
+            ImageBehavior.SetAnimatedSource(PanelUserImage, image);
+        }
+        else
+        {
+            PanelUserImage.Source = image;
+        }
+
         PanelUserImage.Visibility = image is null ? Visibility.Collapsed : Visibility.Visible;
         PanelImageEmptyHint.Visibility = image is null ? Visibility.Visible : Visibility.Collapsed;
 
         PanelImageButton.ToolTip = image is null
-            ? "Elige una imagen para este hueco"
+            ? "Elige una imagen o un GIF para este hueco"
             : "Cambiar la imagen · clic derecho para quitarla";
     }
 
-    private static BitmapImage? TryLoadPanelImage(string? path)
+    private static bool IsAnimatedGif(string? path) =>
+        !string.IsNullOrWhiteSpace(path) &&
+        System.IO.Path.GetExtension(path).Equals(".gif", StringComparison.OrdinalIgnoreCase);
+
+    /// <param name="decode">
+    /// Reducir al vuelo mientras se decodifica ahorra memoria en una foto de catorce megapíxeles,
+    /// pero a un GIF hay que dejarlo a su tamaño: la reducción se aplicaría al primer fotograma y
+    /// el resto llegarían con otras medidas.
+    /// </param>
+    private static BitmapImage? TryLoadPanelImage(string? path, bool decode = true)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
@@ -159,7 +195,12 @@ public partial class DashboardView : UserControl
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
             image.UriSource = new Uri(path, UriKind.Absolute);
-            image.DecodePixelHeight = 264;
+
+            if (decode)
+            {
+                image.DecodePixelHeight = 264;
+            }
+
             image.EndInit();
             image.Freeze();
             return image;
@@ -185,11 +226,6 @@ public partial class DashboardView : UserControl
     public DashboardTab ActiveTab => _activeTab;
 
     /// <summary>
-    /// Elige la pestaña con la que abrir el cajón. La regla vive en
-    /// <see cref="DashboardTabPolicy"/> y no aquí: es una decisión de producto —no enseñar un
-    /// reproductor vacío— y se puede probar sin abrir una ventana.
-    /// </summary>
-    /// <summary>
     /// Abre una pestaña concreta, dejando la tira y el panel de acuerdo.
     ///
     /// Existe porque hasta ahora la única forma de cambiar de pestaña era pulsarla: bien para
@@ -202,6 +238,11 @@ public partial class DashboardView : UserControl
         ShowTab(tab, animate: false);
     }
 
+    /// <summary>
+    /// Elige la pestaña con la que abrir el cajón. La regla vive en
+    /// <see cref="DashboardTabPolicy"/> y no aquí: es una decisión de producto —no enseñar un
+    /// reproductor vacío— y se puede probar sin abrir una ventana.
+    /// </summary>
     public void PrepareForReveal()
     {
         var tab = DashboardTabPolicy.Resolve(_activeTab, _media.HasSession);
@@ -549,13 +590,6 @@ public partial class DashboardView : UserControl
 
         CoverRing.SetLevels(spectrumLevels);
         PanelCoverRing.SetLevels(spectrumLevels);
-
-        // El gato golpea con el mismo espectro que mueve los rayos: es la misma música, así que
-        // van juntos sin tener que sincronizar nada.
-        PanelBongoCat.Pose = _bongo.Advance(
-            spectrumLevels,
-            _media.HasSession && _media.IsPlaying,
-            DateTimeOffset.Now);
         MediaProgressBar.Phase = wavePhase;
         RefreshMediaPosition();
     }
