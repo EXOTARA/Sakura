@@ -84,9 +84,12 @@ public partial class DashboardView : UserControl
         mask.Transform = _coverSpin;
         MediaCoverShape.Clip = mask;
 
-        var smallCover = PetalGeometry.Create(46);
-        PanelMediaBackdrop.Data = smallCover;
-        PanelMediaCoverShape.Data = smallCover;
+        // Diseno D76 - la caratula del panel pasa de 46 a 120 al volverse columna alta. A 46 la
+        // formula devolvia un circulo a proposito; a 120 si ondula, y la portada se reconoce como
+        // la marca en vez de como un circulo cualquiera.
+        var panelCover = PetalGeometry.Create(120);
+        PanelMediaBackdrop.Data = panelCover;
+        PanelMediaCoverShape.Data = panelCover;
 
         BuildCalendarHeader();
         RefreshCalendar();

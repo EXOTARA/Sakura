@@ -62,10 +62,10 @@
                     Background="{DynamicResource BrushBorder}" />
             <Border x:Name="Indicator"
                     Width="40"
-                    Height="3"
+                    Height="2.5"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Bottom"
-                    CornerRadius="2"
+                    CornerRadius="1.5"
                     Background="{DynamicResource BrushAccent}"
                     Opacity="0"
                     SnapsToDevicePixels="True">

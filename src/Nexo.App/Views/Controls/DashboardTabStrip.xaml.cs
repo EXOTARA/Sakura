@@ -56,13 +56,16 @@ public partial class DashboardTabStrip : UserControl
             var index = i;
             var tab = tabs[i];
 
+            // Diseño D75 — medidas tomadas de la referencia, no elegidas a ojo: el icono manda y el
+            // texto va pegado debajo. Antes el icono era más pequeño que en la referencia y estaba
+            // más lejos de su palabra, y el conjunto se leía como dos cosas sueltas en vez de una.
             var icon = new Path
             {
-                Width = 19,
-                Height = 19,
+                Width = 21,
+                Height = 21,
                 Stretch = Stretch.Uniform,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                StrokeThickness = 1.7,
+                StrokeThickness = 1.8,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
                 StrokeLineJoin = PenLineJoin.Round,
@@ -72,8 +75,8 @@ public partial class DashboardTabStrip : UserControl
             var label = new TextBlock
             {
                 Text = tab.Label,
-                Margin = new Thickness(0, 7, 0, 0),
-                FontSize = 12.5,
+                Margin = new Thickness(0, 5, 0, 0),
+                FontSize = 14,
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
@@ -120,7 +123,11 @@ public partial class DashboardTabStrip : UserControl
             var brush = (Brush)FindResource(active ? "BrushAccent" : "BrushTextSecondary");
 
             _labels[i].Foreground = brush;
-            _labels[i].FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
+
+            // Medium y no SemiBold: en la referencia la pestaña activa se distingue por el color y
+            // el subrayado, no por engordar. Una negrita fuerte además ensancha la palabra, y como
+            // el subrayado se mide del texto, el subrayado daba un salto al cambiar de pestaña.
+            _labels[i].FontWeight = active ? FontWeights.Medium : FontWeights.Normal;
 
             if (_buttons[i].Content is StackPanel { Children: [Path icon, ..] })
             {
@@ -160,7 +167,10 @@ public partial class DashboardTabStrip : UserControl
         }
 
         var cellWidth = ActualWidth / _buttons.Count;
-        var width = Math.Max(label.ActualWidth, 24);
+
+        // Un pelo más ancho que la palabra. Exactamente del ancho del texto, el subrayado parece
+        // que se queda corto: las letras no llegan a los bordes de su propia caja.
+        var width = Math.Max(label.ActualWidth + 8, 28);
         var target = (cellWidth * _selectedIndex) + ((cellWidth - width) / 2);
 
         Indicator.Width = width;

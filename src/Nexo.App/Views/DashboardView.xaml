@@ -291,22 +291,41 @@
         <Grid Grid.Row="1" Margin="0,18,0,0">
 
             <!-- ============================ PANEL ============================ -->
+            <!--
+                Diseño D76 — la retícula del panel, como la referencia.
+
+                Antes eran dos filas de celdas iguales: arriba sesión y media a mitades, abajo
+                reloj, calendario y anillos. Todo del mismo tamaño se lee como una LISTA de fichas,
+                y la referencia no es una lista: es un tablero donde el tamaño de cada celda dice
+                cuánto importa lo que hay dentro.
+
+                El cambio de fondo es que **media deja de ser media fila y pasa a ser una columna
+                entera a la derecha**, alta, con la carátula grande arriba y los controles debajo.
+                Eso libera la fila de arriba para la tarjeta de sesión —que ahora ocupa todo el
+                ancho útil— y deja el reloj, el calendario y los anillos abajo, con sus anchos
+                distintos. El hueco de la imagen va al pie de esa columna, que es donde la
+                referencia pone el gato.
+
+                Las piezas son las mismas. Lo único que cambia es dónde va cada una y cuánto ocupa.
+            -->
             <Grid x:Name="PanelPane">
                 <Grid.RenderTransform>
                     <TranslateTransform x:Name="PanelPaneTranslate" />
                 </Grid.RenderTransform>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-                <Grid Grid.Row="0" Margin="-6,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+                <!-- ============================ zona izquierda ============================ -->
+                <Grid Grid.Column="0" Margin="-6,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <Border Grid.Column="0" Style="{StaticResource DashboardCardStyle}">
+                    <!-- Sesión: ancha, arriba, como la tarjeta de perfil de la referencia. -->
+                    <Border Grid.Row="0" Style="{StaticResource DashboardCardStyle}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
@@ -345,24 +364,174 @@
                         </Grid>
                     </Border>
 
-                    <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                    <!-- Reloj estrecho · calendario ancho · anillos estrechos. -->
+                    <Grid Grid.Row="1" VerticalAlignment="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                            <!--
-                                El resumen usa el mismo círculo que la pestaña Media, por la misma
-                                razón: aquí también ClipToBounds dejaba la carátula cuadrada
-                                asomando por las esquinas del cuadrado redondeado.
-                            -->
-                            <Grid Width="46" Height="46" VerticalAlignment="Center">
+                        <Border Grid.Column="0" MinWidth="116" Style="{StaticResource DashboardCardStyle}" Padding="20,18">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock x:Name="PanelClockHourText"
+                                           Text="--"
+                                           FontSize="{DynamicResource FontSizeDisplay}"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource BrushTextPrimary}" />
+                                <TextBlock Text="•••"
+                                           Margin="0,2"
+                                           HorizontalAlignment="Center"
+                                           FontSize="{DynamicResource FontSizeFootnote}"
+                                           Foreground="{DynamicResource BrushAccent}" />
+                                <TextBlock x:Name="PanelClockMinuteText"
+                                           Text="--"
+                                           FontSize="{DynamicResource FontSizeDisplay}"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource BrushTextPrimary}" />
+                                <TextBlock x:Name="PanelClockMeridiemText"
+                                           Text=""
+                                           Margin="0,6,0,0"
+                                           HorizontalAlignment="Center"
+                                           FontSize="{DynamicResource FontSizeFootnote}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Style="{StaticResource CalendarArrowButtonStyle}"
+                                            Click="CalendarPreviousButton_Click"
+                                            ToolTip="Mes anterior"
+                                            AutomationProperties.Name="Mes anterior">
+                                        <Path Width="7"
+                                              Height="11"
+                                              Data="M6,0 L0,5 L6,10"
+                                              Stretch="Fill"
+                                              Stroke="{DynamicResource BrushTextSecondary}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round" />
+                                    </Button>
+                                    <TextBlock x:Name="CalendarMonthText"
+                                               Grid.Column="1"
+                                               Text="—"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FontSizeBody}"
+                                               FontWeight="SemiBold" />
+                                    <Button Grid.Column="2"
+                                            Style="{StaticResource CalendarArrowButtonStyle}"
+                                            Click="CalendarNextButton_Click"
+                                            ToolTip="Mes siguiente"
+                                            AutomationProperties.Name="Mes siguiente">
+                                        <Path Width="7"
+                                              Height="11"
+                                              Data="M0,0 L6,5 L0,10"
+                                              Stretch="Fill"
+                                              Stroke="{DynamicResource BrushTextSecondary}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round" />
+                                    </Button>
+                                </Grid>
+
+                                <ItemsControl x:Name="CalendarWeekdayItems" Margin="0,12,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" Columns="7" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       HorizontalAlignment="Center"
+                                                       FontSize="{DynamicResource FontSizeFootnote}"
+                                                       Foreground="{DynamicResource BrushTextTertiary}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <ItemsControl x:Name="CalendarDayItems" Margin="0,7,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="6" Columns="7" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="2"
+                                                    Height="30"
+                                                    CornerRadius="11"
+                                                    Background="{Binding Background}">
+                                                <TextBlock Text="{Binding Day}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="{DynamicResource FontSizeFootnote}"
+                                                           FontWeight="{Binding Weight}"
+                                                           Foreground="{Binding Foreground}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource DashboardCardStyle}" Padding="14,16">
+                            <StackPanel VerticalAlignment="Center">
+                                <controls:IconRing x:Name="PanelCpuRing"
+                                                   IconData="{StaticResource IconMetricCpu}"
+                                                   ToolTip="Uso del procesador"
+                                                   AutomationProperties.Name="Uso del procesador" />
+                                <controls:IconRing x:Name="PanelMemoryRing"
+                                                   Margin="0,14,0,0"
+                                                   IconData="{StaticResource IconMetricMemory}"
+                                                   ToolTip="Uso de la memoria"
+                                                   AutomationProperties.Name="Uso de la memoria" />
+                                <controls:IconRing x:Name="PanelDiskRing"
+                                                   Margin="0,14,0,0"
+                                                   IconData="{StaticResource IconMetricDisk}"
+                                                   ToolTip="Uso del disco del sistema"
+                                                   AutomationProperties.Name="Uso del disco del sistema" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- ========================= columna de la derecha ========================= -->
+                <Grid Grid.Column="1" Width="196" Margin="0,0,-6,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!--
+                        Media, alta. La carátula pasa de 46 a 120: a 46 la flor de PetalGeometry se
+                        devuelve como círculo a propósito —una ondulación de dos píxeles y medio no
+                        se lee como borde, solo ensucia el canto— y a 120 sí ondula, que es lo que
+                        hace que la portada se reconozca como la marca y no como un círculo.
+                    -->
+                    <Border Grid.Row="0"
+                            VerticalAlignment="Stretch"
+                            Style="{StaticResource DashboardCardStyle}"
+                            Padding="16,18">
+                        <StackPanel VerticalAlignment="Center">
+                            <Grid Width="120" Height="120" HorizontalAlignment="Center">
                                 <Path x:Name="PanelMediaBackdrop" Fill="{DynamicResource BrushSurfaceRaised}" />
                                 <Path x:Name="PanelMediaPlaceholderIcon"
-                                      Width="20"
-                                      Height="20"
+                                      Width="42"
+                                      Height="42"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
                                       Stretch="Uniform"
@@ -379,26 +548,31 @@
                                 </Path>
                             </Grid>
 
-                            <StackPanel Grid.Column="1" Margin="14,0,10,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="PanelMediaTitleText"
-                                           Text="Nada sonando"
-                                           FontSize="{DynamicResource FontSizeBody}"
-                                           FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock x:Name="PanelMediaArtistText"
-                                           Margin="0,4,0,0"
-                                           Text="Sin reproducción"
-                                           FontSize="{DynamicResource FontSizeFootnote}"
-                                           TextTrimming="CharacterEllipsis"
-                                           Foreground="{DynamicResource BrushTextSecondary}" />
-                            </StackPanel>
+                            <TextBlock x:Name="PanelMediaTitleText"
+                                       Margin="0,16,0,0"
+                                       Text="Nada sonando"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       FontSize="{DynamicResource FontSizeBody}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="PanelMediaArtistText"
+                                       Margin="0,4,0,0"
+                                       Text="Sin reproducción"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       FontSize="{DynamicResource FontSizeFootnote}"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource BrushTextSecondary}" />
 
-<!--
+                            <!--
                                 Diseño D61 — los tres controles, como en la referencia. Con solo
                                 reproducir/pausar había que abrir la pestaña Media para cambiar de
                                 canción, que es el gesto más frecuente de los tres.
                             -->
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal"
+                                        Margin="0,16,0,0"
+                                        HorizontalAlignment="Center">
                                 <Button x:Name="PanelMediaPreviousButton"
                                         Width="30"
                                         Height="30"
@@ -448,171 +622,24 @@
                                           Data="{StaticResource IconMediaNext}" />
                                 </Button>
                             </StackPanel>
-                        </Grid>
-                    </Border>
-                </Grid>
-
-                <Grid Grid.Row="1" Margin="-6,6,-6,0" VerticalAlignment="Top">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <!-- Diseño D58 — el hueco de la imagen de quien usa Sakura. -->
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" MinWidth="116" Style="{StaticResource DashboardCardStyle}" Padding="20,18">
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock x:Name="PanelClockHourText"
-                                       Text="--"
-                                       FontSize="{DynamicResource FontSizeDisplay}"
-                                       FontWeight="SemiBold"
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource BrushTextPrimary}" />
-                            <TextBlock Text="•••"
-                                       Margin="0,2"
-                                       HorizontalAlignment="Center"
-                                       FontSize="{DynamicResource FontSizeFootnote}"
-                                       Foreground="{DynamicResource BrushAccent}" />
-                            <TextBlock x:Name="PanelClockMinuteText"
-                                       Text="--"
-                                       FontSize="{DynamicResource FontSizeDisplay}"
-                                       FontWeight="SemiBold"
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource BrushTextPrimary}" />
-                            <TextBlock x:Name="PanelClockMeridiemText"
-                                       Text=""
-                                       Margin="0,6,0,0"
-                                       HorizontalAlignment="Center"
-                                       FontSize="{DynamicResource FontSizeFootnote}"
-                                       Foreground="{DynamicResource BrushTextSecondary}" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
-                        <StackPanel>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0"
-                                        Style="{StaticResource CalendarArrowButtonStyle}"
-                                        Click="CalendarPreviousButton_Click"
-                                        ToolTip="Mes anterior"
-                                        AutomationProperties.Name="Mes anterior">
-                                    <Path Width="7"
-                                          Height="11"
-                                          Data="M6,0 L0,5 L6,10"
-                                          Stretch="Fill"
-                                          Stroke="{DynamicResource BrushTextSecondary}"
-                                          StrokeThickness="1.7"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                </Button>
-                                <TextBlock x:Name="CalendarMonthText"
-                                           Grid.Column="1"
-                                           Text="—"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           FontSize="{DynamicResource FontSizeBody}"
-                                           FontWeight="SemiBold" />
-                                <Button Grid.Column="2"
-                                        Style="{StaticResource CalendarArrowButtonStyle}"
-                                        Click="CalendarNextButton_Click"
-                                        ToolTip="Mes siguiente"
-                                        AutomationProperties.Name="Mes siguiente">
-                                    <Path Width="7"
-                                          Height="11"
-                                          Data="M0,0 L6,5 L0,10"
-                                          Stretch="Fill"
-                                          Stroke="{DynamicResource BrushTextSecondary}"
-                                          StrokeThickness="1.7"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                </Button>
-                            </Grid>
-
-                            <ItemsControl x:Name="CalendarWeekdayItems" Margin="0,12,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="1" Columns="7" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}"
-                                                   HorizontalAlignment="Center"
-                                                   FontSize="{DynamicResource FontSizeFootnote}"
-                                                   Foreground="{DynamicResource BrushTextTertiary}" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <ItemsControl x:Name="CalendarDayItems" Margin="0,7,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Rows="6" Columns="7" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Margin="2"
-                                                Height="30"
-                                                CornerRadius="11"
-                                                Background="{Binding Background}">
-                                            <TextBlock Text="{Binding Day}"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="{DynamicResource FontSizeFootnote}"
-                                                       FontWeight="{Binding Weight}"
-                                                       Foreground="{Binding Foreground}" />
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Column="2" Style="{StaticResource DashboardCardStyle}" Padding="14,16">
-                        <StackPanel VerticalAlignment="Center">
-                            <controls:IconRing x:Name="PanelCpuRing"
-                                               IconData="{StaticResource IconMetricCpu}"
-                                               ToolTip="Uso del procesador"
-                                               AutomationProperties.Name="Uso del procesador" />
-                            <controls:IconRing x:Name="PanelMemoryRing"
-                                               Margin="0,14,0,0"
-                                               IconData="{StaticResource IconMetricMemory}"
-                                               ToolTip="Uso de la memoria"
-                                               AutomationProperties.Name="Uso de la memoria" />
-                            <controls:IconRing x:Name="PanelDiskRing"
-                                               Margin="0,14,0,0"
-                                               IconData="{StaticResource IconMetricDisk}"
-                                               ToolTip="Uso del disco del sistema"
-                                               AutomationProperties.Name="Uso del disco del sistema" />
                         </StackPanel>
                     </Border>
 
                     <!--
                         Diseño D58 — un hueco que Sakura no usa para nada.
 
-                        Va debajo del control de la canción y en la esquina, que es donde la
-                        referencia pone el gato. No lleva título ni borde propio cuando hay imagen:
-                        lo que se pone aquí no es un dato del sistema y enmarcarlo como los demás lo
-                        convertiría en uno.
+                        Va al pie de la columna de la canción, que es donde la referencia pone el
+                        gato. No lleva título ni borde propio cuando hay imagen: lo que se pone aquí
+                        no es un dato del sistema y enmarcarlo como los demás lo convertiría en uno.
 
                         Vacío se enseña como una invitación discreta y no como un error: nadie tiene
                         por qué poner nada, y un recuadro punteado gritando «falta algo» en un panel
                         que se abre veinte veces al día cansa el primer día.
                     -->
                     <Button x:Name="PanelImageButton"
-                            Grid.Column="3"
-                            Margin="12,0,0,0"
+                            Grid.Row="1"
+                            Margin="6,0,6,6"
                             Padding="0"
-                            Width="104"
                             Background="Transparent"
                             BorderThickness="0"
                             Cursor="Hand"
