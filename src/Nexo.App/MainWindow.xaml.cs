@@ -314,6 +314,9 @@ public partial class MainWindow : Window
 
     /// <summary>Diseño D86 — el velo para elegir la zona que se va a traducir.</summary>
     private readonly RegionPickerWindow _regionPickerWindow = new();
+
+    /// <summary>Diseño D87 — mantiene honesta la entrada de «Aplicaciones instaladas».</summary>
+    private readonly WindowsInstalledVersionRegistrar _installedVersionRegistrar = new();
     private readonly CommandPaletteWindow _commandPaletteWindow;
 
     /// <summary>
@@ -4389,6 +4392,26 @@ public partial class MainWindow : Window
         await RefreshMetricsAsync();
         _ = InitializeVoiceFeaturesAsync();
         _ = CheckForUpdateInBackgroundAsync();
+
+        // Diseño D87 (L12) — la lista de «Aplicaciones instaladas» de Windows se queda con la
+        // versión que puso el instalador, porque las actualizaciones sustituyen archivos sin pasar
+        // por él. Se reconcilia aquí, en cada arranque y fuera del hilo de interfaz: así se
+        // arreglan también las instalaciones que ya estaban mal, no solo las futuras.
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                // ReleaseMetadata y no CurrentVersionText: éste último trae el «+hash» del commit
+                // pegado detrás, y el instalador escribe la versión a secas. Con el hash, cada
+                // arranque «corregiría» el registro a algo que el instalador nunca pondría.
+                _installedVersionRegistrar.Reconcile(ReleaseMetadata.CurrentVersion);
+            }
+            catch (Exception)
+            {
+                // Ya se traga lo suyo por dentro; esto es el cinturón. Un dato cosmético de una
+                // lista de Windows no puede tumbar el arranque.
+            }
+        });
     }
 
     /// <summary>

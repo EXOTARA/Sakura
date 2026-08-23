@@ -35,25 +35,53 @@ tareas/enfoque/rutinas, IA y Vision fusionados con la vista) sigue intacto.
 **Aislamiento:** Ninguno.
 **Para estable:** Fase 9 — es criterio de salida explícito.
 
-### L12 — La versión que Windows muestra se queda vieja tras cada actualización
-**Qué:** el registro de "Aplicaciones instaladas" sigue diciendo la versión que puso el instalador.
-En el equipo de Adler decía `0.25.0-dev.20260817` con el ejecutable ya en 0.26.9.
-**Por qué:** el actualizador reemplaza los archivos de la carpeta de instalación mediante su ayudante;
-no ejecuta el instalador, así que nadie toca la entrada de desinstalación del registro.
-**Aislamiento:** ninguno. Es cosmético para quien mira la lista de aplicaciones, pero engaña sobre
-qué versión está instalada, que es justo lo que esa lista existe para responder.
-**Para estable:** que el ayudante actualice `DisplayVersion` al terminar, o que la actualización pase
-por el instalador en modo silencioso.
+### ~~L12 — La versión que Windows muestra se queda vieja tras cada actualización~~ ✅ (2026-08-23)
+**Qué era:** el registro de "Aplicaciones instaladas" seguía diciendo la versión que puso el
+instalador. Medido dos veces en el equipo de Adler: `0.25.0-dev.20260817` con el ejecutable en
+0.26.9, y `Sakura 0.27.0-beta` con el ejecutable ya dos versiones por delante. El nombre también
+llevaba la versión, así que mentía dos veces.
+**Por qué:** el actualizador reemplaza los archivos mediante su ayudante; no ejecuta el instalador,
+así que nadie tocaba la entrada del registro.
+**Arreglado (Diseño D87):** `InstalledVersionPolicy` decide y `WindowsInstalledVersionRegistrar`
+escribe, **en cada arranque y no al actualizar**. Hacerlo solo al actualizar habría arreglado las
+futuras dejando mintiendo a todas las instalaciones que ya estaban mal. Sin entrada en el registro
+no se inventa ninguna: quien usa el zip portable no aparece en esa lista y no debe aparecer.
 
-### L13 — Desinstalar después de actualizar puede dejar archivos
+### L13 — Desinstalar después de actualizar deja los archivos que llegaron en la actualización
 **Qué:** el desinstalador de Inno Setup borra lo que su registro de instalación dice que puso. Los
-archivos que llegan después, en una actualización, no están en ese registro.
+archivos que llegan después, en una actualización, no están en ese registro y sobreviven.
 **Por qué:** el conjunto de archivos cambia entre versiones (DLL nuevas, modelos, recursos) y el
 actualizador los escribe sin anotarlos donde el desinstalador mira.
-**Aislamiento:** ninguno. **No está comprobado todavía**: se dedujo leyendo cómo funcionan las dos
-piezas, y hace falta el ciclo completo en una máquina para confirmarlo y medir cuánto queda.
-**Para estable:** ejecutar el ciclo instalar → actualizar → desinstalar y dejar la carpeta vacía, o
-documentar qué queda y por qué.
+**Comprobado (2026-08-23):** ya no se deduce, se midió. Ciclo completo dentro de **Windows Sandbox**
+—un Windows desechable, para no medirlo sobre una máquina que ya tiene carpetas y entradas de
+registro de antes—, `0.28.0-beta` → `0.29.0-beta`:
+
+| Paso | Resultado |
+| --- | --- |
+| Instalar `Sakura-0.28.0-beta-Setup.exe` | salida 0, 510 archivos, registro dice `0.28.0-beta` |
+| Volcar encima el portable de `0.29.0-beta` | 511 archivos; **1 nuevo** que el instalador nunca anotó: `WpfAnimatedGif.dll` |
+| Desinstalar con `unins000.exe` | salida 0 |
+| Lo que quedó | **1 archivo: `WpfAnimatedGif.dll`** — exactamente el que llegó en la actualización |
+
+La entrada de desinstalación del registro **sí** se borra, y la carpeta de datos
+(`%LOCALAPPDATA%\Sakura`) ni llega a crearse. Lo que queda es una carpeta con un DLL huérfano, no
+una instalación fantasma. El ciclo entero tarda unos 20 segundos.
+
+**Cuánto importa:** hoy es un archivo porque entre 0.28 y 0.29 solo entró una dependencia nueva —la
+biblioteca del GIF—. No es una cifra estable: crece con cada versión que añada DLL, modelos o
+recursos que la versión instalada no tuviera. Quien instale una versión vieja y actualice muchas
+veces acumulará un archivo huérfano por cada dependencia añadida en el camino.
+
+**Aislamiento:** ninguno. Es la consecuencia estructural de actualizar sustituyendo archivos sin
+pasar por el instalador, no un fallo del desinstalador: borró los 510 que sabía que había puesto.
+**Cómo reproducirlo:** banco de pruebas en `scripts/sandbox/`. `New-InstallCycleBundle.ps1 -From
+v0.28.0-beta -To v0.29.0-beta` baja los artefactos y escribe el `.wsb`; abrirlo arranca el Sandbox,
+que corre `Invoke-InstallCycle.ps1` solo y deja `informe.txt` en la carpeta montada. Requiere la
+característica `Containers-DisposableClientVM` activada y la virtualización (SVM/VT-x) habilitada en
+la BIOS.
+**Para estable:** que el ayudante del actualizador anote lo que escribe donde el desinstalador mira,
+o que el desinstalador barra la carpeta entera. Mientras no se haga, esto queda documentado con la
+medida de arriba en vez de con una sospecha.
 
 ### L14 — El instalador no llegaba a publicarse
 **Qué:** las cinco últimas versiones (0.26.4 a 0.26.9) se publicaron **solo con el zip portable**.
