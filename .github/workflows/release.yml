@@ -5,13 +5,13 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: write
-
 jobs:
   release:
     runs-on: windows-latest
     timeout-minutes: 35
+
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -105,3 +105,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "No se pudieron publicar los artefactos en $tag."
           }
+
+  # La página de descargas, con la versión recién publicada ya delante.
+  #
+  # Se llama desde aquí y no se deja que reaccione sola al evento `release`: ese evento lo crea el
+  # paso de arriba con el GITHUB_TOKEN, y GitHub no permite que un evento creado con ese token
+  # dispare otro flujo. La primera vez que hizo falta —la 0.28.0-beta— la página se quedó
+  # ofreciendo la 0.27 sin que nada fallara ni avisara.
+  pages:
+    needs: release
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    uses: ./.github/workflows/pages.yml

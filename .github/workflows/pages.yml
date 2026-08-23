@@ -11,8 +11,14 @@ on:
       - "site/**"
       - "scripts/build-site.ps1"
       - ".github/workflows/pages.yml"
-  release:
-    types: [published]
+
+  # Lo llama el flujo de publicación cuando ya existe la versión nueva. NO se dispara con el evento
+  # `release`, aunque parezca lo obvio: la release la crea `gh` con el GITHUB_TOKEN del propio
+  # flujo, y GitHub no deja que un evento creado con ese token dispare otro flujo — es su regla
+  # contra la recursión. El resultado silencioso es una página que sigue ofreciendo la versión
+  # anterior, que es exactamente lo que pasó con la 0.28.0-beta.
+  workflow_call:
+
   workflow_dispatch:
 
 permissions:
