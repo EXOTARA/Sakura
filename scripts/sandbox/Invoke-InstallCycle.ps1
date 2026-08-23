@@ -26,13 +26,35 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+# La barra de progreso de PowerShell cuesta mas tiempo que el trabajo cuando son miles de archivos.
+$ProgressPreference = "SilentlyContinue"
+
 $installFolder = Join-Path $env:LOCALAPPDATA "Programs\Sakura"
 $uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{5F9D061E-33C8-4F85-BE6E-8C3BAF240B85}_is1"
-$report = New-Object System.Collections.Generic.List[string]
+$reportPath = Join-Path $WorkPath "informe.txt"
+
+# El informe se escribe frase a frase, no al final. La primera vez que esto se corrio de verdad se
+# quedo doce minutos en silencio, y desde el equipo de casa no habia forma de distinguir «va lento»
+# de «se colgo»: la ventana del Sandbox no se deja capturar desde fuera, y el informe todavia no
+# existia. Cada linea lleva la hora, para que un atasco se vea en el hueco entre dos.
+Set-Content $reportPath -Value "" -Encoding UTF8
 
 function Say([string]$text) {
-    Write-Host $text
-    $report.Add($text)
+    $line = if ([string]::IsNullOrWhiteSpace($text)) { "" } else { "[$(Get-Date -Format HH:mm:ss)] $text" }
+    Write-Host $line
+    Add-Content -Path $reportPath -Value $line -Encoding UTF8
+}
+
+# Un error terminante mataba el guion sin dejar rastro: la consola de dentro se queda con el texto
+# rojo, pero esa ventana no se puede capturar desde fuera, asi que el informe se cortaba a media
+# frase y no decia por que. Ahora el error entra en el informe como una frase mas.
+trap {
+    Say ""
+    Say "ERROR: $($_.Exception.Message)"
+    Say "   en la linea $($_.InvocationInfo.ScriptLineNumber): $($_.InvocationInfo.Line.Trim())"
+    Say ""
+    Say "El ciclo se corto aqui."
+    break
 }
 
 function Inventory([string]$path) {
@@ -59,11 +81,10 @@ Say "   codigo de salida: $($process.ExitCode)"
 
 if (-not (Test-Path $installFolder)) {
     Say "   FALLO: no existe $installFolder. El instalador no dejo nada donde se esperaba."
-    Set-Content (Join-Path $WorkPath "informe.txt") -Value $report -Encoding UTF8
     return
 }
 
-$afterInstall = Inventory $installFolder
+$afterInstall = @(Inventory $installFolder)
 Say "   archivos tras instalar: $($afterInstall.Count)"
 
 $recorded = if (Test-Path $uninstallKey) { (Get-ItemProperty $uninstallKey).DisplayVersion } else { "(sin entrada)" }
@@ -78,13 +99,24 @@ if (-not $portable) { throw "No encuentro ningún portable en $WorkPath." }
 Say "2. Volcando $($portable.Name) sobre la instalacion"
 Say "   (es lo que hace el ayudante del actualizador: sustituye archivos sin pasar por el instalador)"
 
-$staged = Join-Path $WorkPath "nueva"
+# El zip se descomprime en el disco de la maquina virtual, no en la carpeta montada. Montada es
+# comoda para mirar desde casa, pero cada archivo cruza el puente del Sandbox: descomprimir ahi
+# significa escribir 250 MB al otro lado y volver a leerlos enteros para copiarlos. Dos travesias
+# que no hacen falta.
+$staged = Join-Path $env:TEMP "sakura-nueva"
 if (Test-Path $staged) { Remove-Item $staged -Recurse -Force }
-Expand-Archive $portable.FullName -DestinationPath $staged -Force
-Copy-Item (Join-Path $staged "*") $installFolder -Recurse -Force
 
-$afterUpdate = Inventory $installFolder
-$arrived = $afterUpdate | Where-Object { $afterInstall -notcontains $_ }
+Say "   descomprimiendo en $staged"
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory($portable.FullName, $staged)
+Say "   descomprimidos: $((Get-ChildItem $staged -Recurse -File).Count) archivos"
+
+Say "   copiando sobre $installFolder"
+Copy-Item (Join-Path $staged "*") $installFolder -Recurse -Force
+Say "   copia terminada"
+
+$afterUpdate = @(Inventory $installFolder)
+$arrived = @($afterUpdate | Where-Object { $afterInstall -notcontains $_ })
 
 Say "   archivos tras actualizar: $($afterUpdate.Count)"
 Say "   archivos NUEVOS que el instalador nunca anoto: $($arrived.Count)"
@@ -97,7 +129,6 @@ Say ""
 $uninstaller = Get-ChildItem $installFolder -Filter "unins*.exe" | Select-Object -First 1
 if (-not $uninstaller) {
     Say "3. FALLO: no encuentro el desinstalador en la carpeta."
-    Set-Content (Join-Path $WorkPath "informe.txt") -Value $report -Encoding UTF8
     return
 }
 
@@ -115,7 +146,7 @@ Say ""
 
 Say "4. Lo que quedo"
 
-$leftovers = Inventory $installFolder
+$leftovers = @(Inventory $installFolder)
 Say "   la carpeta existe todavia: $(Test-Path $installFolder)"
 Say "   archivos que quedaron: $($leftovers.Count)"
 
@@ -138,11 +169,9 @@ if ($leftovers.Count -eq 0 -and -not $keyLeft) {
 }
 else {
     Say "L13 SE REPRODUCE: quedaron $($leftovers.Count) archivos tras desinstalar."
-    $orphans = $leftovers | Where-Object { $arrived -contains $_ }
+    $orphans = @($leftovers | Where-Object { $arrived -contains $_ })
     Say "De ellos, $($orphans.Count) son exactamente los que llegaron en la actualizacion."
 }
 
-$reportPath = Join-Path $WorkPath "informe.txt"
-Set-Content $reportPath -Value $report -Encoding UTF8
 Say ""
 Say "Informe guardado en $reportPath (visible desde el equipo de casa en la carpeta montada)."
