@@ -9095,6 +9095,51 @@ public partial class MainWindow : Window
         _dashboardWindow.UpdateSession(
             Environment.UserName,
             TimeSpan.FromMilliseconds(Environment.TickCount64));
+
+        // Diseño D80 — «Ahora» viaja con las métricas, por el mismo motivo que el reloj: es un
+        // texto que cambia cuando cambias de ventana, no algo que merezca su propio temporizador.
+        // Se lee del rastreador de primer plano, que ya escucha los cambios de foco del sistema.
+        _dashboardWindow.UpdateNow(
+            NowGlancePolicy.Describe(
+                _ambientContextProvider.Capture(
+                    _ambientForegroundTracker.LastExternalWindowHandle)));
+
+        RefreshVoiceGlance();
+    }
+
+    /// <summary>
+    /// Diseño D81 — el estado de la voz para la pestaña Voz.
+    ///
+    /// El nombre del micrófono se busca entre los dispositivos que ve el servicio: la preferencia
+    /// guarda un número, y un número no le dice nada a nadie. Con -1 —«el que use Windows»— se
+    /// enseña el primero de la lista, que es exactamente el que se va a usar.
+    /// </summary>
+    private void RefreshVoiceGlance()
+    {
+        string? deviceName = null;
+
+        try
+        {
+            var devices = _voiceCoordinator.GetInputDevices();
+            var chosen = _preferences.VoiceInputDeviceNumber;
+
+            deviceName =
+                (chosen >= 0
+                    ? devices.FirstOrDefault(device => device.DeviceNumber == chosen)
+                    : devices.FirstOrDefault())?.Name;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException)
+        {
+            // Sin audio disponible la lista puede fallar. La tarjeta ya sabe decir «ninguno».
+        }
+
+        _dashboardWindow.UpdateVoice(
+            VoiceGlancePolicy.Describe(
+                _preferences.WakeWordEnabled,
+                _preferences.WakeWordPhrase.ToSpokenText(),
+                _voiceCoordinator.IsVoiceInputReady,
+                deviceName,
+                _preferences.FlowEnabled));
     }
 
     /// <summary>

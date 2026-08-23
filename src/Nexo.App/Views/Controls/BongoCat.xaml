@@ -1,0 +1,99 @@
+<UserControl x:Class="Nexo.App.Views.Controls.BongoCat"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False"
+             IsHitTestVisible="False">
+    <!--
+        Diseño D83 — el gato del hueco de abajo.
+
+        Dibujado en vectores y no traído como imagen: la ilustración original del bongo cat tiene
+        autor, y este hueco además cambia de tamaño con la ventana. Un gato propio con el mismo
+        gesto escala sin romperse y no le debe nada a nadie.
+
+        Las dos poses comparten cuerpo y solo se cambian las patas. Dibujar dos gatos enteros y
+        alternarlos haría saltar el contorno un píxel en cada golpe, que a treinta golpes por minuto
+        se ve como un temblor.
+    -->
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="200" Height="130">
+
+            <!-- Cuerpo. La línea de abajo es el borde de la mesa: recta, porque se apoya. -->
+            <Path x:Name="Body"
+                  Fill="{DynamicResource BrushTextPrimary}"
+                  Stroke="{DynamicResource BrushBackground}"
+                  StrokeThickness="4"
+                  StrokeLineJoin="Round"
+                  Data="M 30,104
+                        C 30,92 32,80 38,74
+                        L 60,66
+                        L 66,44
+                        L 88,60
+                        C 100,56 112,55 124,58
+                        L 146,46
+                        L 144,74
+                        C 156,82 164,92 168,104
+                        Z" />
+
+            <!-- Ojos: dos puntos y nada más. Cualquier detalle de más lo convierte en otro gato. -->
+            <Ellipse x:Name="EyeLeft"
+                     Canvas.Left="62" Canvas.Top="76"
+                     Width="9" Height="11"
+                     Fill="{DynamicResource BrushBackground}" />
+            <Ellipse x:Name="EyeRight"
+                     Canvas.Left="106" Canvas.Top="82"
+                     Width="9" Height="11"
+                     Fill="{DynamicResource BrushBackground}" />
+
+            <!-- La boca en «w», el gesto que hace que se lea como un gato y no como una piedra. -->
+            <Path x:Name="Mouth"
+                  Stroke="{DynamicResource BrushBackground}"
+                  StrokeThickness="3"
+                  StrokeStartLineCap="Round"
+                  StrokeEndLineCap="Round"
+                  StrokeLineJoin="Round"
+                  Data="M 78,84 C 81,90 86,90 89,84 C 92,90 97,90 100,84" />
+
+            <!-- ============ Patas arriba: entre golpe y golpe ============ -->
+            <Canvas x:Name="PawsRaised">
+                <Path Fill="{DynamicResource BrushTextPrimary}"
+                      Stroke="{DynamicResource BrushBackground}"
+                      StrokeThickness="4"
+                      StrokeLineJoin="Round"
+                      Data="M 24,104 C 22,88 30,80 40,82 C 48,84 50,94 48,106 Z" />
+                <Ellipse Canvas.Left="30" Canvas.Top="86" Width="7" Height="8" Fill="{DynamicResource BrushMarkPetal}" />
+                <Ellipse Canvas.Left="38" Canvas.Top="85" Width="7" Height="8" Fill="{DynamicResource BrushMarkPetal}" />
+                <Ellipse Canvas.Left="32" Canvas.Top="94" Width="10" Height="9" Fill="{DynamicResource BrushMarkPetal}" />
+
+                <Path Fill="{DynamicResource BrushTextPrimary}"
+                      Stroke="{DynamicResource BrushBackground}"
+                      StrokeThickness="4"
+                      StrokeLineJoin="Round"
+                      Data="M 122,108 C 120,92 128,84 138,86 C 146,88 148,98 146,110 Z" />
+                <Ellipse Canvas.Left="128" Canvas.Top="90" Width="7" Height="8" Fill="{DynamicResource BrushMarkPetal}" />
+                <Ellipse Canvas.Left="136" Canvas.Top="89" Width="7" Height="8" Fill="{DynamicResource BrushMarkPetal}" />
+                <Ellipse Canvas.Left="130" Canvas.Top="98" Width="10" Height="9" Fill="{DynamicResource BrushMarkPetal}" />
+            </Canvas>
+
+            <!-- ============ Patas abajo: sobre el golpe ============ -->
+            <Canvas x:Name="PawsStruck" Visibility="Collapsed">
+                <Path Fill="{DynamicResource BrushTextPrimary}"
+                      Stroke="{DynamicResource BrushBackground}"
+                      StrokeThickness="4"
+                      StrokeLineJoin="Round"
+                      Data="M 26,106 C 24,96 32,90 42,92 C 50,94 52,100 50,108 Z" />
+                <Path Fill="{DynamicResource BrushTextPrimary}"
+                      Stroke="{DynamicResource BrushBackground}"
+                      StrokeThickness="4"
+                      StrokeLineJoin="Round"
+                      Data="M 118,110 C 116,100 124,94 134,96 C 142,98 144,104 142,112 Z" />
+
+                <!-- Las tres rayitas del golpe, como en la referencia. -->
+                <Path Stroke="{DynamicResource BrushDanger}"
+                      StrokeThickness="4"
+                      StrokeStartLineCap="Round"
+                      StrokeEndLineCap="Round"
+                      Data="M 60,112 L 56,120  M 70,114 L 70,123  M 80,112 L 84,120" />
+            </Canvas>
+        </Canvas>
+    </Viewbox>
+</UserControl>
