@@ -90,7 +90,7 @@ public sealed class TabStripSnapshotTests
         // El panel entero, para juzgar la retícula y no una pieza suelta. El ancho es el que tiene
         // de verdad la ventana del panel; el alto, holgado, para que nada quede recortado.
         const double width = 920;
-        const double height = 560;
+        const double height = 640;
 
         var output = Path.Combine(
             Path.GetTempPath(), "claude", "C--Dev-Nexo", "panel.png");

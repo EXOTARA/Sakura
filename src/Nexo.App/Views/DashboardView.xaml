@@ -739,23 +739,53 @@
                                    MaxHeight="132"
                                    Visibility="Collapsed"
                                    RenderOptions.BitmapScalingMode="HighQuality" />
+                            <!--
+                                Diseño D83 — el hueco vacío deja de ser una invitación en blanco.
+
+                                Antes decía «+ Tu imagen» y ya está: un recuadro pidiendo algo en un
+                                panel que se abre veinte veces al día. Ahora lo ocupa el gato, que
+                                acompaña a lo que suena, y la invitación aparece solo al pasar por
+                                encima — donde no estorba a quien nunca va a poner nada.
+
+                                Poner una imagen la sustituye: la tuya manda.
+                            -->
                             <Border x:Name="PanelImageEmptyHint"
                                     MinHeight="104"
                                     CornerRadius="20"
                                     Background="{DynamicResource BrushSurface}"
                                     BorderBrush="{DynamicResource BrushBorder}"
                                     BorderThickness="1">
-                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                    <TextBlock Text="+"
-                                               HorizontalAlignment="Center"
-                                               FontSize="19"
-                                               Foreground="{DynamicResource BrushTextTertiary}" />
-                                    <TextBlock Text="Tu imagen"
-                                               Margin="0,3,0,0"
-                                               HorizontalAlignment="Center"
-                                               FontSize="{DynamicResource FontSizeCaption}"
-                                               Foreground="{DynamicResource BrushTextTertiary}" />
-                                </StackPanel>
+                                <Grid>
+                                    <controls:BongoCat x:Name="PanelBongoCat"
+                                                       Margin="14,16"
+                                                       VerticalAlignment="Center" />
+
+                                    <Border CornerRadius="20"
+                                            Background="#C00C0E14">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Opacity" Value="0" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMouseOver, ElementName=PanelImageButton}"
+                                                                 Value="True">
+                                                        <Setter Property="Opacity" Value="1" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock Text="+"
+                                                       HorizontalAlignment="Center"
+                                                       FontSize="19"
+                                                       Foreground="{DynamicResource BrushTextSecondary}" />
+                                            <TextBlock Text="Tu imagen"
+                                                       Margin="0,3,0,0"
+                                                       HorizontalAlignment="Center"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource BrushTextSecondary}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </Border>
                         </Grid>
                     </Button>

@@ -31,6 +31,9 @@ public partial class DashboardView : UserControl
 
     private DateOnly _calendarMonth = DateOnly.FromDateTime(DateTime.Now);
     private MediaSnapshot _media = MediaSnapshot.Nothing;
+
+    /// <summary>Diseño D83 — qué pata toca. El ritmo lo decide Core; aquí solo se pinta.</summary>
+    private readonly BongoBeatPolicy _bongo = new();
     private DashboardTab _activeTab = DashboardTab.Panel;
 
     /// <summary>
@@ -546,6 +549,13 @@ public partial class DashboardView : UserControl
 
         CoverRing.SetLevels(spectrumLevels);
         PanelCoverRing.SetLevels(spectrumLevels);
+
+        // El gato golpea con el mismo espectro que mueve los rayos: es la misma música, así que
+        // van juntos sin tener que sincronizar nada.
+        PanelBongoCat.Pose = _bongo.Advance(
+            spectrumLevels,
+            _media.HasSession && _media.IsPlaying,
+            DateTimeOffset.Now);
         MediaProgressBar.Phase = wavePhase;
         RefreshMediaPosition();
     }
