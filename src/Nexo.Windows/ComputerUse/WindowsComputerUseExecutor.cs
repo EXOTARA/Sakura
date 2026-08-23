@@ -18,9 +18,6 @@ namespace Nexo.Windows.ComputerUse;
 /// </summary>
 public sealed class WindowsComputerUseExecutor : IComputerUseExecutor
 {
-    /// <summary>Un comando de solo lectura que tarda más que esto no va a terminar bien.</summary>
-    private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(20);
-
     /// <summary>
     /// Corrección de un defecto real visto ejecutando «Ver la configuración de red»: la salida
     /// llegaba como «Concesi¢n obtenida» y «Direcci¢n f¡sica». Las herramientas de consola de Windows
@@ -144,7 +141,8 @@ public sealed class WindowsComputerUseExecutor : IComputerUseExecutor
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            if (!process.WaitForExit((int)CommandTimeout.TotalMilliseconds))
+            // El tiempo lo trae el comando: enumerar controladores no es esperar a ipconfig.
+            if (!process.WaitForExit((int)command.Timeout.TotalMilliseconds))
             {
                 TryKill(process);
                 return ComputerUseStepResult.Failed(

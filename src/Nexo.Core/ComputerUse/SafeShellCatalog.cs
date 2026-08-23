@@ -1,7 +1,30 @@
 namespace Nexo.Core.ComputerUse;
 
 /// <summary>Diseño D17 — un comando de la lista de permitidos, con lo que hace en lenguaje llano.</summary>
-public sealed record SafeShellCommand(string Id, string Title, string Executable, string Arguments);
+public sealed record SafeShellCommand(string Id, string Title, string Executable, string Arguments)
+{
+    /// <summary>
+    /// Lo que se espera a un comando corriente antes de darlo por perdido.
+    ///
+    /// Está pensado para los que responden al instante, que son casi todos.
+    /// </summary>
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(20);
+
+    /// <summary>
+    /// Cuánto puede tardar ESTE comando.
+    ///
+    /// Existe porque un único número para todos estaba mal por los dos lados: ajustado a
+    /// `ipconfig`, que contesta al momento, y por tanto demasiado corto para los que enumeran
+    /// medio sistema. `driverquery` recorre todos los controladores instalados y en una máquina
+    /// virtual pasa de veinte segundos con normalidad — el usuario recibía «tardó demasiado» por
+    /// un comando que iba a funcionar perfectamente si se le hubiera dejado terminar.
+    ///
+    /// Forma parte de la igualdad del registro, y eso es deliberado: la lista de permitidos se
+    /// comprueba por valor, así que un comando fabricado fuera tampoco puede colarse cambiando
+    /// solo el tiempo.
+    /// </summary>
+    public TimeSpan Timeout { get; init; } = DefaultTimeout;
+}
 
 /// <summary>
 /// Diseño D17 (Fase 7) — "shell seguro" del roadmap, y la palabra que manda es **seguro**. No es un
@@ -23,8 +46,15 @@ public static class SafeShellCatalog
         new("net.ip", "Ver la configuración de red", "ipconfig", "/all"),
         new("net.ping", "Comprobar si hay conexión", "ping", "-n 4 1.1.1.1"),
         new("net.dns", "Ver la caché de DNS", "ipconfig", "/displaydns"),
-        new("sys.info", "Ver los datos del sistema", "systeminfo", string.Empty),
+        // Los dos que enumeran el sistema entero tardan de verdad, y no por estar rotos.
+        new("sys.info", "Ver los datos del sistema", "systeminfo", string.Empty)
+        {
+            Timeout = TimeSpan.FromSeconds(60)
+        },
         new("sys.drivers", "Ver los controladores instalados", "driverquery", string.Empty)
+        {
+            Timeout = TimeSpan.FromSeconds(60)
+        }
     ];
 
     // Dos candidatos que se descartaron al escribir la lista, anotados para que no vuelvan solos:

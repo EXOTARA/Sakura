@@ -266,4 +266,35 @@ public sealed class ComputerUseTests
         Assert.Null(SafeShellCatalog.Find("rm -rf"));
         Assert.Null(SafeShellCatalog.Find(null));
     }
+
+    [Fact]
+    public void CommandsThatEnumerateTheWholeSystem_GetLongerThanTheDefault()
+    {
+        // Esto se descubrió con la CI en rojo: `driverquery` recorre todos los controladores y en
+        // una máquina virtual pasa de veinte segundos sin estar rota. Con un único tiempo para
+        // toda la lista, el usuario recibía «tardó demasiado» por un comando que iba a terminar
+        // bien. El número no es un detalle de implementación: es la diferencia entre un
+        // diagnóstico y un mensaje de error.
+        foreach (var id in new[] { "sys.drivers", "sys.info" })
+        {
+            var command = SafeShellCatalog.Find(id);
+            Assert.NotNull(command);
+            Assert.True(
+                command!.Timeout > SafeShellCommand.DefaultTimeout,
+                $"«{command.Title}» enumera medio sistema y necesita más que el tiempo corriente.");
+        }
+    }
+
+    [Fact]
+    public void TheQuickCommands_KeepTheDefault()
+    {
+        // Y lo contrario: alargar el tiempo de todos «por si acaso» convertiría un comando colgado
+        // en un minuto de espera mirando una ventana quieta.
+        foreach (var id in new[] { "net.ip", "net.dns" })
+        {
+            var command = SafeShellCatalog.Find(id);
+            Assert.NotNull(command);
+            Assert.Equal(SafeShellCommand.DefaultTimeout, command!.Timeout);
+        }
+    }
 }
