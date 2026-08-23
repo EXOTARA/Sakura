@@ -1,10 +1,36 @@
+# Changelog
+
+## [0.28.0-beta]
+
+### Agregado
+
+- **Halo de voz.** Cuando Sakura escucha aparece un halo en el borde inferior que respira con tu voz: no solo avisa de que está escuchando, muestra que te está oyendo a ti. Sustituye a la cápsula «Te escucho», que decía lo mismo peor y salía a la vez.
+- Decir **«nada»** cierra la escucha sin hacer nada. También valen «olvídalo», «déjalo así», «ya no», «cancela» y algunas más, con o sin «Sakura» delante o detrás.
+- **`Alt + V`** empieza a escuchar sin decir el nombre, y vuelve a pulsarse para dejarlo. Es la primera forma de **cortar** una escucha abierta.
+- **Página de descargas** en https://exotara.github.io/Sakura/, en español y en inglés, con los hashes a la vista y el aviso de SmartScreen explicado antes de que aparezca.
+- Se puede **apagar la comprobación diaria de actualizaciones** en Ajustes. Era lo único que salía del equipo sin que nadie lo pidiera y no había forma de quitarlo.
+- Políticas publicadas de **privacidad**, **firma de código**, **seguridad** y **conducta**, y solicitud enviada a SignPath Foundation para firmar las versiones.
+
+### Cambiado
+
+- **La barra superior del panel** toma las medidas de la referencia: icono más grande y pegado a su palabra, texto mayor, y subrayado más fino y algo más largo que el nombre. La pestaña activa ya no engorda al seleccionarse.
+- **La retícula del panel es un tablero, no una lista.** Media pasa a ser una columna alta a la derecha con la carátula grande; arriba queda la tarjeta de sesión, y abajo el reloj, el calendario y los anillos con sus anchos propios.
+- **Sakura lleva por fin su propio logo dentro.** Seis ventanas enseñaban una flor de cinco pétalos que el ejecutable nunca ha tenido.
+- **La escucha se rinde a los tres segundos** si no habla nadie, en vez de esperar los veinte del máximo. Una pausa a mitad de una orden sigue sin cortarte.
+- Los comandos que enumeran medio sistema —controladores, datos del sistema— tienen ahora **más tiempo** antes de darse por perdidos.
+
+### Corregido
+
+- **El volumen dejaba de avisar y no paraba de avisar a la vez.** Mover el deslizador sacaba una cápsula por paso, y cada una reiniciaba la animación: se leía como un aviso con un tic. Ahora no se te repite lo que acabas de hacer con tu propia mano, y un mensaje repetido se actualiza en vez de volver a entrar.
+- **El relleno del carril de volumen se despegaba del fondo** a media altura, y a niveles bajos flotaba como un círculo suelto.
+- **La píldora de respuesta no era una píldora**: sus extremos eran esquinas redondeadas y los lados salían rectos.
+- El archivo instalado decía **«Kohana 0.9.5»** en sus propiedades de Windows mientras la aplicación decía Sakura 0.27.0.
+
 ## [0.9.5-beta-hotfix.1]
 
 ### Corregido
 
 - La migración al esquema 16 conserva y normaliza los aliases personales de la palabra de activación en lugar de borrarlos.
-
-# Changelog
 
 ## [Unreleased]
 
