@@ -33,6 +33,7 @@ MAUI, nada de Avalonia.
 | `Microsoft.Xaml.Behaviors.Wpf` | MIT | Comportamientos y triggers sin code-behind (arrastre, puntero, foco) | **Recomendado** cuando el code-behind solo existe para enganchar un evento |
 | `SkiaSharp` + `SkiaSharp.Views.WPF` | MIT | Dibujo por fotograma a 60 fps sin pasar por el árbol visual de WPF | **Solo** para el visualizador de voz y espectros. No para UI normal |
 | `NAudio` | MIT | WASAPI loopback, captura de micrófono, mezclador | Ya integrado |
+| `WpfAnimatedGif` | Apache-2.0 | Reproducir GIF animado. WPF no lo trae: `GifBitmapDecoder` devuelve fotogramas **parciales**, cada uno con su modo de descarte, y componerlos a mano falla en buena parte de los GIF reales | Ya integrado (D85) |
 | `Whisper.net`, `Vosk` | MIT / Apache-2.0 | Transcripción y palabra de activación | Ya integrado |
 | `Microsoft.Extensions.DependencyInjection` | MIT | Composition root | Ya integrado |
 
