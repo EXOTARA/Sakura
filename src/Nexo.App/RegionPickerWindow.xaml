@@ -1,0 +1,60 @@
+<Window x:Class="Nexo.App.RegionPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="#01000000"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Cursor="Cross"
+        AutomationProperties.Name="Elegir una zona de la pantalla">
+    <!--
+        Diseño D84 — elegir una zona de la pantalla arrastrando.
+
+        Es la TERCERA ventana con AllowsTransparency de la aplicación, y como las otras dos hay que
+        justificarla: oscurece toda la pantalla y a la vez deja un hueco limpio por el que se ve lo
+        que hay debajo. Eso es transparencia por píxel, y DWM no la da.
+
+        A diferencia del resaltado de Lens, ésta SÍ recibe el ratón: seleccionar es su único trabajo.
+
+        El fondo es #01000000 y no Transparent porque una ventana completamente transparente no
+        recibe clics en WPF: el ratón la atraviesa. Un alfa de uno sobre 255 es invisible y sí los
+        recibe.
+
+        El velo son cuatro rectángulos ALREDEDOR del hueco, no un rectángulo claro encima. Pintar
+        encima dejaría el velo por debajo y el texto de la zona elegida se leería apagado — que es
+        justo el texto que hay que poder leer para saber si se ha seleccionado lo correcto.
+    -->
+    <Canvas x:Name="Root">
+        <Rectangle x:Name="VeilTop" Fill="#8C000000" />
+        <Rectangle x:Name="VeilBottom" Fill="#8C000000" />
+        <Rectangle x:Name="VeilLeft" Fill="#8C000000" />
+        <Rectangle x:Name="VeilRight" Fill="#8C000000" />
+
+        <Rectangle x:Name="SelectionBorder"
+                   Visibility="Collapsed"
+                   Stroke="{DynamicResource BrushAccent}"
+                   StrokeThickness="1.5"
+                   RadiusX="3"
+                   RadiusY="3" />
+
+        <Border x:Name="Hint"
+                Padding="14,10"
+                CornerRadius="14"
+                Background="#E60C0E14"
+                BorderBrush="{DynamicResource BrushAccentBorder}"
+                BorderThickness="1">
+            <StackPanel>
+                <TextBlock x:Name="HintTitle"
+                           Text="Arrastra sobre el texto que quieras traducir"
+                           FontSize="14"
+                           Foreground="{DynamicResource BrushTextPrimary}" />
+                <TextBlock Text="Esc para cancelar"
+                           Margin="0,3,0,0"
+                           FontSize="12"
+                           Foreground="{DynamicResource BrushTextTertiary}" />
+            </StackPanel>
+        </Border>
+    </Canvas>
+</Window>

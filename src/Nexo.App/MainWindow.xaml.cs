@@ -99,6 +99,9 @@ public partial class MainWindow : Window
     /// <summary>Alt + V — abrir y cerrar la escucha sin decir el nombre.</summary>
     private const int VoiceHotkeyId = 0x4E5E;
 
+    /// <summary>Diseño D86 — Ctrl + Shift + T: arrastrar sobre un texto y traducirlo.</summary>
+    private const int TranslateHotkeyId = 0x4E5F;
+
     /// <summary>
     /// Diseño D58 — Escape cierra el shell aunque el teclado esté en otra aplicación.
     ///
@@ -121,6 +124,7 @@ public partial class MainWindow : Window
     private const uint VirtualKeySpace = 0x20;
     private const uint VirtualKeyD = 0x44;
     private const uint VirtualKeyV = 0x56;
+    private const uint VirtualKeyT = 0x54;
     private const uint VirtualKeyEscape = 0x1B;
     private const uint ModNone = 0x0000;
     private const int WmHotkey = 0x0312;
@@ -307,6 +311,9 @@ public partial class MainWindow : Window
     private readonly PeekWindow _peekWindow = new();
     private readonly CapsuleWindow _capsuleWindow = new();
     private readonly AnswerPillWindow _answerPillWindow = new();
+
+    /// <summary>Diseño D86 — el velo para elegir la zona que se va a traducir.</summary>
+    private readonly RegionPickerWindow _regionPickerWindow = new();
     private readonly CommandPaletteWindow _commandPaletteWindow;
 
     /// <summary>
@@ -448,6 +455,9 @@ public partial class MainWindow : Window
     /// La escucha en curso, si la hay. Sirve para saber si ya se está escuchando y para cortarla.
     /// </summary>
     private CancellationTokenSource? _voiceListenCancellation;
+
+    /// <summary>Diseño D86 — evita abrir dos velos si se pulsa el atajo dos veces seguidas.</summary>
+    private bool _translatingRegion;
     private CancellationTokenSource? _wakeWordTestCancellation;
     private WakeWordRecognitionObservedEventArgs? _lastWakeWordObservation;
     private string _runtimeAiStatus = "Desactivada";
@@ -4334,6 +4344,14 @@ public partial class MainWindow : Window
                 "Alt + V ya está siendo utilizado por otra aplicación; el atajo de voz no quedó disponible.");
         }
 
+        if (!RegisterHotKey(
+                windowHandle, TranslateHotkeyId, ModControl | ModShift, VirtualKeyT))
+        {
+            _assistantView.AddSakuraMessage(
+                "Ctrl + Shift + T ya está siendo utilizado por otra aplicación; " +
+                "el traductor de pantalla no quedó disponible.");
+        }
+
         // Diseño D6.3 — el dictado global se registra igual que los demás atajos: como atajo de
         // sistema, para que funcione con Sakura sin foco (que es todo el sentido de dictar en otra
         // aplicación).
@@ -4531,6 +4549,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(windowHandle, CommandPaletteHotkeyId);
             UnregisterHotKey(windowHandle, LookHotkeyId);
             UnregisterHotKey(windowHandle, VoiceHotkeyId);
+            UnregisterHotKey(windowHandle, TranslateHotkeyId);
             UnregisterHotKey(windowHandle, FlowHotkeyId);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
         }
@@ -4585,6 +4604,11 @@ public partial class MainWindow : Window
         else if (wParam.ToInt32() == VoiceHotkeyId)
         {
             _ = ToggleVoiceListeningAsync();
+            handled = true;
+        }
+        else if (wParam.ToInt32() == TranslateHotkeyId)
+        {
+            _ = TranslateRegionAsync();
             handled = true;
         }
         else if (wParam.ToInt32() == EscapeHotkeyId)
@@ -6652,6 +6676,127 @@ public partial class MainWindow : Window
             e.PreRollAudio,
             e.PostWakeAudio);
     }
+
+
+    /// <summary>
+    /// Diseño D86 — se arrastra un recuadro sobre un texto y sale traducido.
+    ///
+    /// Es el gesto de una captura de pantalla con un resultado de texto, y llega donde no llega
+    /// ninguna otra herramienta: un menú de un juego, un error dentro de una imagen, un PDF que no
+    /// deja seleccionar. Ahí no hay nada que copiar, así que un traductor de portapapeles no sirve.
+    ///
+    /// **No abre ninguna vía de red nueva.** Usa el proveedor que ya esté configurado — incluido
+    /// Ollama en local, donde no sale nada del equipo—, y si no hay ninguno lo dice en vez de
+    /// inventarse una conexión. La política de privacidad publicada sigue siendo cierta tal como
+    /// está escrita.
+    ///
+    /// **Lo tapado sigue tapado.** El texto pasa por el mismo redactor que Lens antes de salir: un
+    /// recuadro arrastrado por encima de un gestor de contraseñas manda las marcas, no la clave.
+    /// </summary>
+    private async Task TranslateRegionAsync()
+    {
+        if (_isClosed || _translatingRegion)
+        {
+            return;
+        }
+
+        _translatingRegion = true;
+
+        try
+        {
+            var area = await _regionPickerWindow.PickAsync();
+            if (area is not { Width: > 0, Height: > 0 } region)
+            {
+                return;
+            }
+
+            var target = new VisionCaptureTarget(
+                "region",
+                NativeHandle: 0,
+                Title: "Zona de la pantalla",
+                Subtitle: string.Empty,
+                VisionCaptureKind.Region,
+                region.X,
+                region.Y,
+                region.Width,
+                region.Height);
+
+            var capture = await _screenCaptureService.CaptureAsync(
+                target, _lifetimeCancellation.Token);
+
+            if (!capture.IsSuccess || capture.PngBytes is null)
+            {
+                ShowTranslationNotice(capture.Detail);
+                return;
+            }
+
+            var ocr = await _lensOcrService.RecognizeAsync(
+                capture.PngBytes, _lifetimeCancellation.Token);
+
+            var request = TranslationPolicy.Build(
+                SensitiveContentRedactor.Redact(ocr),
+                TranslationPolicy.DefaultTargetLanguage(CultureInfo.CurrentUICulture),
+                _preferences.AiProvider != AiProviderKind.Disabled);
+
+            if (!request.CanTranslate)
+            {
+                ShowTranslationNotice(request.Detail);
+                return;
+            }
+
+            await StreamTranslationAsync(request);
+        }
+        catch (OperationCanceledException)
+        {
+            // Sakura se está cerrando; no hay nada que contar.
+        }
+        finally
+        {
+            _translatingRegion = false;
+        }
+    }
+
+    private async Task StreamTranslationAsync(TranslationRequest request)
+    {
+        _answerPillWindow.BeginAnswer("Traducción", _preferences.Position);
+
+        var aiRequest = new AiChatRequest(
+            [new ConversationMessage(ConversationRole.User, request.Prompt, DateTimeOffset.Now)],
+            NexoAiInstructions.Default,
+            SystemContext: string.Empty,
+            Images: [],
+            AiRequestMode.Standard);
+
+        var translated = new StringBuilder();
+
+        try
+        {
+            await foreach (var chunk in _aiChatService.StreamAsync(
+                BuildAiConfiguration(), aiRequest, _lifetimeCancellation.Token))
+            {
+                if (string.IsNullOrEmpty(chunk))
+                {
+                    continue;
+                }
+
+                translated.Append(chunk);
+                _answerPillWindow.AppendAnswer(chunk);
+            }
+        }
+        catch (OperationCanceledException) when (!_lifetimeCancellation.IsCancellationRequested)
+        {
+            // El corte del cliente de IA. Lo ya traducido no se tira: se cierra con lo que haya.
+        }
+
+        _answerPillWindow.CompleteAnswer(
+            translated.Length == 0
+                ? "No pude traducir esa zona. Comprueba el modelo en Personalizar → IA."
+                : null);
+    }
+
+    private void ShowTranslationNotice(string detail) =>
+        _capsuleWindow.ShowMessage(
+            CapsuleKind.Warning, "Traducir", detail, _preferences.Position);
 
     /// <summary>
     /// Alt + V: empieza a escuchar sin decir el nombre, y vuelve a pulsarse para dejarlo.
