@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Nexo.App;
 
 namespace Nexo.App.Tests;
 
@@ -96,5 +97,70 @@ public sealed class PillFillSnapshotTests
 
         Assert.True(File.Exists(output));
         Assert.True(new FileInfo(output).Length > 1_000, "El PNG salió vacío; no se dibujó nada.");
+    }
+
+    [Fact]
+    public void Renders_TheAnswerPill_AtItsCompactAndGrownSizes()
+    {
+        // La ventana de verdad, sin mostrarla: se construye, se mide y se dibuja su contenido. Así
+        // se ve la forma real —con su margen de sombra, su relleno y su radio— y no una copia de la
+        // geometría escrita aquí, que es exactamente lo que no sirve para juzgar una forma.
+        double[] heights = [132, 220];
+
+        var output = Path.Combine(
+            Path.GetTempPath(), "claude", "C--Dev-Nexo", "answer-pill.png");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+
+        _wpf.Invoke(() =>
+        {
+            var column = new StackPanel { Orientation = Orientation.Vertical };
+
+            foreach (var height in heights)
+            {
+                var window = new AnswerPillWindow();
+                var content = (FrameworkElement)window.Content;
+                window.Content = null;
+
+                var holder = new Border
+                {
+                    Width = 480,
+                    Height = height,
+                    Margin = new Thickness(0, 0, 0, 8),
+                    Child = content
+                };
+
+                column.Children.Add(holder);
+
+                // La ventana la deja invisible su propia animación de entrada; aquí se quiere ver.
+                content.Opacity = 1;
+                content.RenderTransform = Transform.Identity;
+            }
+
+            var host = new Border
+            {
+                Background = (Brush)Application.Current.FindResource("BrushBackground"),
+                Child = column
+            };
+
+            const double width = 480;
+            var total = heights.Sum() + 16;
+
+            host.Measure(new Size(width, total));
+            host.Arrange(new Rect(0, 0, width, total));
+            host.UpdateLayout();
+
+            var bitmap = new RenderTargetBitmap(
+                (int)(width * 2), (int)(total * 2), 192, 192, PixelFormats.Pbgra32);
+            bitmap.Render(host);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+            using var stream = File.Create(output);
+            encoder.Save(stream);
+        });
+
+        Assert.True(File.Exists(output));
     }
 }

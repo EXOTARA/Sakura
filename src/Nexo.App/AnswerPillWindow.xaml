@@ -1,6 +1,7 @@
 <Window x:Class="Nexo.App.AnswerPillWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:pill="clr-namespace:Nexo.App.Views.Controls"
         Width="480"
         Height="156"
         MinHeight="132"
@@ -16,10 +17,25 @@
         tamaño exacto del contenido recorta la sombra en recto y deja un canto gris a un lado, que
         es el defecto que se vio en el panel de mandos.
     -->
+    <!--
+        Diseño D79 — la píldora es una píldora, no un rectángulo con las esquinas suaves.
+
+        Llevaba un radio fijo de 24 sobre un borde que nunca baja de 72 de alto, así que sus
+        extremos nunca fueron semicírculos: eran esquinas redondeadas y los lados salían rectos.
+        Se llama píldora y no lo parecía.
+
+        El radio sigue ahora a la mitad del alto, con tope: a su tamaño habitual es una píldora de
+        verdad, y cuando la respuesta la hace crecer se vuelve más alta en vez de más redonda. Sin
+        el tope, una respuesta larga la convertiría en un óvalo con el texto metido en la curva.
+
+        El tope es 36 porque 36 es la mitad del alto mínimo: la forma compacta —la que se ve casi
+        siempre— es exactamente la píldora, y crecer no la deforma.
+    -->
     <Border x:Name="PillBorder"
             Margin="30"
-            Padding="16,14"
-            CornerRadius="24"
+            Padding="22,14"
+            pill:PillCorner.IsPill="True"
+            pill:PillCorner.MaxRadius="36"
             Background="{DynamicResource BrushSurfaceRaised}"
             BorderBrush="{DynamicResource BrushAccentBorder}"
             BorderThickness="1"

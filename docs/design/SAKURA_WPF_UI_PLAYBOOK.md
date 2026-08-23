@@ -153,7 +153,8 @@ PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
 
 | Trampa | Qué pasa | Cómo se evita |
 |---|---|---|
-| `CornerRadius` mayor que la mitad del alto | **No se recorta**: dibuja los arcos pedidos y salen dos puntas (forma de lente) | `PillCorner.IsPill`, que mide el alto real |
+| `CornerRadius` mayor que la mitad del alto | **No se recorta a una píldora**: sale una lente con dos puntas. Medido otra vez el 2026-08-23 en `CornerRadiusClampingTests`, con 999 sobre 200x40, 26 sobre 52x12 y 999 sobre 420x72 — las tres dan lente. La propiedad además conserva el valor pedido, así que leerla no avisa de nada | `PillCorner.IsPill`, que mide el alto real |
+| Una superficie de alto variable con `IsPill` | La mitad del alto deja de ser píldora y pasa a óvalo, con el texto dentro de la curva | `PillCorner.MaxRadius`, que pone tope al radio |
 | `ClipToBounds` sobre un borde redondeado | Recorta al **rectángulo**, ignora el radio | `Clip = new RectangleGeometry(rect, rx, ry)` |
 | `{StaticResource}` a una clave definida después | Excepción al cargar | Definirla antes o usar `DynamicResource` |
 | `x:Name` dentro de un `ControlTemplate` | No es accesible desde fuera | `GetTemplateChild` sobre la plantilla |

@@ -30,6 +30,38 @@ public static class PillCorner
     public static bool GetIsPill(DependencyObject element) =>
         element is null ? false : (bool)element.GetValue(IsPillProperty);
 
+    /// <summary>
+    /// Diseño D79 — hasta dónde puede crecer el radio.
+    ///
+    /// La mitad del alto es lo correcto mientras el borde tiene el alto de una píldora. Pero hay
+    /// superficies que crecen con su contenido —la píldora de respuesta crece con la respuesta— y
+    /// ahí la mitad del alto deja de ser una píldora y pasa a ser un óvalo, con el texto metido
+    /// dentro de la curva.
+    ///
+    /// Con un tope, la forma es una píldora de verdad al tamaño que tiene normalmente, y al crecer
+    /// se hace más alta en vez de más redonda. Sin tope —el valor por omisión— se comporta como
+    /// siempre, que es lo que necesitan los botones y las insignias, de alto fijo.
+    /// </summary>
+    public static readonly DependencyProperty MaxRadiusProperty = DependencyProperty.RegisterAttached(
+        "MaxRadius",
+        typeof(double),
+        typeof(PillCorner),
+        new PropertyMetadata(double.PositiveInfinity, OnMaxRadiusChanged));
+
+    public static void SetMaxRadius(DependencyObject element, double value) =>
+        element?.SetValue(MaxRadiusProperty, value);
+
+    public static double GetMaxRadius(DependencyObject element) =>
+        element is null ? double.PositiveInfinity : (double)element.GetValue(MaxRadiusProperty);
+
+    private static void OnMaxRadiusChanged(DependencyObject element, DependencyPropertyChangedEventArgs e)
+    {
+        if (element is Border border && GetIsPill(border))
+        {
+            Apply(border);
+        }
+    }
+
     private static void OnIsPillChanged(DependencyObject element, DependencyPropertyChangedEventArgs e)
     {
         if (element is not Border border)
@@ -59,7 +91,7 @@ public static class PillCorner
     {
         // Antes de la primera medida el alto es cero y el radio también: no se fuerza nada, porque
         // SizeChanged va a llegar en cuanto la haya.
-        var radius = border.ActualHeight / 2;
+        var radius = Math.Min(border.ActualHeight / 2, GetMaxRadius(border));
         if (radius > 0)
         {
             border.CornerRadius = new CornerRadius(radius);
