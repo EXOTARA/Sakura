@@ -54,6 +54,13 @@ public partial class DashboardView : UserControl
     private static readonly TimeSpan CoverTurn = TimeSpan.FromSeconds(40);
 
     private readonly RotateTransform _coverSpin = new() { CenterX = 94, CenterY = 94 };
+
+    /// <summary>
+    /// El giro de la carátula del panel. Es otro transform y no el mismo porque el centro cambia
+    /// con el tamaño —188 allí, 120 aquí— y una rotación alrededor del centro equivocado no gira:
+    /// tambalea. Los dos se animan a la vez y con la misma vuelta, así que van sincronizados.
+    /// </summary>
+    private readonly RotateTransform _panelCoverSpin = new() { CenterX = 60, CenterY = 60 };
     private bool _coverSpinning;
 
     public DashboardView()
@@ -93,6 +100,14 @@ public partial class DashboardView : UserControl
         var panelCover = PetalGeometry.Create(120);
         PanelMediaBackdrop.Data = panelCover;
         PanelMediaCoverShape.Data = panelCover;
+
+        // Diseno D82 - el fondo gira como elemento; la imagen no gira, gira su recorte. Es lo mismo
+        // que hace la caratula grande, y por lo mismo: girando la imagen se veria doble contorno.
+        PanelMediaBackdrop.RenderTransform = _panelCoverSpin;
+
+        var panelMask = panelCover.Clone();
+        panelMask.Transform = _panelCoverSpin;
+        PanelMediaCoverShape.Clip = panelMask;
 
         BuildCalendarHeader();
         RefreshCalendar();
@@ -530,6 +545,7 @@ public partial class DashboardView : UserControl
         ArgumentNullException.ThrowIfNull(spectrumLevels);
 
         CoverRing.SetLevels(spectrumLevels);
+        PanelCoverRing.SetLevels(spectrumLevels);
         MediaProgressBar.Phase = wavePhase;
         RefreshMediaPosition();
     }
@@ -621,8 +637,12 @@ public partial class DashboardView : UserControl
         _coverSpinning = spinning;
 
         var angle = _coverSpin.Angle;
-        _coverSpin.BeginAnimation(RotateTransform.AngleProperty, null);
-        _coverSpin.Angle = angle;
+
+        foreach (var spin in new[] { _coverSpin, _panelCoverSpin })
+        {
+            spin.BeginAnimation(RotateTransform.AngleProperty, null);
+            spin.Angle = angle;
+        }
 
         if (!spinning || !SakuraMotion.AnimationsEnabled)
         {
@@ -637,7 +657,10 @@ public partial class DashboardView : UserControl
             RepeatBehavior = RepeatBehavior.Forever
         };
 
+        // La MISMA animación en los dos: congelada y compartida, van exactamente al mismo ángulo.
+        animation.Freeze();
         _coverSpin.BeginAnimation(RotateTransform.AngleProperty, animation);
+        _panelCoverSpin.BeginAnimation(RotateTransform.AngleProperty, animation);
     }
 
     private static BitmapImage? CreateCover(byte[]? bytes)

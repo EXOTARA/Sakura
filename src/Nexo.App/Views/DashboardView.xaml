@@ -586,7 +586,27 @@
                             Style="{StaticResource DashboardCardStyle}"
                             Padding="16,18">
                         <StackPanel VerticalAlignment="Center">
-                            <Grid Width="120" Height="120" HorizontalAlignment="Center">
+                            <!--
+                                Diseño D82 — la carátula del panel gira y tiene rayos, como la de
+                                la pestaña Media.
+
+                                Las dos piezas ya existían y solo vivían allí: `CoverVisualizer`
+                                dibuja las bandas del espectro en un único trazado por fotograma, y
+                                el giro es el mismo que ya se arranca y se para con la reproducción.
+                                Aquí se reutilizan a su escala: el anillo mide 160 y la carátula
+                                sigue en 120, así que los rayos caben entre la flor y el borde de la
+                                tarjeta sin tocar ninguno de los dos.
+                            -->
+                            <Grid Width="160" Height="160" HorizontalAlignment="Center">
+                                <controls:CoverVisualizer x:Name="PanelCoverRing"
+                                                          BarBrush="{DynamicResource BrushAccent}"
+                                                          InnerRadius="64"
+                                                          MaximumBarLength="15"
+                                                          BarThickness="2.6"
+                                                          Opacity="0.85"
+                                                          IsHitTestVisible="False" />
+
+                                <Grid Width="120" Height="120" HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <Path x:Name="PanelMediaBackdrop" Fill="{DynamicResource BrushSurfaceRaised}" />
                                 <Path x:Name="PanelMediaPlaceholderIcon"
                                       Width="42"
@@ -605,6 +625,7 @@
                                         <ImageBrush x:Name="PanelMediaCoverBrush" Stretch="UniformToFill" />
                                     </Path.Fill>
                                 </Path>
+                                </Grid>
                             </Grid>
 
                             <TextBlock x:Name="PanelMediaTitleText"

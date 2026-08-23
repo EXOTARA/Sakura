@@ -99,16 +99,28 @@ public sealed class TabStripSnapshotTests
 
         _wpf.Invoke(() =>
         {
+            var view = new DashboardView();
+
             var host = new Border
             {
                 Background = (Brush)Application.Current.FindResource("BrushBackground"),
                 Width = width,
                 Height = height,
-                Child = new DashboardView()
+                Child = view
             };
 
             host.Measure(new Size(width, height));
             host.Arrange(new Rect(0, 0, width, height));
+            host.UpdateLayout();
+
+            // Un espectro cualquiera para que el anillo de la carátula tenga algo que dibujar. Sin
+            // niveles solo se ve su largo mínimo, que es correcto pero no enseña nada.
+            var levels = Enumerable
+                .Range(0, 32)
+                .Select(band => 0.25 + 0.7 * Math.Abs(Math.Sin(band * 0.5)))
+                .ToArray();
+
+            view.RenderAudioFrame(levels, wavePhase: 0.4);
             host.UpdateLayout();
 
             var bitmap = new RenderTargetBitmap(
