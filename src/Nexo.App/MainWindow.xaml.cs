@@ -8240,14 +8240,24 @@ public partial class MainWindow : Window
 
     private void AudioView_ActionCompleted(object? sender, AudioActionEventArgs e)
     {
-        PresentAudioResult(e.Result, addToConversation: false);
+        // Esto viene del deslizador de la vista Audio: lo movió una mano y el resultado está a la
+        // vista. Ver AudioAnnouncementPolicy.
+        PresentAudioResult(e.Result, addToConversation: false, adjustedByHand: true);
     }
 
-    private void PresentAudioResult(AudioActionResult result, bool addToConversation)
+    private void PresentAudioResult(
+        AudioActionResult result,
+        bool addToConversation,
+        bool adjustedByHand = false)
     {
         if (addToConversation)
         {
             _assistantView.AddSakuraMessage(result.Detail);
+        }
+
+        if (!AudioAnnouncementPolicy.ShouldAnnounce(result.Status, adjustedByHand))
+        {
+            return;
         }
 
         var capsuleKind = result.Status switch

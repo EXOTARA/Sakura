@@ -19,6 +19,10 @@ public partial class CapsuleWindow : Window
 
     public bool SuppressTransientMessages { get; set; }
 
+    /// <summary>Lo que hay puesto ahora mismo, para reconocer un mensaje repetido.</summary>
+    private CapsuleKind _currentKind;
+    private string _currentTitle = string.Empty;
+
     public CapsuleWindow()
     {
         InitializeComponent();
@@ -55,13 +59,36 @@ public partial class CapsuleWindow : Window
             return;
         }
 
+        // Diseño D77 — un mensaje que sustituye a otro igual se ACTUALIZA; no vuelve a entrar.
+        //
+        // Subir el volumen tres veces seguidas producía tres cápsulas, y cada una reiniciaba la
+        // animación de entrada: la misma ventana saltaba y parpadeaba en el sitio con cada paso.
+        // Lo que ve alguien no son tres avisos, es un aviso teniendo un tic.
+        //
+        // Se compara el tipo y el título, no el detalle: el detalle es justo lo que cambia
+        // —«Volumen al 41 %», «al 42 %»— y es lo que hay que refrescar sin mover nada más.
+        var isRepeat = IsSameMessageAsShowing(kind, title);
+
         _dismissTimer.Stop();
         _isClosingAnimation = false;
         IsHitTestVisible = true;
 
+        _currentKind = kind;
+        _currentTitle = title;
+
         TitleText.Text = title;
         DetailText.Text = detail;
         ApplyKind(kind);
+
+        if (isRepeat)
+        {
+            // Solo se le da cuerda otra vez al temporizador: la ventana ya está donde toca, con su
+            // opacidad y su posición correctas. Reposicionar aquí también la haría dar un salto.
+            _dismissTimer.Interval = duration ?? GetDefaultDuration(kind);
+            _dismissTimer.Start();
+            return;
+        }
+
         PositionWindow(sidebarPosition);
 
         CapsuleBorder.BeginAnimation(OpacityProperty, null);
@@ -90,6 +117,23 @@ public partial class CapsuleWindow : Window
         _dismissTimer.Interval = duration ?? GetDefaultDuration(kind);
         _dismissTimer.Start();
     }
+
+    /// <summary>
+    /// Si lo que llega es el mismo mensaje que ya está puesto.
+    ///
+    /// Se compara el tipo y el título, nunca el detalle: el detalle es exactamente lo que cambia
+    /// entre un paso y el siguiente —«Volumen al 41 %», «al 42 %»—, así que compararlo haría que
+    /// ningún cambio de volumen fuese nunca «el mismo mensaje», que es justo el caso que esto viene
+    /// a resolver.
+    ///
+    /// Una cápsula que se está yendo no cuenta como puesta: su animación de salida ya está en
+    /// marcha y actualizarle el texto dejaría el mensaje nuevo desvaneciéndose.
+    /// </summary>
+    internal bool IsSameMessageAsShowing(CapsuleKind kind, string title) =>
+        IsVisible &&
+        !_isClosingAnimation &&
+        kind == _currentKind &&
+        string.Equals(title, _currentTitle, StringComparison.Ordinal);
 
     public void HideImmediately()
     {
