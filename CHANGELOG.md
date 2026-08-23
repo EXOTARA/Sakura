@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.29.0-beta]
+
+### Agregado
+
+- **Traducir un trozo de pantalla.** `Ctrl + Shift + T`, arrastras un recuadro sobre cualquier texto y sale traducido. Sirve donde no sirve copiar y pegar: el menú de un juego, un error dentro de una imagen, un PDF que no deja seleccionar. Usa el modelo que ya tengas configurado —con Ollama no sale nada de tu equipo— y si no tienes ninguno te lo dice en vez de fallar por dentro. Lo que Sakura tapa por sensible sigue tapado.
+- **La tarjeta «Ahora»**, que dice en qué estás en este momento. Una ventana marcada como privada nunca se nombra: dice que hay algo abierto, no qué.
+- **La pestaña «Voz»**, para contestar de un vistazo a «¿por qué no me oye?». Marca las tres causas —escucha apagada, sin micrófono, modelos sin preparar— y deja los dos atajos a la vista.
+- **El hueco del panel acepta un GIF animado**, no solo una imagen fija.
+
+### Cambiado
+
+- **La carátula del Panel gira y tiene su anillo de rayos**, igual que la de la pestaña Media y con el mismo espectro.
+
+### Corregido
+
+- **La página de descargas no se actualizaba al publicar una versión.** No fallaba nada: se quedaba ofreciendo la anterior, en silencio.
+
 ## [0.28.0-beta]
 
 ### Agregado
