@@ -218,15 +218,26 @@ public partial class QuickControlsWindow : Window
                     TrackWidth / 2)
             };
 
-            // El relleno va anclado abajo para que crezca hacia arriba, como el boceto. Su propio
-            // radio es el mismo que el del carril: así, medio lleno, el borde de arriba es una
-            // cúpula y no un corte.
+            // El relleno va anclado abajo para que crezca hacia arriba, como el boceto.
+            //
+            // Diseño D78 — se redondea ARRIBA y solo arriba.
+            //
+            // Antes llevaba el mismo radio en las cuatro esquinas, con la idea de que así el borde
+            // de arriba sería una cúpula y no un corte. Lo era, pero el de abajo también, y ahí
+            // está el defecto: el relleno se curvaba hacia dentro justo donde tenía que apoyarse.
+            // A media altura se despegaba del fondo del carril, y por debajo de su propio diámetro
+            // WPF encoge los radios para que quepan y el resultado era una lenteja —o directamente
+            // un círculo suelto a 52— flotando en mitad de la píldora en vez de un nivel.
+            //
+            // Abajo no hace falta radio ninguno: el recorte redondeado del carril ya le da la
+            // curva por donde el ojo la espera. El de arriba, el único que se ve moverse, sigue
+            // siendo una cúpula.
             var fill = new Border
             {
                 Width = TrackWidth,
                 Height = 0,
                 VerticalAlignment = VerticalAlignment.Bottom,
-                CornerRadius = new CornerRadius(TrackWidth / 2),
+                CornerRadius = new CornerRadius(TrackWidth / 2, TrackWidth / 2, 0, 0),
                 Background = (Brush)FindResource("BrushAccent")
             };
 
