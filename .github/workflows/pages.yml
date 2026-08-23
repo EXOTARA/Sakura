@@ -17,6 +17,12 @@ on:
   # flujo, y GitHub no deja que un evento creado con ese token dispare otro flujo — es su regla
   # contra la recursión. El resultado silencioso es una página que sigue ofreciendo la versión
   # anterior, que es exactamente lo que pasó con la 0.28.0-beta.
+  # OJO, y no está en este archivo: el entorno `github-pages` tiene una política de ramas que por
+  # omisión solo deja desplegar desde `main`. Llamado desde el flujo de publicación, la ejecución
+  # va sobre la ETIQUETA, así que la primera vez el despliegue se rechazó con «Tag v0.29.0-beta is
+  # not allowed to deploy to github-pages» — con los artefactos ya publicados y la página sin
+  # actualizar. Se añadió una política de tipo etiqueta para `v*` en los ajustes del repositorio.
+  # Si algún día vuelve a rechazarse un despliegue, mirar ahí antes que aquí.
   workflow_call:
 
   workflow_dispatch:
