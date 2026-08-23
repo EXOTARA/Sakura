@@ -1,0 +1,79 @@
+using Nexo.Core.Voice;
+
+namespace Nexo.Core.Tests;
+
+/// <summary>
+/// Diseño D81 — la pestaña Voz existe para contestar «¿por qué no me está oyendo?».
+///
+/// Lo que se fija aquí es que las tres causas de que no conteste —escucha apagada, sin micrófono,
+/// modelos sin preparar— se marquen, y que nada más lo haga. Una lista donde todo pide atención no
+/// señala nada.
+/// </summary>
+public sealed class VoiceGlancePolicyTests
+{
+    private static IReadOnlyList<VoiceGlanceRow> Healthy() =>
+        VoiceGlancePolicy.Describe(
+            wakeWordEnabled: true,
+            wakeWordPhrase: "Oye Sakura",
+            modelsReady: true,
+            inputDeviceName: "Micrófono (Realtek)",
+            dictationEnabled: true);
+
+    [Fact]
+    public void WhenEverythingWorks_NothingAsksForAttention()
+    {
+        Assert.All(Healthy(), row => Assert.False(row.NeedsAttention, row.Label));
+    }
+
+    [Fact]
+    public void TheListeningRow_SaysWhichPhraseItIsWaitingFor()
+    {
+        var listening = Healthy()[0];
+
+        Assert.Equal("Escucha", listening.Label);
+        Assert.Contains("Oye Sakura", listening.Value);
+    }
+
+    [Theory]
+    [InlineData(false, true, "Micrófono (Realtek)", "Escucha")]
+    [InlineData(true, false, "Micrófono (Realtek)", "Modelos de voz")]
+    [InlineData(true, true, null, "Micrófono")]
+    public void EachReasonSakuraCannotHearYou_IsMarked(
+        bool wakeWordEnabled,
+        bool modelsReady,
+        string? device,
+        string expectedLabel)
+    {
+        var rows = VoiceGlancePolicy.Describe(
+            wakeWordEnabled, "Oye Sakura", modelsReady, device, dictationEnabled: true);
+
+        var flagged = rows.Where(row => row.NeedsAttention).ToList();
+
+        Assert.Single(flagged);
+        Assert.Equal(expectedLabel, flagged[0].Label);
+    }
+
+    [Fact]
+    public void TheShortcutsAreThere_BecauseThisIsWhereSomeoneLooksForThem()
+    {
+        var rows = Healthy();
+
+        Assert.Contains(rows, row => row.Value == "Alt + V");
+        Assert.Contains(rows, row => row.Value == "Ctrl + Shift + D");
+    }
+
+    [Fact]
+    public void DictationBeingOff_IsNotAProblem_JustAState()
+    {
+        // Nadie está esperando que el dictado conteste; tenerlo apagado es una elección, no un
+        // fallo, y marcarlo en rojo enseñaría a ignorar las marcas.
+        var rows = VoiceGlancePolicy.Describe(
+            wakeWordEnabled: true,
+            wakeWordPhrase: "Oye Sakura",
+            modelsReady: true,
+            inputDeviceName: "Micrófono (Realtek)",
+            dictationEnabled: false);
+
+        Assert.All(rows, row => Assert.False(row.NeedsAttention, row.Label));
+    }
+}

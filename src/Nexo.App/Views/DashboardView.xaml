@@ -324,45 +324,104 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Sesión: ancha, arriba, como la tarjeta de perfil de la referencia. -->
-                    <Border Grid.Row="0" Style="{StaticResource DashboardCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Border Width="46"
-                                    Height="46"
-                                    VerticalAlignment="Center"
-                                    Background="{DynamicResource BrushAccentSoft}"
-                                    BorderBrush="{DynamicResource BrushAccentBorder}"
-                                    BorderThickness="1"
-                                    CornerRadius="16">
-                                <Path Width="20"
-                                      Height="20"
-                                      Stretch="Uniform"
-                                      Stroke="{DynamicResource BrushAccent}"
-                                      StrokeThickness="1.7"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"
-                                      Data="{StaticResource IconSakuraHome}" />
-                            </Border>
-                            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="PanelSessionTitleText"
-                                           Text="Sakura"
-                                           FontSize="{DynamicResource FontSizeBody}"
-                                           FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock x:Name="PanelUptimeText"
-                                           Margin="0,4,0,0"
-                                           Text="—"
-                                           FontSize="{DynamicResource FontSizeFootnote}"
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource BrushTextSecondary}" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                    <!--
+                        Fila de arriba: «Ahora» a la izquierda —donde la referencia pone el clima— y
+                        la sesión a su derecha. «Ahora» se lleva el trozo ancho porque lo que enseña
+                        es un título de ventana, que es largo; la sesión dice un nombre y un tiempo
+                        de encendido y no necesita más.
+                    -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.35*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!--
+                            Diseño D80 — «Ahora»: en qué estás en este momento.
+
+                            Lo que enseña lo decide NowGlancePolicy, en Nexo.Core, y no esta vista:
+                            la regla de que una ventana marcada como sensible no se nombra es una
+                            decisión de producto con pruebas detrás, no un detalle de presentación.
+                        -->
+                        <Border Grid.Column="0" Style="{StaticResource DashboardCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="46"
+                                        Height="46"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource BrushCoolBlueSoft}"
+                                        BorderBrush="{DynamicResource BrushCoolBlue}"
+                                        BorderThickness="1"
+                                        CornerRadius="16">
+                                    <Path Width="20"
+                                          Height="20"
+                                          Stretch="Uniform"
+                                          Stroke="{DynamicResource BrushCoolBlue}"
+                                          StrokeThickness="1.7"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="{StaticResource IconSidebarPanel}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="PanelNowHeadlineText"
+                                               Text="Sakura"
+                                               FontSize="{DynamicResource FontSizeBody}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"
+                                               AutomationProperties.Name="Aplicación en primer plano" />
+                                    <TextBlock x:Name="PanelNowDetailText"
+                                               Margin="0,4,0,0"
+                                               Text="No hay otra ventana delante"
+                                               FontSize="{DynamicResource FontSizeFootnote}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="46"
+                                        Height="46"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource BrushAccentSoft}"
+                                        BorderBrush="{DynamicResource BrushAccentBorder}"
+                                        BorderThickness="1"
+                                        CornerRadius="16">
+                                    <Path Width="20"
+                                          Height="20"
+                                          Stretch="Uniform"
+                                          Stroke="{DynamicResource BrushAccent}"
+                                          StrokeThickness="1.7"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="{StaticResource IconSakuraHome}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="PanelSessionTitleText"
+                                               Text="Sakura"
+                                               FontSize="{DynamicResource FontSizeBody}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="PanelUptimeText"
+                                               Margin="0,4,0,0"
+                                               Text="—"
+                                               FontSize="{DynamicResource FontSizeFootnote}"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource BrushTextSecondary}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
 
                     <!-- Reloj estrecho · calendario ancho · anillos estrechos. -->
                     <Grid Grid.Row="1" VerticalAlignment="Top">
@@ -924,6 +983,61 @@
                     </UniformGrid>
                 </StackPanel>
             </Grid>
+            <!-- ============================ VOZ ============================ -->
+            <!--
+                Diseño D81 — el estado de la voz, de un vistazo.
+
+                Contesta a «¿por qué no me está oyendo?», que era una pregunta repartida entre
+                Personalizar, el estado del micrófono y acordarse de los atajos. No cambia nada:
+                lo que se toca sigue en Personalizar, que es donde hay sitio para explicarlo.
+            -->
+            <Grid x:Name="VoicePane" Visibility="Collapsed">
+                <Grid.RenderTransform>
+                    <TranslateTransform x:Name="VoicePaneTranslate" />
+                </Grid.RenderTransform>
+
+                <Border Style="{StaticResource DashboardCardStyle}" Margin="-6,0,-6,0" Padding="4,2">
+                    <ItemsControl x:Name="VoiceRowItems">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="14,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" MinWidth="150" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding Label}"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FontSizeFootnote}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Value}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               FontSize="{DynamicResource FontSizeBody}"
+                                               Foreground="{Binding Foreground}" />
+
+                                    <!--
+                                        La marca es un punto, no un color de texto: el color solo
+                                        no distingue nada para quien no lo ve, y esta lista existe
+                                        justamente para señalar cuál de las líneas falla.
+                                    -->
+                                    <Ellipse Grid.Column="2"
+                                             Width="8"
+                                             Height="8"
+                                             VerticalAlignment="Center"
+                                             Fill="{DynamicResource BrushWarning}"
+                                             Visibility="{Binding MarkVisibility}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </Grid>
+
         </Grid>
     </Grid>
 </UserControl>

@@ -6,6 +6,8 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Nexo.App.Motion;
 using Nexo.App.Views;
+using Nexo.Core.Ambient;
+using Nexo.Core.Voice;
 using Nexo.Core.Media;
 using Nexo.Core.Metrics;
 using Nexo.Core.Shell;
@@ -423,6 +425,12 @@ public partial class DashboardWindow : Window
 
     public void UpdateSession(string? profileName, TimeSpan? uptime) =>
         Dashboard.UpdateSession(profileName, uptime);
+
+    /// <summary>Diseño D80 — el vistazo de «Ahora», ya resuelto por la política.</summary>
+    public void UpdateNow(NowGlance glance) => Dashboard.UpdateNow(glance);
+
+    /// <summary>Diseño D81 — el estado de la voz, ya resuelto por la política.</summary>
+    public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows) => Dashboard.UpdateVoice(rows);
 
     public void RefreshClock() => Dashboard.RefreshClock();
 

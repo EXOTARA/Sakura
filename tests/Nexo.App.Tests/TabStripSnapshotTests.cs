@@ -4,6 +4,9 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Nexo.App.Views;
+using Nexo.Core.Shell;
+using Nexo.App.Motion;
+using Nexo.Core.Voice;
 using Nexo.App.Views.Controls;
 
 namespace Nexo.App.Tests;
@@ -121,5 +124,72 @@ public sealed class TabStripSnapshotTests
 
         Assert.True(File.Exists(output));
         Assert.True(new FileInfo(output).Length > 1_000, "El PNG salió vacío; no se dibujó nada.");
+    }
+
+    [Fact]
+    public void Voice_RendersToAnImageSomeoneCanLookAt()
+    {
+        const double width = 920;
+        const double height = 380;
+
+        var output = Path.Combine(
+            Path.GetTempPath(), "claude", "C--Dev-Nexo", "voice-tab.png");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+
+        _wpf.Invoke(() =>
+        {
+            var view = new DashboardView();
+
+            var host = new Border
+            {
+                Background = (Brush)Application.Current.FindResource("BrushBackground"),
+                Width = width,
+                Height = height,
+                Child = view
+            };
+
+            host.Measure(new Size(width, height));
+            host.Arrange(new Rect(0, 0, width, height));
+            host.UpdateLayout();
+
+            // Un caso con algo mal: sin micrófono, que es una de las tres razones por las que
+            // Sakura no contesta y la que peor se explica sola.
+            view.UpdateVoice(
+                VoiceGlancePolicy.Describe(
+                    wakeWordEnabled: true,
+                    wakeWordPhrase: "Oye Sakura",
+                    modelsReady: true,
+                    inputDeviceName: null,
+                    dictationEnabled: true));
+
+            // Sin animaciones: el subrayado de la tira viaja hasta la pestaña nueva a lo largo de
+            // unos cientos de milisegundos, y un retrato que se dibuja al instante lo captura
+            // todavía en la pestaña anterior. La imagen enseñaría un estado que no existe.
+            var animations = SakuraMotion.AnimationsEnabled;
+            SakuraMotion.AnimationsEnabled = false;
+
+            try
+            {
+                view.SelectTab(DashboardTab.Voice);
+                host.UpdateLayout();
+            }
+            finally
+            {
+                SakuraMotion.AnimationsEnabled = animations;
+            }
+
+            var bitmap = new RenderTargetBitmap(
+                (int)(width * 1.5), (int)(height * 1.5), 144, 144, PixelFormats.Pbgra32);
+            bitmap.Render(host);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+            using var stream = File.Create(output);
+            encoder.Save(stream);
+        });
+
+        Assert.True(File.Exists(output));
     }
 }

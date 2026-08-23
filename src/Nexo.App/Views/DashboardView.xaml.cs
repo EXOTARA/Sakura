@@ -9,10 +9,12 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Nexo.App.Motion;
 using Nexo.App.Views.Controls;
+using Nexo.Core.Ambient;
 using Nexo.Core.Media;
 using Nexo.Core.Metrics;
 using Nexo.Core.Shell;
 using Nexo.Core.Time;
+using Nexo.Core.Voice;
 
 namespace Nexo.App.Views;
 
@@ -63,7 +65,8 @@ public partial class DashboardView : UserControl
         [
             new DashboardTabDefinition("Panel", FindResource("IconTabPanel") as Geometry),
             new DashboardTabDefinition("Media", FindResource("IconTabMedia") as Geometry),
-            new DashboardTabDefinition("Rendimiento", FindResource("IconTabPerformance") as Geometry)
+            new DashboardTabDefinition("Rendimiento", FindResource("IconTabPerformance") as Geometry),
+            new DashboardTabDefinition("Voz", FindResource("IconSakuraMic") as Geometry)
         ]);
         DashboardTabs.SelectionChanged += (_, index) => ShowTab((DashboardTab)index, animate: true);
 
@@ -168,6 +171,19 @@ public partial class DashboardView : UserControl
     /// <see cref="DashboardTabPolicy"/> y no aquí: es una decisión de producto —no enseñar un
     /// reproductor vacío— y se puede probar sin abrir una ventana.
     /// </summary>
+    /// <summary>
+    /// Abre una pestaña concreta, dejando la tira y el panel de acuerdo.
+    ///
+    /// Existe porque hasta ahora la única forma de cambiar de pestaña era pulsarla: bien para
+    /// alguien delante de la pantalla, imposible para cualquier otra cosa —una orden de voz que
+    /// quiera llevar a Voz, o un retrato que quiera dibujarla.
+    /// </summary>
+    public void SelectTab(DashboardTab tab)
+    {
+        DashboardTabs.Select((int)tab);
+        ShowTab(tab, animate: false);
+    }
+
     public void PrepareForReveal()
     {
         var tab = DashboardTabPolicy.Resolve(_activeTab, _media.HasSession);
@@ -198,6 +214,7 @@ public partial class DashboardView : UserControl
         Show(PanelPane, PanelPaneTranslate, tab == DashboardTab.Panel, animate, offset);
         Show(MediaPane, MediaPaneTranslate, tab == DashboardTab.Media, animate, offset);
         Show(PerformancePane, PerformancePaneTranslate, tab == DashboardTab.Performance, animate, offset);
+        Show(VoicePane, VoicePaneTranslate, tab == DashboardTab.Voice, animate, offset);
 
         static void Show(
             UIElement pane,
@@ -296,6 +313,48 @@ public partial class DashboardView : UserControl
     /// llama sigue calculando el resumen para Inicio y para el shell: quitar también la llamada
     /// esparciría el cambio de una pestaña por media aplicación.
     /// </summary>
+    /// <summary>
+    /// Diseño D80 — qué enseña la tarjeta «Ahora».
+    ///
+    /// La vista no decide nada: recibe el vistazo ya resuelto por <c>NowGlancePolicy</c> y lo pinta.
+    /// La regla de que una ventana sensible no se nombra vive en Core, con pruebas, porque es una
+    /// decisión de producto y no una de presentación.
+    /// </summary>
+    public void UpdateNow(NowGlance glance)
+    {
+        PanelNowHeadlineText.Text = glance.Headline;
+        PanelNowDetailText.Text = glance.Detail;
+
+        // El título completo en el tooltip: la tarjeta es un vistazo y recorta, pero quien quiera
+        // leerlo entero no debería tener que ir a buscar la ventana. Salvo que no haya nada que
+        // añadir, en cuyo caso un tooltip que repite lo que ya se ve solo estorba.
+        PanelNowDetailText.ToolTip =
+            glance.Detail.EndsWith('…') ? glance.Detail : null;
+    }
+
+    /// <summary>
+    /// Diseño D81 — las líneas de la pestaña Voz, ya resueltas por <c>VoiceGlancePolicy</c>.
+    ///
+    /// La vista solo traduce a pinceles lo que la política marcó: qué está mal lo decide Core, con
+    /// pruebas, porque «Sakura no te oye» tiene tres causas concretas y cuál de ellas es no es una
+    /// cuestión de presentación.
+    /// </summary>
+    public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows)
+    {
+        var normal = (Brush)FindResource("BrushTextPrimary");
+        var attention = (Brush)FindResource("BrushWarning");
+
+        VoiceRowItems.ItemsSource = rows
+            .Select(row => new
+            {
+                row.Label,
+                row.Value,
+                Foreground = row.NeedsAttention ? attention : normal,
+                MarkVisibility = row.NeedsAttention ? Visibility.Visible : Visibility.Collapsed
+            })
+            .ToArray();
+    }
+
     public void UpdateDailySummary(
         string? taskValue,
         string? taskDetail,
