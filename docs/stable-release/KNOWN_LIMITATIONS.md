@@ -100,6 +100,30 @@ a `scripts/sandbox/Invoke-InstallCycle.ps1` en una carpeta, se monta con un `.ws
 el ciclo solo. Requiere `Containers-DisposableClientVM` activada y la virtualización (SVM/VT-x)
 habilitada en la BIOS.
 
+**Las instalaciones que ya estaban rotas se arreglan solas, reinstalando.** El arreglo impide que
+vuelva a pasar, pero no devuelve un desinstalador que se borró hace versiones: ahí no hay nada que
+copiar. La vía de recuperación es volver a pasar el instalador por encima, y **no hace falta tocar
+nada desde la aplicación** — comprobado el 2026-08-23 con `scripts/sandbox/Invoke-RepairCycle.ps1`,
+que instala, rompe la instalación igual que lo hacía el fallo, reinstala y desinstala:
+
+| Paso | Resultado |
+| --- | --- |
+| Rota como lo hacía el fallo | 0 desinstaladores; el registro ofrece uno que no existe |
+| Reinstalar por encima | **2 desinstaladores**; el registro ofrece uno que sí existe; 511 archivos |
+| Desinstalar | salida 0; **la carpeta ya no existe; 0 archivos**; entrada borrada |
+
+Funciona porque la entrada del registro guarda `Inno Setup: App Path`, y el instalador lo usa para
+reinstalar exactamente donde ya estaba.
+
+**Por eso esa entrada rota no se borra.** La primera idea para «limpiar» fue que Sakura quitara al
+arrancar la entrada cuyo desinstalador ya no existe. Es mala por dos motivos, y los dos se ven en el
+equipo de Adler, que está justo en ese estado: dejaría a la persona **sin ninguna** forma de
+desinstalar en vez de con un botón roto, y el siguiente instalador —sin el rastro que le dice dónde
+estaba— plantaría una segunda copia en su carpeta por defecto mientras la vieja (261 MB, en
+`…\Programs\Kohana` por el nombre anterior del producto) se queda en disco para siempre. La entrada
+rota es el hilo del que tirar, no basura.
+
+
 ### L14 — El instalador no llegaba a publicarse
 **Qué:** las cinco últimas versiones (0.26.4 a 0.26.9) se publicaron **solo con el zip portable**.
 **Por qué:** el flujo de release construía el instalador y luego intentaba *crear* una release que ya
