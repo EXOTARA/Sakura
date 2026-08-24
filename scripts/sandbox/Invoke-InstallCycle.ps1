@@ -9,14 +9,19 @@
     Reproduce el mecanismo del que habla L13 sin necesitar red ni interacción:
 
       1. Instala la versión de partida con el instalador de verdad, en silencio.
-      2. Vuelca encima los archivos de la versión siguiente — que es EXACTAMENTE lo que hace el
-         ayudante del actualizador: sustituye el contenido de la carpeta sin pasar por el
-         instalador, así que los archivos nuevos no quedan anotados en su registro.
+      2. Hace el intercambio de carpetas **igual que el ayudante**: aparta la instalación, pone en
+         su sitio el contenido del zip portable y borra la apartada.
       3. Desinstala con el desinstalador de verdad, en silencio.
       4. Mira qué quedó.
 
-    La pregunta que contesta es una y concreta: **¿el desinstalador deja atrás los archivos que
-    llegaron en la actualización?** L13 sospecha que sí y admite que nadie lo miró.
+    **La primera versión de este guion simulaba el paso 2 con `Copy-Item` encima**, porque eso es lo
+    que decía su propia documentación que hacía el ayudante. Era falso, y la medida que produjo
+    describía un mecanismo que no existe. `UpdateHelperScript` mueve la carpeta entera: la actual se
+    aparta y se borra, y la que ocupa su sitio sale del zip portable — que es la salida de
+    `dotnet publish` y **no trae el desinstalador**, porque ese lo escribe Inno al instalar.
+
+    La pregunta que contesta, entonces, son dos: **¿sigue habiendo desinstalador después de
+    actualizar?** y **¿se lleva también lo que llegó en la actualización y él nunca anotó?**
 #>
 [CmdletBinding()]
 param(
@@ -96,8 +101,7 @@ Say ""
 $portable = Get-ChildItem $WorkPath -Filter "*portable.zip" | Select-Object -First 1
 if (-not $portable) { throw "No encuentro ningún portable en $WorkPath." }
 
-Say "2. Volcando $($portable.Name) sobre la instalacion"
-Say "   (es lo que hace el ayudante del actualizador: sustituye archivos sin pasar por el instalador)"
+Say "2. Intercambiando por $($portable.Name), como hace el ayudante"
 
 # El zip se descomprime en el disco de la maquina virtual, no en la carpeta montada. Montada es
 # comoda para mirar desde casa, pero cada archivo cruza el puente del Sandbox: descomprimir ahi
@@ -111,9 +115,25 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::ExtractToDirectory($portable.FullName, $staged)
 Say "   descomprimidos: $((Get-ChildItem $staged -Recurse -File).Count) archivos"
 
-Say "   copiando sobre $installFolder"
-Copy-Item (Join-Path $staged "*") $installFolder -Recurse -Force
-Say "   copia terminada"
+# Una dependencia que llega con la version nueva y que el instalador nunca anoto. Con dos versiones
+# reales distintas esto aparece solo —entre 0.28 y 0.29 fue WpfAnimatedGif.dll—, pero el instalador
+# de partida tiene que llevar el barrido que se esta probando, asi que se construye aqui y las dos
+# versiones son la misma. Este archivo ocupa el lugar de esa dependencia.
+$forastero = "llegada-en-la-actualizacion.dll"
+Set-Content (Join-Path $staged $forastero) -Value "una dependencia que el instalador nunca anoto" -Encoding UTF8
+
+# El ayudante conserva el desinstalador antes de mover nada: no viene en el zip portable, y sin esta
+# copia la actualizacion se lo llevaba por delante.
+$conservados = @(Get-ChildItem -LiteralPath $installFolder -Filter "unins*" -File -ErrorAction SilentlyContinue)
+foreach ($u in $conservados) { Copy-Item -LiteralPath $u.FullName -Destination $staged -Force }
+Say "   desinstalador conservado: $($conservados.Count) archivos"
+
+$apartada = "$installFolder.old"
+if (Test-Path $apartada) { Remove-Item $apartada -Recurse -Force }
+Move-Item -LiteralPath $installFolder -Destination $apartada
+Move-Item -LiteralPath $staged -Destination $installFolder
+Remove-Item $apartada -Recurse -Force -ErrorAction SilentlyContinue
+Say "   intercambio hecho"
 
 $afterUpdate = @(Inventory $installFolder)
 $arrived = @($afterUpdate | Where-Object { $afterInstall -notcontains $_ })

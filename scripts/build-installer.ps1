@@ -34,7 +34,12 @@ if (-not (Test-Path (Join-Path $publishDirectory "Sakura.exe"))) {
 }
 
 if ([string]::IsNullOrWhiteSpace($InnoSetupPath)) {
+    # La instalación por usuario va la primera porque es la que ofrece el instalador de Inno cuando
+    # no se le dan permisos de administrador, que es el caso normal en un equipo de desarrollo. Solo
+    # se miraban las dos carpetas de Archivos de programa, y el resultado era «no encontré Inno
+    # Setup 6» con Inno Setup 6 perfectamente instalado.
     $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
         "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
         "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
     )

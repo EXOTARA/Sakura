@@ -107,6 +107,27 @@ public static class UpdateHelperScript
         script.AppendLine("}");
         script.AppendLine();
 
+        // L13 — el desinstalador viaja con la instalación, o deja de existir.
+        //
+        // El intercambio sustituye la carpeta **entera**: la actual se aparta y se borra, y la que
+        // ocupa su sitio sale del zip portable. Ese zip es la salida de `dotnet publish` y no trae
+        // `unins000.exe` ni `unins000.dat` — esos los escribe Inno al instalar, y solo existen en
+        // una instalación hecha con el instalador.
+        //
+        // Sin esta copia, **cada actualización se llevaba por delante el desinstalador** y dejaba
+        // en el registro una entrada que apuntaba a un archivo que ya no estaba. Desinstalar desde
+        // «Aplicaciones instaladas» no dejaba restos: ni siquiera llegaba a arrancar.
+        //
+        // Se copia antes de mover nada, mientras las dos carpetas siguen donde estaban. Y no es un
+        // fallo que no haya nada que copiar: quien usa el zip portable nunca tuvo desinstalador, y
+        // su actualización debe seguir funcionando igual.
+        script.AppendLine("$desinstalador = @(Get-ChildItem -LiteralPath $install -Filter 'unins*' -File -ErrorAction SilentlyContinue)");
+        script.AppendLine("foreach ($u in $desinstalador) {");
+        script.AppendLine("    Copy-Item -LiteralPath $u.FullName -Destination $staged -Force -ErrorAction SilentlyContinue");
+        script.AppendLine("}");
+        script.AppendLine("Apunta ('desinstalador conservado: ' + $desinstalador.Count + ' archivos')");
+        script.AppendLine();
+
         // Un intento anterior pudo dejar una carpeta apartada. Se quita antes de empezar, porque si
         // no el movimiento falla y el ayudante se cree a mitad de un trabajo que no ha empezado.
         script.AppendLine("if (Test-Path -LiteralPath $previous) {");

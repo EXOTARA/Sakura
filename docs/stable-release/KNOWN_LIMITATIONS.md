@@ -47,41 +47,58 @@ escribe, **en cada arranque y no al actualizar**. Hacerlo solo al actualizar hab
 futuras dejando mintiendo a todas las instalaciones que ya estaban mal. Sin entrada en el registro
 no se inventa ninguna: quien usa el zip portable no aparece en esa lista y no debe aparecer.
 
-### L13 — Desinstalar después de actualizar deja los archivos que llegaron en la actualización
-**Qué:** el desinstalador de Inno Setup borra lo que su registro de instalación dice que puso. Los
-archivos que llegan después, en una actualización, no están en ese registro y sobreviven.
-**Por qué:** el conjunto de archivos cambia entre versiones (DLL nuevas, modelos, recursos) y el
-actualizador los escribe sin anotarlos donde el desinstalador mira.
-**Comprobado (2026-08-23):** ya no se deduce, se midió. Ciclo completo dentro de **Windows Sandbox**
-—un Windows desechable, para no medirlo sobre una máquina que ya tiene carpetas y entradas de
-registro de antes—, `0.28.0-beta` → `0.29.0-beta`:
+### ~~L13 — Desinstalar después de actualizar dejaba archivos~~ ✅ (2026-08-23)
+**Qué era:** el desinstalador de Inno borra lo que su propio registro dice que puso. El actualizador
+no pasa por el instalador, así que lo que hay en la carpeta después de actualizar no es lo que Inno
+anotó.
+
+**Y era peor de lo que la nota decía.** Esta limitación se escribió deduciendo, y la deducción daba
+por hecho que el ayudante *copiaba archivos encima*. No lo hace: **intercambia la carpeta entera**
+—aparta la instalación, pone en su sitio el contenido del zip portable y borra la apartada—. Y ese
+zip es la salida de `dotnet publish`, que **no trae `unins000.exe` ni `unins000.dat`**, porque esos
+los escribe Inno al instalar.
+
+El resultado real no era una DLL huérfana: era que **cada actualización borraba el desinstalador**,
+dejando en «Aplicaciones instaladas» una entrada que apuntaba a un archivo inexistente. Desinstalar
+desde Windows no dejaba restos porque no llegaba a empezar. La primera medida de este ciclo
+(2026-08-23, antes de leer el ayudante) reprodujo el mecanismo equivocado y describió un
+`WpfAnimatedGif.dll` superviviente que en la realidad no llega a existir.
+
+**Arreglado, en dos piezas que se necesitan mutuamente:**
+
+1. **El ayudante se lleva el desinstalador consigo** (`UpdateHelperScript`): copia `unins*` de la
+   instalación a la carpeta preparada antes de mover nada, mientras las dos siguen donde estaban.
+   Sin esto no hay nada que arreglar, porque no hay desinstalador. Que no haya nada que copiar no es
+   un fallo: quien usa el zip portable nunca tuvo uno.
+2. **El desinstalador barre `{app}`** (`[UninstallDelete]` en `Sakura.iss`): así se lleva también lo
+   que llegó después y él nunca anotó. Es seguro porque `{app}` es una carpeta exclusiva de Sakura
+   (`…\Programs\Sakura`); los datos de la persona viven en `%LOCALAPPDATA%\Sakura`, que esa línea no
+   toca. Anotar en el registro de Inno desde fuera —lo primero que se intentó— no es posible:
+   `unins000.dat` es un formato binario propio sin forma soportada de añadirle entradas.
+
+**Comprobado (2026-08-23):** ciclo completo en Windows Sandbox con instalador y portable construidos
+con el arreglo dentro:
 
 | Paso | Resultado |
 | --- | --- |
-| Instalar `Sakura-0.28.0-beta-Setup.exe` | salida 0, 510 archivos, registro dice `0.28.0-beta` |
-| Volcar encima el portable de `0.29.0-beta` | 511 archivos; **1 nuevo** que el instalador nunca anotó: `WpfAnimatedGif.dll` |
+| Instalar | salida 0, 511 archivos, registro dice `0.29.0-beta` |
+| Intercambio como el del ayudante | **desinstalador conservado: 2 archivos**; 512 archivos, 1 que el instalador nunca anotó |
 | Desinstalar con `unins000.exe` | salida 0 |
-| Lo que quedó | **1 archivo: `WpfAnimatedGif.dll`** — exactamente el que llegó en la actualización |
+| Lo que quedó | **la carpeta ya no existe; 0 archivos**; entrada del registro borrada |
 
-La entrada de desinstalación del registro **sí** se borra, y la carpeta de datos
-(`%LOCALAPPDATA%\Sakura`) ni llega a crearse. Lo que queda es una carpeta con un DLL huérfano, no
-una instalación fantasma. El ciclo entero tarda unos 20 segundos.
+El desinstalador consigue borrarse a sí mismo y a la carpeta que está barriendo, que era la parte
+que no se podía afirmar leyendo.
 
-**Cuánto importa:** hoy es un archivo porque entre 0.28 y 0.29 solo entró una dependencia nueva —la
-biblioteca del GIF—. No es una cifra estable: crece con cada versión que añada DLL, modelos o
-recursos que la versión instalada no tuviera. Quien instale una versión vieja y actualice muchas
-veces acumulará un archivo huérfano por cada dependencia añadida en el camino.
+**Lo que esta medida no cubre:** el ciclo instala y actualiza a la **misma** versión, con un archivo
+sintético (`llegada-en-la-actualizacion.dll`) haciendo de dependencia que llega después — el
+instalador de partida tiene que llevar el barrido que se está probando, así que se construye en el
+momento. Y el banco reproduce los pasos del ayudante, no ejecuta el guion que genera
+`UpdateHelperScript`; que ese guion emita esos pasos lo cubren las pruebas de unidad.
 
-**Aislamiento:** ninguno. Es la consecuencia estructural de actualizar sustituyendo archivos sin
-pasar por el instalador, no un fallo del desinstalador: borró los 510 que sabía que había puesto.
-**Cómo reproducirlo:** banco de pruebas en `scripts/sandbox/`. `New-InstallCycleBundle.ps1 -From
-v0.28.0-beta -To v0.29.0-beta` baja los artefactos y escribe el `.wsb`; abrirlo arranca el Sandbox,
-que corre `Invoke-InstallCycle.ps1` solo y deja `informe.txt` en la carpeta montada. Requiere la
-característica `Containers-DisposableClientVM` activada y la virtualización (SVM/VT-x) habilitada en
-la BIOS.
-**Para estable:** que el ayudante del actualizador anote lo que escribe donde el desinstalador mira,
-o que el desinstalador barra la carpeta entera. Mientras no se haga, esto queda documentado con la
-medida de arriba en vez de con una sospecha.
+**Cómo reproducirlo:** `scripts/build-installer.ps1` construye instalador y portable; se dejan junto
+a `scripts/sandbox/Invoke-InstallCycle.ps1` en una carpeta, se monta con un `.wsb` y el Sandbox corre
+el ciclo solo. Requiere `Containers-DisposableClientVM` activada y la virtualización (SVM/VT-x)
+habilitada en la BIOS.
 
 ### L14 — El instalador no llegaba a publicarse
 **Qué:** las cinco últimas versiones (0.26.4 a 0.26.9) se publicaron **solo con el zip portable**.
