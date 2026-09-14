@@ -1,6 +1,7 @@
 <Window x:Class="Nexo.App.AmbientHistoryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:a11y="clr-namespace:Nexo.App.Views.Controls"
         Title="Historial de solicitudes ambientales"
         Width="460"
         SizeToContent="Height"
@@ -59,16 +60,16 @@
                         ToolTip="Cerrar"
                         AutomationProperties.Name="Cerrar historial de solicitudes"
                         Click="CloseButton_Click">
-                    <TextBlock Text="&#10005;" FontSize="{DynamicResource FontSizeCaption}" HorizontalAlignment="Center" />
+                    <a11y:DecorativeText Text="&#10005;" FontSize="{DynamicResource FontSizeCaption}" HorizontalAlignment="Center" />
                 </Button>
             </Grid>
 
-            <ScrollViewer Grid.Row="1"
+            <ScrollViewer Focusable="True" AutomationProperties.Name="Historial de solicitudes: desplazar" Grid.Row="1"
                           Margin="0,14,0,0"
                           MaxHeight="420"
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto">
-                <ItemsControl x:Name="HistoryItemsControl">
+                <ItemsControl AutomationProperties.Name="Solicitudes recientes" x:Name="HistoryItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Margin="0,0,0,8"

@@ -8,7 +8,9 @@
         ShowInTaskbar="False"
         Topmost="True"
         Cursor="Cross"
-        AutomationProperties.Name="Elegir una zona de la pantalla">
+        AutomationProperties.Name="Elegir una zona de la pantalla"
+        AutomationProperties.LiveSetting="Polite"
+        AutomationProperties.HelpText="Flechas mueven la zona; Mayús y flechas cambian su tamaño; Control afina; Enter confirma; Escape cancela.">
     <!--
         Diseño D84 — elegir una zona de la pantalla arrastrando.
 
@@ -50,7 +52,7 @@
                            Text="Arrastra sobre el texto que quieras traducir"
                            FontSize="14"
                            Foreground="{DynamicResource BrushTextPrimary}" />
-                <TextBlock Text="Esc para cancelar"
+                <TextBlock Text="Flechas: mover · Mayús+flechas: tamaño · Ctrl: precisión · Enter: confirmar · Esc: cancelar"
                            Margin="0,3,0,0"
                            FontSize="12"
                            Foreground="{DynamicResource BrushTextTertiary}" />

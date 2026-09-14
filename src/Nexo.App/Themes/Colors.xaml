@@ -9,7 +9,8 @@
     <Color x:Key="ColorBorder">#2A303A</Color>
     <Color x:Key="ColorTextPrimary">#DFE1EA</Color>
     <Color x:Key="ColorTextSecondary">#AAAAB4</Color>
-    <Color x:Key="ColorTextTertiary">#747986</Color>
+    <!-- El texto auxiliar también se lee: el gris anterior daba 3,49:1 sobre SurfaceHover. -->
+    <Color x:Key="ColorTextTertiary">#969BA8</Color>
     <Color x:Key="ColorAccent">#C4889A</Color>
     <Color x:Key="ColorAccentSoft">#2C2027</Color>
     <Color x:Key="ColorAccentBorder">#80C4889A</Color>

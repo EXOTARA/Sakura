@@ -54,9 +54,10 @@ public partial class QuickControlsWindow : Window
     public QuickControlsWindow()
     {
         InitializeComponent();
+        Views.Controls.PopupKeyboardAccess.Attach(this, System.Windows.Input.Key.F9, () => Dismiss());
 
         _idleTimer = new DispatcherTimer { Interval = IdleDismiss };
-        _idleTimer.Tick += (_, _) => Dismiss();
+        _idleTimer.Tick += (_, _) => { if (!IsKeyboardFocusWithin) Dismiss(); };
 
         SourceInitialized += OnSourceInitialized;
         MouseEnter += (_, _) => _idleTimer.Stop();
@@ -175,6 +176,8 @@ public partial class QuickControlsWindow : Window
         }
 
         var normalized = QuickControlsPolicy.NormalizePercent(percent);
+        foreach (var track in ControlsPanel.Children.OfType<Views.Controls.AccessibleLevelTrack>())
+            if (Equals(track.Tag, kind)) track.UpdateValue(normalized);
         var target = TrackHeight * normalized / 100.0;
 
         if (!animate || !SakuraMotion.AnimationsEnabled)
@@ -198,7 +201,7 @@ public partial class QuickControlsWindow : Window
         {
             var kind = kinds[index];
 
-            var track = new Border
+            var track = new Views.Controls.AccessibleLevelTrack
             {
                 Style = (Style)FindResource("ControlTrackStyle"),
                 Margin = new Thickness(0, index == 0 ? 0 : 12, 0, 0),
@@ -269,6 +272,14 @@ public partial class QuickControlsWindow : Window
             layers.Children.Add(icon);
             track.Child = layers;
 
+            System.Windows.Automation.AutomationProperties.SetName(track,
+                kind == QuickControlKind.Volume ? "Volumen" : "Brillo");
+            track.ValueRequested += value =>
+            {
+                // La escritura final debe coincidir con el valor anunciado, no con una animación en curso.
+                SetLevel(kind, value, animate: false);
+                WriteNow(kind);
+            };
             track.MouseLeftButtonDown += OnTrackPressed;
             track.MouseLeftButtonUp += OnTrackReleased;
             track.LostMouseCapture += OnTrackLostCapture;

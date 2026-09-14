@@ -183,6 +183,7 @@ public partial class DashboardWindow : Window
         IsHitTestVisible = true;
         Show();
         Activate();
+        MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
 
         // Hay que medir antes de animar: la altura la decide el contenido (SizeToContent) y sin
         // este paso la primera apertura arrancaría desde cero y el cajón aparecería de golpe en su
@@ -342,7 +343,7 @@ public partial class DashboardWindow : Window
             return;
         }
 
-        if (IsPointerInside())
+        if (IsKeyboardFocusWithin || IsPointerInside())
         {
             _outsideSince = null;
             return;

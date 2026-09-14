@@ -178,12 +178,12 @@ public partial class CommandCenterWindow : Window
                 CloseAndRestoreFocus();
                 break;
 
-            case Key.Down:
+            case Key.Down when !ResultsList.IsKeyboardFocusWithin:
                 e.Handled = true;
                 MoveSelection(1);
                 break;
 
-            case Key.Up:
+            case Key.Up when !ResultsList.IsKeyboardFocusWithin:
                 e.Handled = true;
                 MoveSelection(-1);
                 break;
@@ -281,6 +281,8 @@ public partial class CommandCenterWindow : Window
         string Detail)
     {
         public string Title => Command.Title;
+
+        public override string ToString() => Title;
 
         public string? Shortcut => Command.Shortcut;
 

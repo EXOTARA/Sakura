@@ -36,10 +36,12 @@ public partial class SakuraPillWindow : Window
     public SakuraPillWindow()
     {
         InitializeComponent();
+        Views.Controls.PopupKeyboardAccess.Attach(this, System.Windows.Input.Key.F10, () => CloseButton_Click(this, new RoutedEventArgs()));
 
         _autoDismissTimer = new DispatcherTimer { Interval = AutoDismissDelay };
         _autoDismissTimer.Tick += (_, _) =>
         {
+            if (IsKeyboardFocusWithin) return;
             _autoDismissTimer.Stop();
             if (_canDismiss)
             {
@@ -125,6 +127,7 @@ public partial class SakuraPillWindow : Window
             ? Visibility.Visible
             : Visibility.Collapsed;
         CloseButton.ToolTip = state.CanCancel ? "Cancelar" : "Cerrar";
+        AutomationProperties.SetName(CloseButton, state.CanCancel ? "Cancelar solicitud" : "Cerrar solicitud");
 
         var description = string.IsNullOrEmpty(state.ErrorMessage)
             ? $"{state.StatusText}. {state.ShortText}"

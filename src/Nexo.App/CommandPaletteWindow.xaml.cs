@@ -27,6 +27,8 @@ public sealed record CommandPaletteSuggestion(
     IReadOnlyList<string> Keywords,
     bool IsPrompt = false)
 {
+    public override string ToString() => Title;
+
     public Visibility ShortcutVisibility =>
         string.IsNullOrWhiteSpace(ShortcutHint)
             ? Visibility.Collapsed
@@ -721,13 +723,15 @@ public partial class CommandPaletteWindow : Window
             return;
         }
 
+        if (!PromptTextBox.IsKeyboardFocusWithin && !SuggestionsList.IsKeyboardFocusWithin) return;
+
         if (e.Key == Key.Enter && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
         {
             // Shift + Enter pertenece al TextBox y agrega una línea.
             return;
         }
 
-        if (e.Key == Key.Tab)
+        if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.Control && PromptTextBox.IsKeyboardFocusWithin)
         {
             if (SuggestionsList.SelectedItem is CommandPaletteSuggestion selected)
             {
@@ -761,7 +765,7 @@ public partial class CommandPaletteWindow : Window
 
         if (e.Key == Key.Enter)
         {
-            if (ShouldSubmitSelectedSuggestion())
+            if (SuggestionsList.IsKeyboardFocusWithin || ShouldSubmitSelectedSuggestion())
             {
                 SubmitSelectedSuggestion();
             }
@@ -774,7 +778,7 @@ public partial class CommandPaletteWindow : Window
             return;
         }
 
-        if (e.Key == Key.Down && _isExpanded && SuggestionsList.Items.Count > 0)
+        if (e.Key == Key.Down && PromptTextBox.IsKeyboardFocusWithin && _isExpanded && SuggestionsList.Items.Count > 0)
         {
             _selectionExplicit = true;
             _activeCompletionSuggestion = null;
@@ -787,7 +791,7 @@ public partial class CommandPaletteWindow : Window
             return;
         }
 
-        if (e.Key == Key.Up && _isExpanded && SuggestionsList.Items.Count > 0)
+        if (e.Key == Key.Up && PromptTextBox.IsKeyboardFocusWithin && _isExpanded && SuggestionsList.Items.Count > 0)
         {
             _selectionExplicit = true;
             _activeCompletionSuggestion = null;

@@ -37,7 +37,7 @@
                        Text="Comprobando Ollama…"
                        TextWrapping="Wrap"
                        Style="{StaticResource MutedTextStyle}" />
-            <Button Grid.Column="1"
+            <Button AutomationProperties.Name="Actualizar" Grid.Column="1"
                     Margin="12,0,0,0"
                     Content="Actualizar"
                     Style="{StaticResource SecondaryButtonStyle}"
@@ -45,7 +45,7 @@
         </Grid>
 
         <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="8">
-            <ListBox x:Name="ModelsListBox"
+            <ListBox AutomationProperties.Name="Modelos instalados" x:Name="ModelsListBox"
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionChanged="ModelsListBox_SelectionChanged">
@@ -85,7 +85,7 @@
                              AutomationProperties.Name="Nombre del modelo"
                              Text="qwen3.5:4b"
                              Style="{StaticResource CompactTextBoxStyle}" />
-                    <Button x:Name="InstallButton"
+                    <Button AutomationProperties.Name="Descargar" x:Name="InstallButton"
                             Grid.Column="1"
                             Margin="10,0,0,0"
                             Content="Descargar"
@@ -113,17 +113,17 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button x:Name="DeleteButton"
+            <Button AutomationProperties.Name="Eliminar seleccionado" x:Name="DeleteButton"
                     Content="Eliminar seleccionado"
                     IsEnabled="False"
                     Style="{StaticResource SecondaryButtonStyle}"
                     Click="DeleteButton_Click" />
-            <Button Grid.Column="2"
+            <Button AutomationProperties.Name="Cerrar" Grid.Column="2"
                     Margin="0,0,10,0"
                     Content="Cerrar"
                     Style="{StaticResource SecondaryButtonStyle}"
-                    Click="CloseButton_Click" />
-            <Button x:Name="UseButton"
+                    IsCancel="True" Click="CloseButton_Click" />
+            <Button AutomationProperties.Name="Usar seleccionado" x:Name="UseButton"
                     Grid.Column="3"
                     Content="Usar seleccionado"
                     IsEnabled="False"

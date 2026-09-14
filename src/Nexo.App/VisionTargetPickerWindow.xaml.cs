@@ -11,6 +11,7 @@ public partial class VisionTargetPickerWindow : Window
         long preferredWindowHandle = 0)
     {
         InitializeComponent();
+        ContentRendered += (_, _) => TargetsList.Focus();
         TargetsList.ItemsSource = targets;
 
         var preferred = targets.FirstOrDefault(target =>

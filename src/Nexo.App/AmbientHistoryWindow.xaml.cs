@@ -12,6 +12,7 @@ public partial class AmbientHistoryWindow : Window
     public AmbientHistoryWindow()
     {
         InitializeComponent();
+        ContentRendered += (_, _) => CloseButton.Focus();
     }
 
     /// <summary>Se dispara cuando el usuario pulsa "Deshacer" sobre una entrada del historial.</summary>
@@ -28,6 +29,7 @@ public partial class AmbientHistoryWindow : Window
         }
 
         Activate();
+        CloseButton.Focus();
     }
 
     public void Apply(IReadOnlyList<AmbientRequestHistoryItem> items)
@@ -62,6 +64,9 @@ public partial class AmbientHistoryWindow : Window
         public Guid Id => item.Id;
 
         public string Prompt => item.Prompt;
+
+        // UIA usa este texto para nombrar la fila, no el tipo interno.
+        public override string ToString() => Prompt;
 
         public string StatusLabel => item.StatusLabel;
 
