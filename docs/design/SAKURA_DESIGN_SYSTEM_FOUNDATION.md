@@ -1,4 +1,4 @@
-# Kohana Design System — Foundation 0.1
+# Sakura Design System — Foundation 0.1
 
 > **Estado:** Fundación técnica. **No** es un rediseño ni una aprobación visual. Establece el
 > vocabulario reutilizable (tokens y estilos base) preservando la apariencia actual. La revisión
@@ -16,9 +16,10 @@
 
 ## 2. Identidad Sakura
 
-- Marca vectorial de flor de cerezo (cinco pétalos) ya definida en `Themes/Brand.xaml`
-  (`KohanaFlowerMarkStyle`, `KohanaPetalGeometry`), con un núcleo azul frío que contrasta con el
-  rosa acento.
+- Marca definida en `Themes/Brand.xaml` (`SakuraFlowerMarkStyle`): el icono real de la aplicación,
+  **cuatro pétalos** rosa `#F5B3CF` y un destello de cuatro puntas `#AC333F`. Los colores de la
+  marca son fijos y no siguen al acento. *(Corregido en septiembre de 2026: esta sección decía
+  «cinco pétalos con núcleo azul», la flor que la app enseñó por error hasta la 0.28.)*
 - Paleta: grafito neutro para superficies + acento floral contenido (`#C4889A`) y un azul frío de
   apoyo (`#6B9CC8`). El acento nunca domina; puntúa.
 - Iconografía de módulos: líneas sobrias, funcionales primero, con margen para detalles florales
@@ -93,9 +94,9 @@ value-identical. El resto de literales se migrará de forma incremental y verifi
 
 ## 5. Iconografía (dirección futura)
 
-`Brand.xaml` contiene el set de iconos de módulos (`IconKohanaHome`, `…Assistant`, `…Tasks`,
+`Brand.xaml` contiene el set de iconos de módulos (`IconSakuraHome`, `…Assistant`, `…Tasks`,
 `…Focus`, `…Routines`, `…Audio`, `…Capture`, `…System`, `…Settings`) y de acciones
-(`IconKohanaMic`, `…Send`, `…Plus`, `…Look`, `IconCommandPalette`, `IconSidebarPanel`). Dirección:
+(`IconSakuraMic`, `…Send`, `…Plus`, `…Look`, `IconCommandPalette`, `IconSidebarPanel`). Dirección:
 conservar la geometría funcional y, más adelante, introducir detalles florales sutiles y un logo
 final. **No** se reemplazan iconos en esta fundación.
 

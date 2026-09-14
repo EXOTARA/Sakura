@@ -1,7 +1,7 @@
-# Arquitectura de capacidades de Kohana
+# Arquitectura de capacidades de Sakura
 
 > Diseño D3.2. Describe las capas conceptuales que ordenan el roadmap
-> (`docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md`), no una reescritura del código actual. Cada capa
+> (`docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md`), no una reescritura del código actual. Cada capa
 > indica explícitamente qué parte ya existe hoy en `release/kohana-1.0-rc` y qué parte es diseño
 > para fases futuras. No confundir con `docs/architecture/HARDWARE_CAPABILITY_PROFILE.md` ni
 > `docs/architecture/ADAPTIVE_ENGINE_REGISTRY.md`, que documentan implementación real ya existente
@@ -37,7 +37,7 @@ flowchart TB
 | 4 | Engine Registry / Capability Router | Implementado (alcance actual), evolución a Capability Router completo es planeada |
 | 5 | Intent Router | Parcial — el enrutamiento de `Command Center` cubre comandos explícitos, no intención en lenguaje libre |
 | 6 | Planner | Planeado |
-| 7 | Tool and Action Runtime | Parcial — acciones internas de Kohana existen (`AutomationAction`, `IAutomationActionExecutor`); acciones externas son Fase 5/7 |
+| 7 | Tool and Action Runtime | Parcial — acciones internas de Sakura existen (`AutomationAction`, `IAutomationActionExecutor`); acciones externas son Fase 5/7 |
 | 8 | Ambient Surface Host | Planeado (Fase 1) |
 | 9 | Memory | Planeado (Fase 6) |
 | 10 | Permission Broker | Planeado (primitivas en Fase 1, completo en Fase 7) |
@@ -46,7 +46,7 @@ flowchart TB
 
 ## 1. Context Sources
 
-Fuentes de información que Kohana puede leer, cada una bajo su propio permiso:
+Fuentes de información que Sakura puede leer, cada una bajo su propio permiso:
 
 - Ventana activa (planeado, Fase 2).
 - UI Automation (planeado, Fase 2/7).
@@ -66,7 +66,7 @@ Fuentes de información que Kohana puede leer, cada una bajo su propio permiso:
 
 ## 2. Context Snapshot
 
-Hoy Kohana ya tiene dos fotografías independientes y deliberadamente separadas (ver
+Hoy Sakura ya tiene dos fotografías independientes y deliberadamente separadas (ver
 `HARDWARE_CAPABILITY_PROFILE.md`): `SystemSnapshot` (uso instantáneo) y `HardwareCapabilitySnapshot`
 (identidad de hardware, estable). Un "Context Snapshot" ambiental — de la ventana activa o de una
 solicitud puntual — es una capa nueva planeada para la Fase 1, con la misma filosofía: datos que se
@@ -81,7 +81,7 @@ hoy — el Command Center actual resuelve comandos sin necesitar este nivel de f
 ## 4. Engine Registry / Capability Router
 
 **Esta es la capa más madura del sistema hoy.** `IAdaptiveEngineRegistry` (ver
-`ADAPTIVE_ENGINE_REGISTRY.md`) ya cataloga los motores reales de Kohana (Whisper, Vosk, SAPI, y los
+`ADAPTIVE_ENGINE_REGISTRY.md`) ya cataloga los motores reales de Sakura (Whisper, Vosk, SAPI, y los
 proveedores de IA — OpenAI, Ollama, LM Studio, compatible) y expone su estado observable
 (disponible/configurado/activo) para que `AdaptiveEnginePolicy` produzca recomendaciones según el
 `HardwareCapabilityProfile`.
@@ -110,10 +110,10 @@ porque ninguna capacidad implementada todavía requiere planificación multi-pas
 
 `Nexo.Core.Automation` (`AutomationAction`, `AutomationActionResult`, `AutomationActionType`,
 `AutomationPermissionPolicy`, `AutomationRiskLevel`) y su ejecutor en `Nexo.App.Automation`
-(`NexoAutomationActionExecutor`) ya existen como el runtime de acciones **internas** de Kohana
+(`NexoAutomationActionExecutor`) ya existen como el runtime de acciones **internas** de Sakura
 (navegar, cambiar preferencias, disparar comandos). El runtime debe poder, según la visión final:
 
-- escribir, abrir, navegar, cambiar configuraciones (parcial, dentro de Kohana);
+- escribir, abrir, navegar, cambiar configuraciones (parcial, dentro de Sakura);
 - editar proyectos, ejecutar comandos de terminal, trabajar con Git (planeado, Fase 5);
 - controlar audio (implementado, `IAudioMixerService`);
 - hacer UI Automation, usar MCP y Windows App Actions (planeado, Fase 7);
@@ -136,11 +136,11 @@ Hoy los permisos son implícitos y por preferencia individual (p. ej. `WakeWordE
 `VisionEnabled`, `ShareSystemMetricsWithAi`). Un Permission Broker centralizado — que evalúe
 permisos por aplicación y por capacidad de forma unificada, con exclusiones y confirmaciones
 consistentes — es trabajo planeado, con primitivas iniciales en la Fase 1 y el modelo completo en
-la Fase 7. Ver `docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md`.
+la Fase 7. Ver `docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md`.
 
 ## 11. Audit Log
 
-Kohana ya escribe logs por subsistema bajo `NexoDataPaths.LogsDirectory`
+Sakura ya escribe logs por subsistema bajo `NexoDataPaths.LogsDirectory`
 (`command-center.log`, `voice-capture.log`, `wake-word-recognition.log`,
 `ollama-runtime.log`, `resource-governor.log`, y desde Diseño D3.2, `data-root.log` cuando hay un
 perfil de validación activo). Son diagnóstico técnico, no un registro de auditoría orientado al
@@ -163,4 +163,4 @@ implementado, ver capa 7) debe eventualmente poder:
   revertir acciones.
 
 Ninguna de estas capacidades fuera de "controlar audio", "navegar" y "cambiar configuraciones
-(dentro de Kohana)" está implementada a la fecha de este documento.
+(dentro de Sakura)" está implementada a la fecha de este documento.

@@ -2,7 +2,7 @@ namespace Nexo.Core.Ambient;
 
 /// <summary>
 /// Diseño D4 — subconjunto de los niveles de autonomía descritos en
-/// docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md que D4 puede ofrecer. D4 sienta las bases
+/// docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md que D4 puede ofrecer. D4 sienta las bases
 /// ambientales, no ejecuta nada por sí mismo: los niveles 4+ (ejecución) llegan con las Fases 5/7
 /// y su Permission Broker completo.
 /// </summary>

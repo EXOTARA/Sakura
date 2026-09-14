@@ -2,7 +2,7 @@ namespace Nexo.Core.Flow;
 
 /// <summary>
 /// Diseño D6 (Fase 3 — Sakura Flow) — los tres modos de dictado que exige el criterio de terminado
-/// de la Fase 3 (`docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md`). No son etiquetas cosméticas: cada
+/// de la Fase 3 (`docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md`). No son etiquetas cosméticas: cada
 /// uno cambia de verdad cómo se convierte lo dictado en texto insertable (ver
 /// <see cref="SpanishDictationNormalizer"/>).
 /// </summary>
