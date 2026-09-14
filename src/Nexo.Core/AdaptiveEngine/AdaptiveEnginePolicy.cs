@@ -50,12 +50,13 @@ public static class AdaptiveEnginePolicy
         if (hardwareProfile.OverallConfidence != HardwareDataConfidence.Known)
         {
             generalWarnings.Add(
-                "La información de hardware es parcial; las recomendaciones son conservadoras.");
+                "Los datos del equipo son parciales, así que las recomendaciones son prudentes.");
         }
 
         var (availableTodayChanges, futureChanges) = BuildChangeLists(descriptors, recommendations);
 
-        var summary = $"Modo {DescribeMode(mode)} · {DescribeTier(hardwareProfile.Tier)}.";
+        // Sin el modo: la tarjeta ya lo enseña al lado, en grande, y repetirlo aquí era leerlo dos veces.
+        var summary = $"{DescribeTier(hardwareProfile.Tier)}.";
 
         return new AdaptiveEnginePlan(
             mode,
@@ -82,7 +83,7 @@ public static class AdaptiveEnginePolicy
 
         if (categoryDescriptors.Count == 0)
         {
-            warnings.Add($"No hay motores registrados para {DescribeCategory(category)}.");
+            warnings.Add("No hay motores registrados.");
             return new EngineRecommendation(
                 category,
                 null,
@@ -126,34 +127,36 @@ public static class AdaptiveEnginePolicy
 
         if (recommended is null)
         {
-            warnings.Add(
-                $"Ningún motor compatible disponible para {DescribeCategory(category)} con el hardware detectado.");
+            warnings.Add("Ningún motor es compatible con este equipo.");
         }
         else
         {
-            reasons.Add(
-                $"{recommended.DisplayName} es la recomendación para {DescribeCategory(category)} en modo {DescribeMode(mode)}.");
+            // 2026-09-14 — frases sin sujeto. Cada tarjeta ya nombra la categoría y el motor
+            // recomendado, y estas frases empezaban todas por ese mismo nombre: en la pestaña Sistema
+            // se leía «Whisper (reconocimiento de voz local)» cuatro veces seguidas por tarjeta.
+            reasons.Add($"Recomendado para el modo {DescribeMode(mode)}.");
 
             if (stateById.TryGetValue(recommended.Id, out var recommendedState))
             {
-                if (recommendedState.IsAvailable != true)
+                // Si lo que falta es descargarlo, «hay que descargarlo» ya explica por qué no está.
+                if (recommendedState.IsAvailable != true && !recommended.RequiresDownload)
                 {
-                    warnings.Add($"{recommended.DisplayName} todavía no está disponible en este equipo.");
+                    warnings.Add("Todavía no está disponible en este equipo.");
                 }
             }
             else
             {
-                warnings.Add($"No hay información de disponibilidad para {recommended.DisplayName}.");
+                warnings.Add("Sin datos de disponibilidad.");
             }
 
-            if (recommended.RequiresDownload)
+            if (recommended.RequiresDownload && recommendedState?.IsAvailable != true)
             {
-                warnings.Add($"{recommended.DisplayName} requiere descarga.");
+                warnings.Add("Falta descargarlo.");
             }
 
             if (recommended.RequiresRestart)
             {
-                warnings.Add($"{recommended.DisplayName} requiere reiniciar Sakura para aplicarse.");
+                warnings.Add("Se aplica al reiniciar Sakura.");
             }
         }
 
@@ -322,11 +325,11 @@ public static class AdaptiveEnginePolicy
 
     private static string DescribeTier(HardwareCapabilityTier tier) => tier switch
     {
-        HardwareCapabilityTier.Basic => "equipo con capacidad básica",
-        HardwareCapabilityTier.Standard => "equipo con capacidad estándar",
-        HardwareCapabilityTier.Accelerated => "equipo con capacidad acelerada",
-        HardwareCapabilityTier.HighPerformance => "equipo de alto rendimiento",
-        _ => "equipo con capacidad estándar"
+        HardwareCapabilityTier.Basic => "Equipo básico",
+        HardwareCapabilityTier.Standard => "Equipo estándar",
+        HardwareCapabilityTier.Accelerated => "Equipo con aceleración",
+        HardwareCapabilityTier.HighPerformance => "Equipo de alto rendimiento",
+        _ => "Equipo estándar"
     };
 
     private static string DescribeCategory(EngineCategory category) => category switch

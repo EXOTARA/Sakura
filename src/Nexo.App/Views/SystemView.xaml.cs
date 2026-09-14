@@ -247,26 +247,26 @@ public partial class SystemView : UserControl
             null => "No disponible"
         };
 
-        HardwareCapabilityCompletenessText.Text = profile.HasCompleteData
-            ? "La información de capacidad es completa."
-            : "La información de capacidad es parcial.";
-
-        HardwareCapabilityReasonsText.Text = profile.PositiveReasons.Count > 0
-            ? "Razones: " + string.Join(" · ", profile.PositiveReasons.Select(reason => reason.Message))
-            : string.Empty;
-
-        HardwareCapabilityMissingDataText.Text = profile.MissingData.Count > 0
-            ? "Datos desconocidos: " + string.Join(" · ", profile.MissingData.Select(reason => reason.Message))
-            : string.Empty;
+        var missing = profile.MissingData.Select(reason => reason.Message).ToList();
+        HardwareCapabilityMissingDataText.Text = missing.Count > 0
+            ? "No se pudo leer: " + string.Join(" · ", missing)
+            : profile.HasCompleteData ? string.Empty : "Faltan algunos datos del equipo.";
+        HardwareCapabilityMissingDataText.Visibility = HardwareCapabilityMissingDataText.Text.Length > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     public void UpdateAdaptiveEnginePlan(AdaptiveEnginePlan plan, IReadOnlyList<EngineDescriptor> descriptors)
     {
         AdaptiveEnginePlanModeText.Text = DescribeMode(plan.Mode);
         AdaptiveEnginePlanSummaryText.Text = plan.Summary;
-        AdaptiveEnginePlanConfidenceText.Text = plan.GeneralWarnings.Count > 0
-            ? string.Join(" ", plan.GeneralWarnings)
-            : "La información de hardware es suficiente para esta recomendación.";
+
+        // Solo se dice algo cuando hay algo que decir: «la información es suficiente» en cada visita
+        // era una frase que no cambiaba nada de lo que se ve debajo.
+        AdaptiveEnginePlanConfidenceText.Text = string.Join(" ", plan.GeneralWarnings);
+        AdaptiveEnginePlanConfidenceText.Visibility = plan.GeneralWarnings.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
         _adaptiveEnginePlanRows.Clear();
         foreach (var recommendation in plan.Recommendations)
@@ -279,27 +279,16 @@ public partial class SystemView : UserControl
         EngineRecommendation recommendation,
         IReadOnlyList<EngineDescriptor> descriptors)
     {
-        var configuredLine = recommendation.ConfiguredEngineId is { } configuredId
-            ? $"Configurado: {ResolveDisplayName(configuredId, descriptors)}"
-            : "Configurado: ninguno";
-
-        var activeLine = recommendation.ActiveEngineId is { } activeId
-            ? $"Activo: {ResolveDisplayName(activeId, descriptors)}"
-            : "Activo: desconocido";
-
         var recommendedLine = recommendation.RecommendedEngineId is { } recommendedId
-            ? $"Recomendado: {ResolveDisplayName(recommendedId, descriptors)}"
-            : "Recomendado: ninguna opción compatible con el hardware detectado";
+            ? ResolveDisplayName(recommendedId, descriptors)
+            : "Ninguna opción compatible";
 
-        var reasonText = string.Join(" ", recommendation.Reasons);
-        var warningText = string.Join(" ", recommendation.Warnings);
+        var warningText = string.Join(" · ", recommendation.Warnings.Select(w => w.TrimEnd('.')));
 
         return new AdaptiveEnginePlanRow(
             DescribeCategory(recommendation.Category),
-            configuredLine,
-            activeLine,
             recommendedLine,
-            reasonText,
+            DescribeState(recommendation, descriptors),
             warningText,
             WarningVisibility: warningText.Length > 0 ? Visibility.Visible : Visibility.Collapsed,
             RecommendationOnlyVisibility: recommendation.IsRecommendationOnly ? Visibility.Visible : Visibility.Collapsed);
@@ -307,6 +296,42 @@ public partial class SystemView : UserControl
 
     private static string ResolveDisplayName(EngineIdentifier id, IReadOnlyList<EngineDescriptor> descriptors) =>
         descriptors.FirstOrDefault(d => d.Id == id)?.DisplayName ?? id.Value;
+
+    /// <summary>
+    /// Cómo está ahora, en una línea. Lo desconocido no se enseña: «Activo: desconocido» en todas las
+    /// tarjetas no decía nada, solo ocupaba sitio.
+    /// </summary>
+    private static string DescribeState(EngineRecommendation recommendation, IReadOnlyList<EngineDescriptor> descriptors)
+    {
+        var recommended = recommendation.RecommendedEngineId;
+
+        if (recommended is not null && recommendation.ActiveEngineId == recommended)
+        {
+            return "Ya está en uso.";
+        }
+
+        var parts = new List<string>();
+
+        if (recommendation.ActiveEngineId is { } active)
+        {
+            parts.Add($"En uso: {ResolveDisplayName(active, descriptors)}");
+        }
+
+        if (recommendation.ConfiguredEngineId is not { } configured)
+        {
+            parts.Add("Sin configurar");
+        }
+        else if (configured == recommended)
+        {
+            parts.Add("Ya configurado");
+        }
+        else if (configured != recommendation.ActiveEngineId)
+        {
+            parts.Add($"Configurado: {ResolveDisplayName(configured, descriptors)}");
+        }
+
+        return string.Join(" · ", parts) + ".";
+    }
 
     private static string DescribeMode(HardwarePerformanceMode mode) => mode switch
     {
@@ -328,10 +353,8 @@ public partial class SystemView : UserControl
 
     private sealed record AdaptiveEnginePlanRow(
         string CategoryLabel,
-        string ConfiguredLine,
-        string ActiveLine,
         string RecommendedLine,
-        string ReasonText,
+        string StateLine,
         string WarningText,
         Visibility WarningVisibility,
         Visibility RecommendationOnlyVisibility)

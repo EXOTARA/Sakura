@@ -209,8 +209,8 @@ public partial class DiagnosticsWindow : Window
             var reasons = string.Join(" ", recommendation.Reasons);
             var warnings = string.Join(" ", recommendation.Warnings);
             var detail = warnings.Length > 0
-                ? $"Recomendado: {recommendedName}. {reasons} {warnings}"
-                : $"Recomendado: {recommendedName}. {reasons}";
+                ? $"{recommendedName}. {reasons} {warnings}"
+                : $"{recommendedName}. {reasons}";
 
             _items.Add(new DiagnosticItemRow(
                 $"Recomendación: {descriptors.FirstOrDefault(d => d.Category == recommendation.Category)?.Category.ToString() ?? recommendation.Category.ToString()}",
