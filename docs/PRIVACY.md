@@ -6,17 +6,25 @@ Sakura es una aplicación de escritorio que se ejecuta en el equipo de quien la 
 no hay cuenta, no hay registro y no hay nadie al otro lado. Esta página enumera, sin excepciones,
 todo lo que sale del equipo.
 
-Última revisión: 22 de agosto de 2026, para la versión 0.27.0-beta.
+La política de la página de descargas, junto con un resumen de esta, está en
+[exotara.github.io/Sakura/privacidad/](https://exotara.github.io/Sakura/privacidad/). Si una cambia,
+la otra cambia en el mismo commit.
+
+Última revisión: 13 de septiembre de 2026, para la versión 0.29.1-beta.
 
 ## Lo que nunca sale del equipo
 
 - **El audio del micrófono.** La palabra de activación (Vosk) y la transcripción (Whisper) se
   ejecutan en local, contra modelos que están en el disco. No hay reconocimiento de voz en la nube.
-- **Las pulsaciones, el portapapeles y lo que se lee de la pantalla.** El OCR y la automatización de
-  interfaz son las que trae Windows, y se quedan en el proceso.
-- **Los datos de la aplicación**: tareas, rutinas, sesiones de enfoque, memoria, historial de
-  conversación y preferencias. Viven en `%LocalAppData%\Sakura` y lo sensible se cifra en reposo con
-  DPAPI de Windows, atado a la cuenta de usuario.
+- **El portapapeles y lo que se lee de la pantalla**, salvo lo que el usuario mande a un proveedor
+  en la nube (apartado 3). El OCR y la automatización de interfaz son las que trae Windows, y se
+  quedan en el proceso.
+- **Los datos de la aplicación**: tareas, rutinas, sesiones de enfoque, historial de conversación,
+  copias previas de los archivos de un proyecto y preferencias. Viven en `%LocalAppData%\Sakura`
+  como archivos normales de la cuenta de usuario. **Solo la memoria personal y las claves de los
+  proveedores de IA se cifran además con DPAPI** de Windows, atado a la cuenta. *(Hasta el 13 de
+  septiembre de 2026 esta línea decía que se cifraba «lo sensible» de todo lo anterior; no era
+  exacto.)*
 - **Cualquier forma de telemetría, analítica, informe de errores o medición de uso.** No existe en el
   código. No hay ninguna, ni anónima ni agregada ni opcional.
 
@@ -52,6 +60,9 @@ del instalador:
 
 Se descargan una vez, se quedan en el disco y a partir de ahí todo el reconocimiento es local.
 
+Los modelos de lenguaje de Ollama que el usuario elija descargar desde Sakura los trae el propio
+Ollama desde su registro; Sakura solo se lo pide.
+
 ### 3. Proveedores de IA — solo si el usuario configura uno
 
 Sakura funciona contra un [Ollama](https://ollama.com/) local (`127.0.0.1`), y en ese caso nada sale
@@ -66,15 +77,17 @@ del equipo**, que es lo que significa usar un modelo remoto:
 | Groq | https://groq.com/privacy-policy/ |
 | OpenRouter | https://openrouter.ai/privacy |
 
-Nada de esto está activo por omisión: hay que elegir el proveedor y poner una clave. La clave se lee
-de una variable de entorno del usuario; no se guarda en `settings.json` ni viaja a ningún sitio que
-no sea el proveedor elegido.
+Nada de esto está activo por omisión: hay que elegir el proveedor y poner una clave. La clave se
+guarda cifrada con DPAPI en un archivo propio, aparte de `settings.json`, o se lee de una variable
+de entorno del usuario si se prefiere; no viaja a ningún sitio que no sea el proveedor elegido.
 
 Qué se manda y cuándo:
 
 - El texto de la conversación, cuando se habla con Sakura teniendo un proveedor en la nube activo.
 - Una captura de pantalla, **solo** al usar Lens o al compartir una ventana a propósito. Las
   capturas se redactan antes de salir: se tapa lo que el detector reconoce como dato sensible.
+- El texto leído de un recuadro de la pantalla, **solo** al usar el traductor
+  (`Ctrl + Shift + T`), después de pasar por el mismo redactor.
 - Nunca el audio. La transcripción ya ocurrió en local; lo que viaja es texto.
 
 ### 4. Descarga de Ollama — solo si el usuario lo instala desde Sakura
@@ -82,6 +95,11 @@ Qué se manda y cuándo:
 Si se acepta que Sakura instale Ollama, consulta su versión publicada en
 `api.github.com/repos/ollama/ollama/releases/latest` y la descarga. Es una acción explícita del
 usuario, no ocurre sola.
+
+### 5. Órdenes de red que pida el usuario
+
+Algunas órdenes del equipo usan la red por definición. «Comprobar si hay conexión» ejecuta
+`ping -n 4 1.1.1.1`. Solo se ejecutan cuando se piden y con el permiso de «Actuar sobre el equipo».
 
 ## Menores, publicidad y venta de datos
 
@@ -102,9 +120,11 @@ sale del equipo se refleja aquí en el mismo cambio que lo introduce.
 ## Privacy policy (English summary)
 
 Sakura is a local-first Windows desktop application. There is no server, no account, no telemetry,
-no analytics and no crash reporting. Microphone audio, screen contents, and all application data
-(tasks, routines, focus sessions, memory, conversation history, preferences) stay on the machine,
-under `%LocalAppData%\Sakura`, encrypted at rest with Windows DPAPI.
+no analytics and no crash reporting. Microphone audio, screen contents (unless sent to a cloud
+provider by the user) and all application data (tasks, routines, focus sessions, memory,
+conversation history, preferences) stay on the machine, under `%LocalAppData%\Sakura`. Only personal
+memory and AI provider keys are additionally encrypted at rest with Windows DPAPI; the rest are
+ordinary files in the user's profile.
 
 Everything that leaves the machine is listed above. In short:
 
@@ -114,8 +134,9 @@ Everything that leaves the machine is listed above. In short:
 2. **Voice model download (on user action):** Vosk models from alphacephei.com, Whisper `ggml`
    models from Hugging Face. Downloaded once, then all recognition is local.
 3. **Cloud AI providers (opt-in only):** if the user configures one, conversation text — and, only
-   when Lens or window sharing is used, a redacted screenshot — is sent to that provider. Audio is
-   never sent. API keys are read from a user environment variable. Providers and their privacy
+   when Lens or window sharing is used, a redacted screenshot, or with the screen translator the
+   redacted text — is sent to that provider. Audio is never sent. API keys are stored encrypted with
+   DPAPI or read from a user environment variable. Providers and their privacy
    policies are listed above. The default local option is Ollama on `127.0.0.1`, which sends
    nothing anywhere.
 4. **Ollama installation (on user action):** version lookup and download from GitHub.

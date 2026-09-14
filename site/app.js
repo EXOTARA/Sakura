@@ -15,6 +15,13 @@
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+  // Pausa pedida con el botón de la portada. Se suma a la del sistema, no la sustituye, y no se
+  // guarda en ningún sitio: la página no almacena nada que no pidas guardar.
+  var userPaused = false;
+  function motionStopped() {
+    return reduceMotion.matches || userPaused;
+  }
+
   /* ------------------------------------------------------------------ *
    * Pétalos
    *
@@ -160,7 +167,7 @@
 
     function apply() {
       resize();
-      if (reduceMotion.matches) {
+      if (motionStopped()) {
         running = false;
         drawStill();
       } else if (!running) {
@@ -178,7 +185,7 @@
 
     // Una pestaña que no se ve no necesita gastar batería.
     document.addEventListener("visibilitychange", function () {
-      if (reduceMotion.matches) return;
+      if (motionStopped()) return;
       if (document.hidden) {
         running = false;
       } else if (!running) {
@@ -193,11 +200,33 @@
     }
 
     resize();
-    if (reduceMotion.matches) {
+    if (motionStopped()) {
+      running = false;
       drawStill();
     } else {
       window.requestAnimationFrame(step);
     }
+
+    return apply;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Pausar animaciones
+   *
+   * WCAG 2.2.2: lo que se mueve solo más de cinco segundos tiene que poder pararse. Los pétalos, el
+   * giro de la marca y el halo lo hacen. Con «reducir movimiento» del sistema ya están parados y el
+   * botón ni aparece.
+   * ------------------------------------------------------------------ */
+
+  function startMotionToggle(button, onChange) {
+    if (reduceMotion.matches) return;
+    button.hidden = false;
+    button.addEventListener("click", function () {
+      userPaused = !userPaused;
+      button.setAttribute("aria-pressed", userPaused ? "true" : "false");
+      document.documentElement.classList.toggle("motion-paused", userPaused);
+      if (onChange) onChange();
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -219,6 +248,7 @@
     }
 
     stage.addEventListener("pointermove", function (event) {
+      if (userPaused) return;
       var rect = stage.getBoundingClientRect();
       targetX = ((event.clientX - rect.left) / rect.width - 0.5) * 12;
       targetY = ((event.clientY - rect.top) / rect.height - 0.5) * -12;
@@ -351,29 +381,36 @@
     var altHref = body.getAttribute("data-alt-href");
     var memory = store();
 
+    // Lo único que esta página guarda en el navegador, y solo porque lo pides al pulsar: el idioma.
+    // Está descrito en la política de cookies; si esto cambia, aquella tiene que cambiar con ello.
     var link = document.querySelector(".lang-switch");
     if (link && memory) {
       link.addEventListener("click", function () {
         memory.setItem(LANG_KEY, link.getAttribute("data-lang-pick") || "");
-        memory.setItem(REDIRECTED_KEY, "1");
       });
     }
 
-    if (!memory || !altHref) return;
+    if (!memory) return;
 
-    var chosen = memory.getItem(LANG_KEY);
-    if (chosen) {
+    // Las versiones anteriores guardaban esta marca en la primera visita, sin que nadie pulsara nada.
+    // Ya no se crea; se retira la que quedara.
+    memory.removeItem(REDIRECTED_KEY);
+
+    // La redirección automática solo ocurre en la portada: quien abre un enlace directo a una página
+    // legal quiere esa página.
+    if (!altHref || body.getAttribute("data-auto-lang") !== "true") return;
+
+    if (memory.getItem(LANG_KEY)) {
       // Ya eligió. Si está en la otra, se respeta y no se toca.
       return;
     }
 
-    if (memory.getItem(REDIRECTED_KEY)) return;
-
     var preferred = (navigator.language || "").toLowerCase();
     var speaksSpanish = preferred.indexOf("es") === 0;
 
+    // Sin marca guardada no hay bucle: la versión inglesa nunca redirige, y quien vuelva al español
+    // con el conmutador deja su elección guardada.
     if (current === "es" && !speaksSpanish) {
-      memory.setItem(REDIRECTED_KEY, "1");
       window.location.replace(altHref);
     }
   }
@@ -382,7 +419,10 @@
     startLanguage();
 
     var canvas = document.getElementById("petals");
-    if (canvas) startPetals(canvas);
+    var applyPetals = canvas ? startPetals(canvas) : null;
+
+    var toggle = document.querySelector(".motion-toggle");
+    if (toggle) startMotionToggle(toggle, applyPetals);
 
     var stage = document.querySelector(".mark-stage");
     var mark = document.querySelector(".mark");

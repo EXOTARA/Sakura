@@ -1,0 +1,99 @@
+      <p class="eyebrow">Legal</p>
+      <h1>Política de privacidad</h1>
+      <p class="legal-updated">Última actualización: 13 de septiembre de 2026</p>
+
+      <p class="legal-lead">Esta política cubre dos cosas: esta página web y la aplicación Sakura. La
+      respuesta corta es la misma para las dos: <strong>quien mantiene Sakura no recibe datos
+      personales tuyos</strong>, porque ni la página ni la aplicación los envían a ningún servidor del
+      proyecto. Ese servidor no existe. Lo que sí sale de tu equipo, y hacia dónde, está enumerado
+      abajo sin excepciones.</p>
+
+      <h2 id="quien">Quién mantiene Sakura</h2>
+      <p>Sakura es un proyecto de código abierto mantenido por <strong>EXOTARA</strong>. No se vende
+      nada y no hay cuentas de usuario. El canal de contacto es el
+      <a href="https://github.com/EXOTARA/Sakura/issues">registro de incidencias del repositorio</a>,
+      que es público.</p>
+
+      <h2 id="web">1. Esta página web</h2>
+
+      <h3>Qué recoge</h3>
+      <p>Nada. La página no tiene analítica, píxeles de seguimiento, publicidad, formularios, botones
+      de redes sociales, vídeos incrustados, ni tipografías o guiones cargados desde otros
+      servidores. No crea cookies.</p>
+
+      <h3>El alojamiento: GitHub Pages</h3>
+      <p>La página se sirve desde GitHub Pages, un servicio de GitHub, Inc. Según su propia
+      documentación, <q lang="en">when a GitHub Pages site is visited, the visitor's IP address is
+      logged and stored for security purposes</q>: cuando se visita un sitio de GitHub Pages, GitHub
+      registra y guarda la dirección IP del visitante por motivos de seguridad. Ese registro lo hace y
+      lo controla GitHub; el proyecto no tiene acceso a él. Se rige por la
+      <a href="https://docs.github.com/es/site-policy/privacy-policies/github-general-privacy-statement">declaración
+      de privacidad de GitHub</a>.</p>
+
+      <h3>Las descargas</h3>
+      <p>El instalador y el zip se descargan desde las versiones publicadas en GitHub. Al pulsar un
+      botón de descarga tu navegador se conecta a los servidores de GitHub, y aplica la misma
+      declaración de privacidad.</p>
+
+      <h3>Lo que guarda tu navegador</h3>
+      <p>Solo el idioma que elijas con el conmutador ES/EN, y solo si lo pulsas. Está explicado en la
+      <a href="{{LEGAL_COOKIES}}">política de cookies</a>.</p>
+
+      <h2 id="app">2. La aplicación Sakura</h2>
+
+      <h3>Lo que se queda en tu equipo</h3>
+      <ul>
+        <li><strong>El audio del micrófono.</strong> La palabra de activación (Vosk) y la transcripción
+        (Whisper) funcionan en tu equipo, con modelos guardados en tu disco. No hay reconocimiento de
+        voz en la nube.</li>
+        <li><strong>Lo que se lee de la pantalla y del portapapeles</strong>, salvo cuando tú lo mandas
+        a un proveedor de IA en la nube (ver abajo).</li>
+        <li><strong>Tus datos de la aplicación</strong> —tareas, rutinas, sesiones de enfoque, historial
+        de conversación y ajustes— se guardan en <code>%LocalAppData%\Sakura</code>, dentro de tu
+        cuenta de usuario de Windows. <strong>La memoria personal</strong> (que viene apagada) y
+        <strong>las claves de los proveedores de IA</strong> se guardan además cifradas con DPAPI de
+        Windows.</li>
+      </ul>
+      <p>La aplicación no tiene telemetría, analítica, informes de errores ni medición de uso de ningún
+      tipo. No existen en su código, que es público.</p>
+
+      <h3>Lo que sale de tu equipo</h3>
+      <ol>
+        <li><strong>Comprobación de actualizaciones.</strong> Es lo único automático. Como mucho una vez
+        cada 24 horas, Sakura lee la lista pública de versiones en <code>api.github.com</code>. No envía
+        ningún identificador ni datos de tu equipo más allá de lo que lleva cualquier conexión (tu
+        dirección IP). Se desactiva en Ajustes. Nada se instala sin que lo aceptes.</li>
+        <li><strong>Descargas que pides tú.</strong> Los modelos de voz (de <code>alphacephei.com</code>
+        y de Hugging Face), Ollama si dejas que Sakura lo instale (desde GitHub), y los modelos de
+        lenguaje que elijas descargar, que Ollama trae de su propio registro.</li>
+        <li><strong>Proveedores de IA en la nube, solo si configuras uno.</strong> Ninguno está activo
+        por omisión. Si eliges uno (Anthropic, OpenAI, Google Gemini, Groq u OpenRouter), le llega el
+        texto de la conversación y, cuando usas Lens o el traductor de pantalla, lo que se leyó de la
+        pantalla después de tapar lo que parece sensible. Nunca el audio. Lo que ese proveedor haga con
+        ello se rige por su política de privacidad. Con Ollama en tu propio equipo no sale nada.</li>
+        <li><strong>Órdenes de red que pidas.</strong> Por ejemplo, «Comprobar si hay conexión» hace un
+        <code>ping</code> a <code>1.1.1.1</code>.</li>
+      </ol>
+      <p>El detalle técnico, con las direcciones exactas y los enlaces a la política de cada proveedor,
+      está en <a href="https://github.com/EXOTARA/Sakura/blob/main/docs/PRIVACY.md">docs/PRIVACY.md</a>.</p>
+
+      <h3>Borrar tus datos</h3>
+      <p>La memoria personal se puede leer y borrar entera desde Sakura. Todo lo demás está en
+      <code>%LocalAppData%\Sakura</code>: borrar esa carpeta borra tus datos de la aplicación.</p>
+
+      <h2 id="derechos">3. Tus derechos</h2>
+      <p>Las leyes de protección de datos —la Ley Federal de Protección de Datos Personales en Posesión
+      de los Particulares en México, el RGPD en la Unión Europea y otras— te dan derecho a acceder a tus
+      datos, corregirlos, cancelarlos u oponerte a su uso. Como el proyecto no guarda datos tuyos, no
+      hay nada que entregar o borrar de nuestro lado. Los datos que tengan GitHub o el proveedor de IA
+      que elijas se ejercen ante ellos. Si tienes cualquier duda, escríbenos por el canal de
+      contacto.</p>
+
+      <h2 id="menores">4. Menores</h2>
+      <p>Ni la página ni la aplicación recogen datos de nadie, tampoco de menores. Si un menor
+      configura un proveedor de IA en la nube, se aplican las condiciones de edad de ese proveedor.</p>
+
+      <h2 id="cambios">5. Cambios</h2>
+      <p>Si algo de lo que sale del equipo cambia, esta página se actualiza en el mismo cambio y cambia
+      la fecha de arriba. El historial completo está en el
+      <a href="https://github.com/EXOTARA/Sakura/commits/main/site">repositorio</a>.</p>

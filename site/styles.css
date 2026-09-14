@@ -14,7 +14,8 @@
   --border:#2A303A;
   --text:#DFE1EA;
   --text-2:#AAAAB4;
-  --text-3:#747986;
+  /* 4,43:1 sobre el fondo no llegaba al 4,5:1 que pide WCAG para texto pequeño. */
+  --text-3:#8D92A0;
   --accent:#C4889A;
   --accent-soft:#2C2027;
   --accent-border:rgba(196,136,154,.5);
@@ -48,16 +49,21 @@ body{
   margin:0;
   background:var(--bg);
   color:var(--text);
-  font-family:"Noto Sans JP",-apple-system,"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  /*
+    Fuentes del sistema y nada descargado: ver el comentario de la cabecera en index.html. El peso
+    pasa de 300 a 400 porque sin Noto Sans JP el 300 cae en variantes demasiado finas para leerse
+    bien sobre fondo oscuro.
+  */
+  font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
   font-size:17px;
-  font-weight:300;
+  font-weight:400;
   line-height:1.65;
   -webkit-font-smoothing:antialiased;
   overflow-x:hidden;
 }
 
 h1,h2,h3{
-  font-family:"Noto Serif JP",Georgia,"Times New Roman",serif;
+  font-family:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",Georgia,"Times New Roman",serif;
   font-weight:600;
   line-height:1.25;
   letter-spacing:-.01em;
@@ -72,7 +78,13 @@ a{
   transition:border-color var(--dur) var(--ease-out),color var(--dur) var(--ease-out);
 }
 a:hover{border-bottom-color:var(--accent-border)}
-a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+/*
+  Un enlace dentro de un párrafo no puede distinguirse solo por el color: el rosa contra el gris del
+  texto da 1,24:1 y WCAG 1.4.1 pide otra señal. Los de navegación, botones y pie ya se leen como
+  enlaces por su sitio y no lo necesitan.
+*/
+p a,li a,td a,.legal-lead a{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 
 img,svg{max-width:100%}
 code{font-family:"Cascadia Code",ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
@@ -110,7 +122,7 @@ section{padding-block:var(--space-7)}
 
 .brand{display:flex;align-items:center;gap:10px;color:var(--text);border:0;font-weight:500}
 .brand svg{width:26px;height:26px;flex:none}
-.brand span{font-family:"Noto Serif JP",serif;font-size:19px;letter-spacing:.02em}
+.brand span{font-family:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",Georgia,"Times New Roman",serif;font-size:19px;letter-spacing:.02em}
 
 .topbar nav{margin-left:auto;display:none;gap:var(--space-3);align-items:center}
 @media(min-width:920px){.topbar nav{display:flex}}
@@ -187,7 +199,7 @@ section{padding-block:var(--space-7)}
   color:var(--accent);font-weight:400;margin-bottom:.7em;opacity:.9;
 }
 .hero-tagline{
-  font-family:"Noto Serif JP",serif;font-size:clamp(19px,2.4vw,25px);
+  font-family:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",Georgia,"Times New Roman",serif;font-size:clamp(19px,2.4vw,25px);
   color:var(--text);margin-bottom:var(--space-3);
 }
 .hero-lead{color:var(--text-2);max-width:52ch;margin-bottom:var(--space-4)}
@@ -336,7 +348,7 @@ section{padding-block:var(--space-7)}
   display:grid;place-items:center;
   background:var(--accent-soft);border:1px solid var(--accent-border);
   color:var(--accent);font-size:14px;font-weight:700;
-  font-family:"Noto Sans JP",sans-serif;line-height:1;
+  font-family:inherit;line-height:1;
 }
 .steps strong{color:var(--text);font-weight:500}
 
@@ -418,9 +430,9 @@ section{padding-block:var(--space-7)}
 footer{border-top:1px solid var(--border);padding-block:var(--space-5) var(--space-4);margin-top:var(--space-6)}
 .foot-grid{display:grid;gap:var(--space-4)}
 @media(min-width:820px){.foot-grid{grid-template-columns:1.5fr 1fr 1fr}}
-.foot-grid h4{
+.foot-heading{
   font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);
-  margin:0 0 var(--space-2);font-weight:500;font-family:"Noto Sans JP",sans-serif;
+  margin:0 0 var(--space-2);font-weight:500;font-family:inherit;
 }
 .foot-links{display:grid;gap:11px;padding:0;margin:0;list-style:none}
 .foot-links a{color:var(--text-2);font-size:15px;border:0}
@@ -434,8 +446,12 @@ footer{border-top:1px solid var(--border);padding-block:var(--space-5) var(--spa
 
 /* ---------------- Entrada al desplazar ---------------- */
 
-.reveal{opacity:0;transform:translateY(22px);transition:opacity 700ms var(--ease-out),transform 700ms var(--ease-out)}
-.reveal.in{opacity:1;transform:none}
+/*
+  Solo se esconde si hay JavaScript para volver a enseñarlo. Antes se escondía siempre, y sin
+  JavaScript —bloqueado, o si el guion fallaba— la página se quedaba en blanco debajo de la portada.
+*/
+.js .reveal{opacity:0;transform:translateY(22px);transition:opacity 700ms var(--ease-out),transform 700ms var(--ease-out)}
+.js .reveal.in{opacity:1;transform:none}
 
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -444,7 +460,8 @@ footer{border-top:1px solid var(--border);padding-block:var(--space-5) var(--spa
     animation-iteration-count:1!important;
     transition-duration:.001ms!important;
   }
-  .reveal{opacity:1;transform:none}
+  .js .reveal{opacity:1;transform:none}
+  .motion-toggle{display:none!important}
   .mark .petal,.mark .spark{opacity:1;animation:none;transform:none}
   .mark-spin{animation:none}
   .btn:hover,.card:hover{transform:none}
@@ -460,3 +477,51 @@ footer{border-top:1px solid var(--border);padding-block:var(--space-5) var(--spa
   background:var(--accent-soft);
   color:var(--text)!important;font-size:15px;
 }
+
+/* ---------------- Pausar animaciones (WCAG 2.2.2) ---------------- */
+
+.motion-toggle{
+  position:absolute;right:var(--space-3);bottom:var(--space-3);z-index:2;
+  display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 14px;
+  background:rgba(12,14,20,.72);color:var(--text-2);
+  border:1px solid var(--border);border-radius:999px;
+  font:inherit;font-size:14px;cursor:pointer;
+}
+.motion-toggle[hidden]{display:none}
+.motion-toggle:hover{color:var(--text);border-color:var(--text-3)}
+.motion-toggle svg{width:16px;height:16px}
+.motion-toggle[aria-pressed="true"]{color:var(--text);border-color:var(--accent-border);background:var(--accent-soft)}
+.motion-paused *,.motion-paused *::before,.motion-paused *::after{animation-play-state:paused!important}
+
+.panel-subtitle{font-size:19px}
+
+/* ---------------- Páginas legales ---------------- */
+
+.legal{padding-block:var(--space-6) var(--space-7)}
+.prose{max-width:var(--measure)}
+.prose h1{font-size:clamp(32px,5vw,46px);margin-bottom:var(--space-1)}
+.prose h2{font-size:24px;margin:var(--space-5) 0 var(--space-2)}
+.prose h3{font-size:19px;margin:var(--space-3) 0 var(--space-1)}
+.prose p,.prose li{color:var(--text-2)}
+.prose p{margin-bottom:var(--space-2)}
+.prose ul,.prose ol{padding-left:1.4em;margin:0 0 var(--space-2);display:grid;gap:10px}
+.prose strong{color:var(--text);font-weight:600}
+.prose q{color:var(--text)}
+.legal-updated{color:var(--text-3)!important;font-size:15px}
+.legal-lead{font-size:19px;color:var(--text)!important;margin-top:var(--space-3)}
+.prose details{
+  margin:0 0 var(--space-2);padding:12px 16px;
+  border:1px solid var(--border);border-radius:12px;background:var(--surface-raised);
+}
+.prose summary{cursor:pointer;color:var(--text);font-weight:500;min-height:24px}
+.prose pre{
+  margin:12px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;
+  font-family:"Cascadia Code",ui-monospace,Consolas,monospace;font-size:13px;color:var(--text-2);
+}
+.table-wrap:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.table-wrap{overflow-x:auto;margin:0 0 var(--space-2);border:1px solid var(--border);border-radius:12px}
+.prose table{border-collapse:collapse;width:100%;min-width:620px;font-size:15px}
+.prose caption{text-align:left;padding:12px 14px;color:var(--text-3);font-size:14px}
+.prose th,.prose td{padding:10px 14px;text-align:left;vertical-align:top;border-top:1px solid var(--border)}
+.prose th{color:var(--text);font-weight:600;background:var(--surface-raised)}
+.prose td{color:var(--text-2)}
