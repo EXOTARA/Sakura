@@ -60,6 +60,7 @@ public partial class DashboardWindow : Window
     private DateTimeOffset? _outsideSince;
     private bool _isShown;
     private bool _isClosing;
+    private bool _coverageRaised;
 
     public DashboardWindow()
     {
@@ -76,6 +77,16 @@ public partial class DashboardWindow : Window
             Interval = FrameInterval
         };
         _audioFrames.Tick += (_, _) => RenderAudioFrame();
+
+        // La altura la decide el contenido: cambiar de pestaña con el cajón abierto lo alarga o lo
+        // acorta, y el shell tiene que seguirlo.
+        SizeChanged += (_, _) =>
+        {
+            if (_isShown)
+            {
+                RaiseCoverage();
+            }
+        };
     }
 
     /// <summary>
@@ -141,6 +152,16 @@ public partial class DashboardWindow : Window
     /// <summary>Se dispara al recogerse, para que el vigilante del borde se silencie un momento.</summary>
     public event EventHandler? Dismissed;
 
+    /// <summary>
+    /// Lo que tapa el panel en pantalla, en DIP, o <c>null</c> cuando ya se ha ido.
+    ///
+    /// El <c>null</c> llega al terminar la salida, no al empezarla. Avisando al empezar, el shell
+    /// crecía más deprisa de lo que el panel tardaba en subir —su primer fotograma llega tarde, hay
+    /// mucho que componer— y durante un momento volvía a quedar tapado, que es justo lo que se quería
+    /// evitar. Primero se va el panel y después el shell recupera su sitio.
+    /// </summary>
+    public event EventHandler<ScreenBounds?>? CoverageChanged;
+
     public DashboardView View => Dashboard;
 
     public bool IsRevealed => _isShown;
@@ -189,6 +210,7 @@ public partial class DashboardWindow : Window
         // sitio en vez de caer.
         UpdateLayout();
 
+        RaiseCoverage();
         PlayRevealAnimation();
 
         _outsideSince = null;
@@ -308,6 +330,12 @@ public partial class DashboardWindow : Window
 
     public void HideImmediately()
     {
+        if (_coverageRaised)
+        {
+            _coverageRaised = false;
+            CoverageChanged?.Invoke(this, null);
+        }
+
         _isShown = false;
         _mouseWatch.Stop();
         StopAudioFrames();
@@ -320,6 +348,20 @@ public partial class DashboardWindow : Window
         PanelBorder.Opacity = 0;
 
         Hide();
+    }
+
+    /// <summary>El rectángulo del panel, sin el margen transparente que reserva la sombra.</summary>
+    private void RaiseCoverage()
+    {
+        var margin = PanelBorder.Margin;
+        var height = PanelBorder.ActualHeight > 0 ? PanelBorder.ActualHeight : ActualHeight;
+
+        _coverageRaised = true;
+        CoverageChanged?.Invoke(this, new ScreenBounds(
+            Left + margin.Left,
+            Top + margin.Top,
+            Math.Max(0, Width - margin.Left - margin.Right),
+            height));
     }
 
     public void PrepareForShutdown()

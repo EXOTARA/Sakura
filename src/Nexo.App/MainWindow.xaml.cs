@@ -674,6 +674,11 @@ public partial class MainWindow : Window
         _dashboardWindow.View.SetPanelImage(_preferences.PanelImagePath);
 
         _dashboardWindow.Dismissed += (_, _) => _topRevealWatcher.SuppressBriefly();
+        _dashboardWindow.CoverageChanged += (_, coverage) =>
+        {
+            _drawerCoverage = coverage;
+            ApplyDrawerClearance(animate: true);
+        };
 
         _topRevealWatcher.Configure(_preferences.EdgeRevealEnabled);
         _assistantView.ConfigureHistory(
@@ -4942,6 +4947,51 @@ public partial class MainWindow : Window
         Left = _preferences.Position == SidebarPosition.Right
             ? workArea.Right - Width - ShellScreenInset
             : workArea.Left + ShellScreenInset;
+
+        ApplyDrawerClearance(animate: false);
+    }
+
+    private ScreenBounds? _drawerCoverage;
+    private double _drawerClearance;
+
+    /// <summary>
+    /// Con el panel superior abierto encima, el shell se encoge hacia abajo hasta quedar debajo de
+    /// él, y vuelve a su alto cuando el panel se recoge (Adler, 2026-09-14).
+    ///
+    /// Se mueve el borde de arriba de la superficie, no la ventana: la ventana es cristal
+    /// transparente, así que el hueco que queda deja ver el escritorio, y no hay que tocar
+    /// posiciones que otras piezas —el vigilante del borde, los controles rápidos— dan por fijas.
+    /// </summary>
+    private void ApplyDrawerClearance(bool animate)
+    {
+        var target = _drawerCoverage is { } drawer
+            ? DrawerClearancePolicy.TopInset(new ScreenBounds(Left, Top, ActualWidth, ActualHeight), drawer)
+            : 0;
+
+        if (Math.Abs(target - _drawerClearance) < 0.5)
+        {
+            return;
+        }
+
+        _drawerClearance = target;
+        var margin = new Thickness(0, target, 0, 0);
+
+        if (!animate || !SakuraMotion.AnimationsEnabled)
+        {
+            ShellBorder.BeginAnimation(MarginProperty, null);
+            ShellBorder.Margin = margin;
+            return;
+        }
+
+        // Bajar acompaña a un panel que cae, así que frena como él; volver a subir va a la par de
+        // uno que se va, sin rebote.
+        var entering = target > 0;
+        var animation = new ThicknessAnimation(margin, entering ? SakuraMotion.Emphasized : SakuraMotion.Exit)
+        {
+            EasingFunction = entering ? SakuraMotion.DecelerateCurve : SakuraMotion.EmphasizedCurve
+        };
+        animation.Freeze();
+        ShellBorder.BeginAnimation(MarginProperty, animation, HandoffBehavior.SnapshotAndReplace);
     }
 
     /// <summary>
