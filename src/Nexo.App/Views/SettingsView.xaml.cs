@@ -1548,6 +1548,20 @@ public partial class SettingsView : UserControl
         UpdateSkipButton.IsEnabled = false;
     }
 
+    /// <summary>
+    /// Diseño D89 — la copia instalada desde Microsoft Store no tiene actualizador propio. Se quitan el
+    /// botón, la casilla y su explicación en vez de dejarlos sin efecto: un botón que no hace nada es
+    /// peor que ninguno.
+    /// </summary>
+    public void ShowStoreManagedUpdates()
+    {
+        UpdateStatusText.Text = "Esta copia se instaló desde Microsoft Store, y las versiones nuevas las instala la Store.";
+        UpdateOfferPanel.Visibility = Visibility.Collapsed;
+        AutomaticUpdateCheckBox.Visibility = Visibility.Collapsed;
+        AutomaticUpdateHintText.Visibility = Visibility.Collapsed;
+        UpdateCheckPanel.Visibility = Visibility.Collapsed;
+    }
+
     private void UpdateCheckButton_Click(object sender, RoutedEventArgs e) =>
         UpdateCheckRequested?.Invoke();
 

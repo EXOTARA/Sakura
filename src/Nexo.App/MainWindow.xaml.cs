@@ -20,6 +20,7 @@ using Nexo.App.Automation;
 using Nexo.App.DailyFlow;
 using Nexo.App.Motion;
 using Nexo.App.Optimization;
+using Nexo.Windows.Distribution;
 using Nexo.Windows.Display;
 using Nexo.Windows.Documents;
 using Nexo.Windows.Updates;
@@ -35,11 +36,13 @@ using Nexo.Core.Audit;
 using Nexo.Core.AdaptiveEngine;
 using Nexo.Core.Automation;
 using Nexo.Core.Audio;
+using Nexo.Core.Branding;
 using Nexo.Core.Commands;
 using Nexo.Core.Commands.CommandCenter;
 using Nexo.Core.ComputerUse;
 using Nexo.Core.Diagnostics;
 using Nexo.Core.Display;
+using Nexo.Core.Distribution;
 using Nexo.Core.Flow;
 using Nexo.Core.Focus;
 using Nexo.Core.Hardware;
@@ -594,6 +597,15 @@ public partial class MainWindow : Window
         _assistantView.VisionAttachmentCleared += AssistantView_VisionAttachmentCleared;
         _assistantView.ImagePasted += AssistantView_ImagePasted;
         _assistantView.DocumentSaveRequested += AssistantView_DocumentSaveRequested;
+        _assistantView.AiContentReportRequested += (_, _) =>
+        {
+            _capsuleWindow.ShowMessage(
+                CapsuleKind.Information,
+                "Respuesta copiada",
+                "Pégala en el reporte si quieres que se vea qué dijo.",
+                _preferences.Position);
+            OpenExternalPage(ProductIdentity.AiContentReportUrl);
+        };
         _tasksView.TasksChanged += TasksView_TasksChanged;
         _tasksView.FocusRequested += TasksView_FocusRequested;
         _focusView.FocusChanged += FocusView_FocusChanged;
@@ -1958,6 +1970,20 @@ public partial class MainWindow : Window
                 _voiceHaloWindow.HideHalo();
                 return CommandExecutionResult.Success();
             }));
+
+        // Diseño D89 — la misma vía de reporte que el menú de cada respuesta, alcanzable con teclado y
+        // lector de pantalla: el menú contextual de una burbuja no lo es.
+        registry.Register(new SakuraCommandDescriptor(
+            "ai.content.report",
+            "Reportar una respuesta de IA",
+            "Abre el formulario para avisar de una respuesta inapropiada o dañina.",
+            SakuraCommandCategory.Shell,
+            _ =>
+            {
+                OpenExternalPage(ProductIdentity.AiContentReportUrl);
+                return Task.FromResult(CommandExecutionResult.Success());
+            },
+            keywords: ["reportar", "denunciar", "respuesta", "inapropiada", "ofensiva", "ia", "contenido"]));
 
         registry.Register(new SakuraCommandDescriptor(
             "shell.sidebar.toggle",
@@ -4391,12 +4417,27 @@ public partial class MainWindow : Window
         ConfigureManagedOllamaSupervisor();
         await RefreshMetricsAsync();
         _ = InitializeVoiceFeaturesAsync();
-        _ = CheckForUpdateInBackgroundAsync();
+
+        // Diseño D89 — la copia de Microsoft Store no busca ni instala versiones: eso lo hace la Store.
+        if (DistributionPolicy.UsesOwnUpdater(WindowsDistributionChannel.Current))
+        {
+            _ = CheckForUpdateInBackgroundAsync();
+        }
+        else
+        {
+            _settingsView.ShowStoreManagedUpdates();
+        }
 
         // Diseño D87 (L12) — la lista de «Aplicaciones instaladas» de Windows se queda con la
         // versión que puso el instalador, porque las actualizaciones sustituyen archivos sin pasar
         // por él. Se reconcilia aquí, en cada arranque y fuera del hilo de interfaz: así se
         // arreglan también las instalaciones que ya estaban mal, no solo las futuras.
+        if (!DistributionPolicy.ReconcilesInstalledAppsEntry(WindowsDistributionChannel.Current))
+        {
+            // Diseño D89 — un paquete no tiene esa entrada: la lleva Windows.
+            return;
+        }
+
         _ = Task.Run(() =>
         {
             try
@@ -5291,6 +5332,12 @@ public partial class MainWindow : Window
 
     private async Task CheckForUpdateAsync()
     {
+        if (!DistributionPolicy.UsesOwnUpdater(WindowsDistributionChannel.Current))
+        {
+            _settingsView.ShowStoreManagedUpdates();
+            return;
+        }
+
         _settingsView.SetUpdateStatus("Comprobando…", busy: true);
         _settingsView.ShowUpdateOffer(null, null);
         _offeredUpdate = null;

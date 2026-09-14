@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Diseño D89 — manifiesto del paquete MSIX para Microsoft Store.
+
+  scripts/build-msix.ps1 rellena las marcas {{...}}. Name y Publisher tienen que ser exactamente los
+  que asigna Partner Center al reservar el nombre de la app: con otros valores la Store rechaza el
+  paquete. Para probar en local valen unos inventados.
+
+  Lo que declara y por qué:
+  - runFullTrust: Sakura es una app de escritorio WPF normal; sin esto no arranca.
+  - microphone: la palabra de activación y el dictado. Una app empaquetada aparece en
+    Configuración > Privacidad > Micrófono con su nombre, y Windows puede negarle el acceso.
+  - windows.startupTask «SakuraStartup»: el único arranque con Windows que funciona dentro de un
+    paquete (la clave Run del registro se virtualiza). Tiene que coincidir con
+    WindowsStartupService.PackageStartupTaskId. Viene apagada: la enciende la persona.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+
+  <Identity
+    Name="{{IDENTITY_NAME}}"
+    Publisher="{{IDENTITY_PUBLISHER}}"
+    Version="{{PACKAGE_VERSION}}"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Sakura</DisplayName>
+    <PublisherDisplayName>{{PUBLISHER_DISPLAY_NAME}}</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="es-MX" />
+  </Resources>
+
+  <Applications>
+    <Application Id="Sakura" Executable="Sakura.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Sakura"
+        Description="Asistente local para Windows: voz, pantalla y automatización con permisos."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <desktop:Extension
+          Category="windows.startupTask"
+          Executable="Sakura.exe"
+          EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="SakuraStartup" Enabled="false" DisplayName="Sakura" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+</Package>

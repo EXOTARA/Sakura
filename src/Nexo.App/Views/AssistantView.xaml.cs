@@ -783,6 +783,18 @@ public partial class AssistantView : UserControl
             };
 
             menu.Items.Add(save);
+
+            // Diseño D89 — política 11.16 de Microsoft Store: cómo reportar una respuesta de IA
+            // inapropiada. El texto se copia al portapapeles, en este equipo, y la persona decide si lo
+            // pega en el reporte: no se manda nada por su cuenta.
+            var report = new MenuItem { Header = "Reportar esta respuesta" };
+            report.Click += (_, _) =>
+            {
+                CopyToClipboard(content());
+                AiContentReportRequested?.Invoke(this, EventArgs.Empty);
+            };
+
+            menu.Items.Add(report);
         }
 
         bubble.ContextMenu = menu;
@@ -790,6 +802,9 @@ public partial class AssistantView : UserControl
 
     /// <summary>Se pidió dejar una respuesta como documento.</summary>
     public event EventHandler<DocumentSaveEventArgs>? DocumentSaveRequested;
+
+    /// <summary>Diseño D89 — se pidió reportar una respuesta; el texto ya está en el portapapeles.</summary>
+    public event EventHandler? AiContentReportRequested;
 
     private static void CopyToClipboard(string? text)
     {

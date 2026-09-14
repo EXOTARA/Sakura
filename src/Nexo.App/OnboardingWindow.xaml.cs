@@ -2,9 +2,11 @@ using System.ComponentModel;
 using System.Net.Http;
 using System.Windows;
 using Nexo.Core.Ai;
+using Nexo.Core.Distribution;
 using Nexo.Core.Settings;
 using Nexo.Core.Voice;
 using Nexo.Windows.Ai;
+using Nexo.Windows.Distribution;
 using Nexo.Windows.Settings;
 using Nexo.Windows.Voice;
 using Nexo.Windows.WindowsIntegration;
@@ -32,6 +34,7 @@ public partial class OnboardingWindow : Window
 
     private CancellationTokenSource? _aiOperationCancellation;
     private OllamaRuntimeSnapshot? _runtimeSnapshot;
+    private bool _ollamaPageOpened;
     private string _activeAiBaseUrl = string.Empty;
     private int _step;
     private bool _allowClose;
@@ -78,6 +81,22 @@ public partial class OnboardingWindow : Window
             1 => "Se encontró un micrófono.",
             _ => $"Se encontraron {devices.Count} micrófonos."
         };
+    }
+
+    private static void OpenOllamaDownloadPage()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://ollama.com/download/windows",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception)
+        {
+            // Sin navegador predeterminado no hay nada que abrir; el texto ya dice de dónde bajarlo.
+        }
     }
 
     private async Task RefreshAiStateAsync()
@@ -137,6 +156,16 @@ public partial class OnboardingWindow : Window
             {
                 AiRuntimeTitleText.Text = "IA local instalada";
                 InstallAiButton.Content = "Iniciar IA local";
+            }
+            else if (!DistributionPolicy.InstallsOllamaItself(WindowsDistributionChannel.Current))
+            {
+                // Diseño D89 — política 10.2.3 de Microsoft Store: no se ofrece instalar software de
+                // otros. Se manda a la web de Ollama y se vuelve a comprobar cuando la persona vuelve.
+                AiRuntimeTitleText.Text = "Falta Ollama";
+                AiStatusText.Text =
+                    "La IA local de Sakura funciona con Ollama, un programa gratuito de otros autores. " +
+                    "Descárgalo desde su web, instálalo y vuelve aquí. También puedes seguir sin IA local.";
+                InstallAiButton.Content = _ollamaPageOpened ? "Ya lo instalé: comprobar" : "Descargar Ollama";
             }
             else
             {
@@ -295,6 +324,21 @@ public partial class OnboardingWindow : Window
     {
         if (_aiBusy)
         {
+            return;
+        }
+
+        if (!DistributionPolicy.InstallsOllamaItself(WindowsDistributionChannel.Current) &&
+            _runtimeSnapshot?.State is null or OllamaRuntimeState.Unavailable)
+        {
+            if (!_ollamaPageOpened)
+            {
+                _ollamaPageOpened = true;
+                OpenOllamaDownloadPage();
+                InstallAiButton.Content = "Ya lo instalé: comprobar";
+                return;
+            }
+
+            await RefreshAiStateAsync();
             return;
         }
 

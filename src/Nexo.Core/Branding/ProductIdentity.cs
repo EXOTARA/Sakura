@@ -41,5 +41,12 @@ public static class ProductIdentity
     public const string RepositoryUrl = "https://github.com/EXOTARA/Sakura";
     public const string SupportName = "Sakura Support";
 
+    /// <summary>
+    /// Diseño D89 — dónde se reporta una respuesta de IA inapropiada. La política 11.16 de Microsoft
+    /// Store exige que la persona tenga cómo hacerlo, y tiene sentido igual fuera de la Store. Abre la
+    /// plantilla de incidencia; el texto de la respuesta no viaja en el enlace.
+    /// </summary>
+    public const string AiContentReportUrl = RepositoryUrl + "/issues/new?template=contenido-ia.yml";
+
     public static string DisplayNameWithTagline => $"{ProductName} — {Tagline}";
 }
