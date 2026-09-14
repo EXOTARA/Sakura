@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.29.2-beta]
+
+### Corregido
+
+- **«Oye Sakura» se despertaba sola con frases normales.** «Voy a sacar la basura», «oye, saca la ropa» o «se acabó el café» abrían la escucha como si la hubieras llamado. Medido con grabaciones reales: ocho despertares falsos en 44 segundos de conversación. Ahora, en esas mismas grabaciones, uno; y ninguno en una tanda nueva de un minuto llena de palabras parecidas. A dos metros y con música puede costar alguna llamada más que antes: dos de cada dieciséis.
+- **Los controles de volumen y brillo podían quedarse encima de un juego** si estaban abiertos, o se abrían, justo cuando el juego pasaba a pantalla completa.
+
+### Agregado
+
+- **Accesibilidad en las ventanas secundarias.** El lector de pantalla nombra los botones y las listas de la paleta, el centro de comandos, el historial, los diagnósticos, el gestor de modelos y los selectores de captura.
+- **Volumen y brillo con teclado**: flechas de 5 en 5, RePág y AvPág de 10 en 10, Inicio y Fin.
+- **Elegir una zona de pantalla sin ratón**: las flechas mueven el recuadro, Mayús + flechas cambia su tamaño y Enter confirma.
+- **Entrar con el teclado en los avisos mientras están en pantalla**: Ctrl + Alt + F7 (aviso), F8 (respuesta), F9 (volumen y brillo), F10 (solicitud) y F11 (vistazo). Escape sale.
+
+### Cambiado
+
+- **Los botones principales llevan el texto oscuro sobre el rosa**, porque en blanco no se leía bien. El texto gris secundario también es algo más claro.
+- **En la paleta de comandos, autocompletar es Ctrl + Tab.** Tab pasa a moverse entre los controles, como en cualquier otra ventana.
+
 ## [0.29.1-beta]
 
 ### Corregido
