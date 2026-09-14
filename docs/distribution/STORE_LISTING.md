@@ -135,6 +135,8 @@ HOW TO TEST
   key for a cloud provider configured in Personalizar > Inteligencia artificial. Without either, the
   app still works as a command, task, focus and dictation assistant. This dependency is disclosed at
   the start of the description (policy 10.2.4).
+- On first launch the app downloads its local speech recognition model (Whisper, about 140 MB, from
+  Hugging Face) so dictation works offline. It is a data file, not executable code.
 
 CAPABILITIES
 - runFullTrust: standard WPF desktop application.
@@ -146,7 +148,7 @@ POLICY NOTES
 - 10.2.3: the Store build does NOT download or install Ollama; it only links to its website.
 - Updates: the Store build has its own updater disabled; updates come only from the Store.
 - 10.2.8: Sakura only changes Windows settings through documented APIs (e.g. PowerSetActiveScheme) and
-  only after explicit user confirmation, with an undo. UI Automation is used to read the active window
+  only after explicit user action. UI Automation is used to read the active window
   when the user asks, and to act on other apps only at the user's explicit request, gated by a
   per-capability permission that is "blocked" by default, with a confirmation before acting.
 - 10.8.3: cloud AI API keys are optional; the primary functionality does not require them.
@@ -155,3 +157,28 @@ POLICY NOTES
   project's public issue form.
 - Privacy policy: https://exotara.github.io/Sakura/privacidad/ — no telemetry, no analytics, no account.
 ```
+
+Este bloque va en **Additional Testing Information**; Submission options solo enlaza a esa página.
+
+## Submission options — Restricted capabilities
+
+Partner Center pide justificar `runFullTrust`, **en 500 caracteres como máximo**: la primera versión
+pasaba de ese límite, se cortó a media frase y la sección se quedó como incompleta. Volumen y brillo
+cambian en cuanto se mueve el control, sin confirmación aparte; decir lo contrario sería falso.
+
+```
+WPF (.NET 10) desktop app packaged as full-trust MSIX. runFullTrust is needed to run as a normal desktop process: tray icon, global shortcuts (Alt+A, Ctrl+Shift+D, Ctrl+Shift+T), reading the active window via UI Automation when the user asks, volume and brightness when the user moves those controls, and the power plan only after explicit confirmation, with undo. No drivers or services; no admin rights.
+```
+
+## Otros campos de la ficha (0.30.0-beta)
+
+- **Short description:** Asistente para Windows que aparece cuando lo llamas: órdenes, dictado, tareas
+  y enfoque. La voz se procesa en tu equipo, sin cuenta ni telemetría. La IA es opcional y requiere
+  Ollama o una clave de un proveedor en la nube.
+- **Developed by:** EXOTARA.
+- **Poster art 9:16 y box art 1:1:** `sakura-poster-art-1440x2160.png` y `sakura-box-art-2160.png` en
+  `artifacts/store-screenshots/`, con la marca de cuatro pétalos de `Brand.xaml`.
+- **System requirements:** todo en «Not specified». Sakura, en marcha, ocupa unos 430 MB de memoria
+  (medido el 2026-09-14); no hay medición en un equipo modesto que respalde un mínimo.
+- **Publicación:** «Don't publish this submission until I select Publish now», para revisar la ficha
+  aprobada antes de hacerla pública.
