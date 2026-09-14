@@ -5801,8 +5801,8 @@ public partial class MainWindow : Window
             {
                 _capsuleWindow.ShowMessage(
                     CapsuleKind.Warning,
-                    "Sakura Vision desactivado",
-                    "Actívalo desde Personalización.",
+                    "Lens está desactivado",
+                    "Actívalo desde Personalizar.",
                     _preferences.Position,
                     force: true);
             }
@@ -5936,10 +5936,10 @@ public partial class MainWindow : Window
         if (!_preferences.VisionEnabled)
         {
             _assistantView.AddSakuraMessage(
-                "Sakura Vision está desactivado. Puedes activarlo en Personalización → Inteligencia artificial.");
+                "Lens está desactivado. Puedes activarlo en Personalizar → Inteligencia artificial.");
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Warning,
-                "Sakura Vision desactivado",
+                "Lens está desactivado",
                 "Actívalo desde Personalización.",
                 _preferences.Position);
             return;

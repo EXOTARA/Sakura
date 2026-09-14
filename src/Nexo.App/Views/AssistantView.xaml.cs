@@ -88,7 +88,7 @@ public partial class AssistantView : UserControl
             VisionButton.IsEnabled = available;
             VisionButton.ToolTip = available
                 ? "Mirar la ventana activa · Ctrl + Shift + Espacio"
-                : "Sakura Vision está desactivado en Personalización";
+                : "Lens está desactivado en Personalizar";
         }
     }
 

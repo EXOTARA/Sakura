@@ -13,7 +13,7 @@
         Todos los nombres de elementos y los manejadores se conservan intactos: este rediseño cambia
         cómo se agrupa y se revela el contenido, no qué hace ningún control.
     -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False" controls:ScrollEdgeFade.IsEnabled="True">
         <StackPanel Margin="0,0,6,0">
             <TextBlock Margin="0,0,0,14"
                        Text="Abre el apartado que necesites. Los cambios se aplican al momento y se guardan en este equipo."
@@ -368,7 +368,7 @@
 
                     <CheckBox x:Name="VisionEnabledCheckBox"
                               Margin="0,12,0,0"
-                              Content="Permitir capturas bajo demanda con Sakura Vision"
+                              Content="Dejar que Lens mire la pantalla cuando se lo pidas"
                               Checked="VisionEnabledCheckBox_Changed"
                               Unchecked="VisionEnabledCheckBox_Changed" />
                     <TextBlock Margin="24,5,0,0"
@@ -451,7 +451,7 @@
 
                     <CheckBox x:Name="WakeWordEnabledCheckBox"
                               Margin="0,14,0,0"
-                              Content="Activar Sakura mediante una frase de voz (experimental)"
+                              Content="Despertar a Sakura con la voz (experimental)"
                               Checked="WakeWordEnabledCheckBox_Changed"
                               Unchecked="WakeWordEnabledCheckBox_Changed" />
 
@@ -490,18 +490,18 @@
 
                         <WrapPanel Margin="0,12,0,0">
                             <Button x:Name="WakeWordTestButton"
-                                    Content="Probar frase"
+                                    Content="Probar"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Click="WakeWordTestButton_Click" />
                             <Button x:Name="WakeWordUseObservedAliasButton"
                                     Margin="8,0,0,0"
-                                    Content="Usar lo escuchado"
+                                    Content="Guardar lo que entendió"
                                     IsEnabled="False"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Click="WakeWordUseObservedAliasButton_Click" />
                             <Button x:Name="WakeWordClearAliasesButton"
                                     Margin="8,0,0,0"
-                                    Content="Borrar aliases"
+                                    Content="Borrar variantes"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Click="WakeWordClearAliasesButton_Click" />
                         </WrapPanel>
@@ -512,11 +512,11 @@
                                    Style="{StaticResource MutedTextStyle}" />
                         <TextBlock x:Name="WakeWordAliasesText"
                                    Margin="0,5,0,0"
-                                   Text="Aliases personales: ninguno"
+                                   Text="Variantes guardadas: ninguna"
                                    TextWrapping="Wrap"
                                    Style="{StaticResource MutedTextStyle}" />
                         <TextBlock Margin="0,8,0,0"
-                                   Text="La escucha se realiza localmente. En español, Sakura suele reconocerse como ‘cojana’ o ‘kojana’. La prueba muestra exactamente qué entendió Vosk y permite guardar una variante personal. Whisper solo se carga después de detectar la frase."
+                                   Text="Se escucha en tu equipo. Si no te reconoce, pulsa Probar: verás qué entendió y podrás guardarlo como una variante tuya."
                                    TextWrapping="Wrap"
                                    Style="{StaticResource MutedTextStyle}" />
                     </StackPanel>
@@ -569,7 +569,7 @@
                     <StackPanel Margin="24,14,0,0">
                         <TextBlock Margin="0,0,0,5" Text="Diccionario personal" FontWeight="SemiBold" />
                         <TextBlock Margin="0,0,0,6"
-                                   Text="Una línea por corrección, con el formato dicho=escrito. Ejemplo: cojana=Sakura"
+                                   Text="Una corrección por línea, con el formato dicho=escrito. Por ejemplo: guasap=WhatsApp"
                                    TextWrapping="Wrap"
                                    Style="{StaticResource MutedTextStyle}" />
                         <TextBox x:Name="FlowDictionaryBox"

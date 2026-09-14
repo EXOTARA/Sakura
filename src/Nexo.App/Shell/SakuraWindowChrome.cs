@@ -35,15 +35,15 @@ public static class SakuraWindowChrome
     public static HardwarePerformanceMode PerformanceMode { get; set; } = HardwarePerformanceMode.Automatic;
 
     /// <summary>
-    /// Diseño D62 — Sakura pide esquinas rectas.
+    /// Diseño D62 pedía esquinas rectas: las redondeadas de Windows traían encima el borde de DWM, y
+    /// en el arco se leía como una mancha oscura. Después se quitó ese borde
+    /// (<c>DWMWA_BORDER_COLOR</c> = <c>DWMWA_COLOR_NONE</c> en <see cref="WindowsDwmChrome"/>), pero la
+    /// esquina se quedó recta sin que nadie volviera a mirarla.
     ///
-    /// Las redondeadas de Windows miden unos 8px y, en el arco, el borde que DWM dibuja encima se
-    /// lee como una mancha oscura: el mismo filo que Adler llevaba tres versiones señalando, ahora
-    /// dibujado por el sistema en vez de por nosotros. Se puede quitar el borde, pero él pidió
-    /// dejarlo plano antes que seguir persiguiéndolo, y un canto recto no tiene arco donde nada
-    /// pueda asomar.
+    /// 2026-09-14: Adler preguntó por qué el panel de arriba es redondo y el shell no. Sin borde ya no
+    /// hay mancha que evitar, así que se piden redondeadas.
     /// </summary>
-    public const WindowCorner Corner = WindowCorner.Square;
+    public const WindowCorner Corner = WindowCorner.Round;
 
     public static WindowBackdropDecision Apply(
         Window window,

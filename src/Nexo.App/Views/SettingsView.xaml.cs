@@ -519,7 +519,7 @@ public partial class SettingsView : UserControl
         {
             0 => "Windows no encontró micrófonos disponibles.",
             1 => "Se encontró un micrófono. Sakura lo usará para Mic y la frase de activación.",
-            _ => "El micrófono elegido se usa tanto para Mic como para “Oye Sakura”."
+            _ => "Se usa para hablarle a Sakura y para «Oye Sakura»."
         };
         _isApplyingPreferences = false;
     }
@@ -943,8 +943,8 @@ public partial class SettingsView : UserControl
     {
         aliases ??= Array.Empty<string>();
         WakeWordAliasesText.Text = aliases.Count == 0
-            ? "Aliases personales: ninguno"
-            : "Aliases personales: " + string.Join(", ", aliases.Select(alias => $"“{alias}”"));
+            ? "Variantes guardadas: ninguna"
+            : "Variantes guardadas: " + string.Join(", ", aliases.Select(alias => $"“{alias}”"));
         WakeWordClearAliasesButton.IsEnabled = aliases.Count > 0;
     }
 
@@ -1010,13 +1010,18 @@ public partial class SettingsView : UserControl
 
     private void UpdatePositionButtons(SidebarPosition position)
     {
-        LeftButton.Background = position == SidebarPosition.Left
-            ? (System.Windows.Media.Brush)FindResource("BrushAccentSoft")
-            : (System.Windows.Media.Brush)FindResource("BrushSurfaceRaised");
+        MarkSide(LeftButton, position == SidebarPosition.Left);
+        MarkSide(RightButton, position == SidebarPosition.Right);
+    }
 
-        RightButton.Background = position == SidebarPosition.Right
-            ? (System.Windows.Media.Brush)FindResource("BrushAccentSoft")
-            : (System.Windows.Media.Brush)FindResource("BrushSurfaceRaised");
+    // Solo el fondo apenas se distinguía: AccentSoft contra SurfaceRaised son dos grises casi iguales
+    // en los temas oscuros. El elegido lleva ahora borde y texto en el color de acento.
+    private void MarkSide(Button button, bool selected)
+    {
+        button.Background = (System.Windows.Media.Brush)FindResource(selected ? "BrushAccentSoft" : "BrushSurfaceRaised");
+        button.BorderBrush = (System.Windows.Media.Brush)FindResource(selected ? "BrushAccent" : "BrushBorder");
+        button.Foreground = (System.Windows.Media.Brush)FindResource(selected ? "BrushAccent" : "BrushTextSecondary");
+        button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
     }
 
     // ---------- Diseño D7 (Fase 3 — Sakura Flow) ----------
@@ -1295,8 +1300,8 @@ public partial class SettingsView : UserControl
                 capability,
                 CapabilityTitle(capability),
                 excluded == 0
-                    ? CapabilityText.Describe(capability)
-                    : $"{CapabilityText.Describe(capability)} · {excluded} exclusiones",
+                    ? CapabilityDetail(capability)
+                    : $"{CapabilityDetail(capability)} · {excluded} apps excluidas",
                 permission.Level,
                 OnPermissionRowChanged));
         }
@@ -1445,6 +1450,21 @@ public partial class SettingsView : UserControl
         SakuraCapability.Optimizacion => "Optimizar el equipo",
         SakuraCapability.ComputerUse => "Actuar sobre el equipo",
         _ => capability.ToString()
+    };
+
+    /// <summary>
+    /// Qué hace cada capacidad, en una línea. Antes se repetía el título en minúscula debajo del
+    /// título, que no explicaba nada.
+    /// </summary>
+    private static string CapabilityDetail(SakuraCapability capability) => capability switch
+    {
+        SakuraCapability.Lens => "Mirar la ventana activa cuando se lo pides",
+        SakuraCapability.Flow => "Escribir lo que dictas en la app que tengas abierta",
+        SakuraCapability.Memoria => "Recordar lo que le dejes entre conversaciones",
+        SakuraCapability.Proyecto => "Leer y cambiar archivos de la carpeta que autorices",
+        SakuraCapability.Optimizacion => "Cambiar el plan de energía, con vuelta atrás",
+        SakuraCapability.ComputerUse => "Pulsar botones y ejecutar órdenes en otras apps",
+        _ => string.Empty
     };
 
     private sealed class PermissionRow(

@@ -195,7 +195,7 @@
                                Style="{StaticResource MutedTextStyle}" />
                     <CheckBox x:Name="VisionCheckBox"
                               Margin="0,0,0,12"
-                              Content="Permitir capturas bajo demanda con Sakura Vision" />
+                              Content="Dejar que Lens mire la pantalla cuando se lo pidas" />
                     <CheckBox x:Name="StartWithWindowsCheckBox"
                               Margin="0,0,0,12"
                               Content="Iniciar Sakura con Windows" />
