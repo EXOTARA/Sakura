@@ -126,6 +126,7 @@
             </Border>
 
             <ScrollViewer x:Name="ConversationScroll"
+                          AutomationProperties.Name="Conversación"
                           Visibility="Collapsed"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
