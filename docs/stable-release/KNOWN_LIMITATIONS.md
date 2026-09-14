@@ -231,10 +231,26 @@ de `scripts/voice/WakeBench` mide la lista del producto, no una copia. Resumen c
   `saqura`, `sagura`) y el prefijo `oye,` **no están en el vocabulario de Vosk**: nunca hicieron nada
   en la gramática. Siguen sirviendo al comparador de texto, así que no se tocan.
 
+**Probado en vivo con la aplicación (2026-09-13, versión de prueba en el equipo de Adler):** unos dos
+minutos de frases trampa sin ningún despertar falso, y «Oye Sakura» despertó cada vez que se dijo.
+
+**Alternativas estudiadas después, y por qué no:**
+- **openWakeWord.** Solo entrena en inglés (sus voces sintéticas son inglesas) y los datos de
+  entrenamiento que usa (`davidscripka/openwakeword_features`, 17,5 GB) son **CC BY-NC-SA 4.0**; sus
+  propios modelos heredan esa licencia. Choca con la regla de no aceptar dependencias con restricción
+  no comercial (`THIRD-PARTY-NOTICES.md`).
+- **Vosk propone y Whisper confirma** (modo `cascada` del banco). Con clips de 2,5 s, Whisper base
+  escribe «oye, esa cura» por «Oye Sakura»: 3 de ~12 cerca y 0 de ~16 a distancia sin pista; 3 y 3
+  con una pista del nombre. Cero falsos, pero pierde casi todos los aciertos, y tarda ~1,3 s por
+  comprobación en CPU.
+
+Lo que quedaría por medir es otro detector entrenado con datos de licencia limpia (voces en español
+propias, Common Voice, MUSAN) o el modelo grande de Vosk en español (1,4 GB). Los dos piden descargas
+grandes y días de trabajo, y hoy no hay un fallo que lo justifique.
+
 **Límites de la medida:** una sola voz (la de Adler), un micrófono, grabaciones de escritorio de NVIDIA
 con micrófono y audio del sistema mezclados en una pista, y «Hey Sakura» sin medir aparte. La
-sensibilidad Alta sigue aceptando «basura» o «segura» por parecido, igual que antes. Falta probarlo
-en vivo con la aplicación.
+sensibilidad Alta sigue aceptando «basura» o «segura» por parecido, igual que antes.
 
 ### L5 — TTS sin naturalidad ni barge-in
 **Qué:** SAPI5 (`System.Speech`). Sin streaming, sin interrupción, sin AEC.

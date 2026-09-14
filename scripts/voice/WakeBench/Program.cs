@@ -16,6 +16,9 @@
 //   hibrido        la gramática propone y el reconocedor libre confirma que el nombre suena.
 //   confusores     la gramática del producto desde D88 (WakeWordGrammarConfusers); CONFUSORES=a,b,c prueba otra lista.
 //   confianza      confianza por palabra de Vosk en los finales (no discrimina: 1,00 también en trampas).
+//   cascada-*      Vosk propone y Whisper base confirma sobre 2,5 s (VERIFY_PROMPT=... para darle pista).
+//                  Descartada: con clips cortos Whisper oye «oye, esa cura»; 3/12 cerca y 0-3/16 a
+//                  distancia, y ~1,3 s por comprobación en CPU.
 //
 // Por qué existe (2026-09-13): con voz sintética, «Voy a sacar la basura», «Oye, saca la ropa»,
 // «Oye, ¿sabes a qué hora cierra?» u «Oye, se acabó el café» despiertan a Sakura con la estrategia
@@ -27,6 +30,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Nexo.Core.Voice;
 using Vosk;
+using Whisper.net;
 
 var modelDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
     "Sakura", "models", "Vosk", "vosk-model-small-es-0.42");
@@ -36,6 +40,9 @@ var sensitivity = Enum.Parse<WakeWordSensitivity>(Environment.GetEnvironmentVari
 var phrase = Enum.Parse<WakeWordPhrase>(Environment.GetEnvironmentVariable("PHRASE") ?? "OyeSakura");
 Vosk.Vosk.SetLogLevel(-1);
 using var model = new Model(modelDir);
+var whisperPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Sakura", "models", "ggml-base.bin");
+using var whisper = WhisperFactory.FromPath(whisperPath);
+var verifyPrompt = Environment.GetEnvironmentVariable("VERIFY_PROMPT");
 var grammar = JsonSerializer.Serialize(WakeWordTextMatcher.GetGrammarPhrases(phrase, sensitivity).Append("[unk]").ToArray());
 
 foreach (var file in args)
@@ -122,6 +129,41 @@ foreach (var file in args)
         }
         Console.WriteLine($"[{"confianza",-13}] finales con el nombre: {confs.Count}  " + string.Join(" | ", confs));
     }
+    foreach (var source in new[] { "app", "confusores" })
+    {
+        // Cascada: Vosk propone (con la gramática de siempre o con confusores) y Whisper, sobre los
+        // 2,5 s de audio que acaban en la propuesta, confirma que se dijo la frase. Sin prompt que
+        // empuje a Whisper hacia «Sakura»: un verificador sesgado hacia la respuesta no verifica nada.
+        var forms = WakeWordTextMatcher.GetGrammarPhrases(phrase, sensitivity);
+        var g = source == "app"
+            ? JsonSerializer.Serialize(forms.Append("[unk]").ToArray())
+            : JsonSerializer.Serialize(WakeWordGrammarConfusers.ComposeGrammar(phrase, forms));
+        using var rec = new VoskRecognizer(model, 16000f, g);
+        var accepted = new List<string>(); var rejected = new List<string>(); var ms = new List<long>();
+        double skipUntil = -1;
+        for (int off = 0; off < pcm.Length; off += 3200)
+        {
+            var n = Math.Min(3200, pcm.Length - off); var t = off / 32000.0;
+            if (t < skipUntil) continue;
+            var buf = pcm.AsSpan(off, n).ToArray();
+            var fin = rec.AcceptWaveform(buf, n);
+            var text = Read(fin ? rec.Result() : rec.PartialResult(), fin ? "text" : "partial");
+            if (!WakeWordTextMatcher.Evaluate(text, phrase, sensitivity).IsMatch) continue;
+            rec.Reset(); skipUntil = t + 2.5;
+            // Se espera medio segundo más para que la palabra termine de entrar en la ventana.
+            var endByte = Math.Min(pcm.Length, off + n + 16000);
+            var startByte = Math.Max(0, endByte - 80000);
+            startByte -= startByte % 2;
+            var sw = Stopwatch.StartNew();
+            var heard = Transcribe(whisper, pcm.AsSpan(startByte, endByte - startByte).ToArray(), verifyPrompt);
+            ms.Add(sw.ElapsedMilliseconds);
+            var ok = Wakes(WakeWordTextMatcher.Normalize(heard), phrase, sensitivity, free: true);
+            (ok ? accepted : rejected).Add($"{t:0.0}s «{heard}»");
+        }
+        Console.WriteLine($"[cascada-{source,-10}] despertares: {accepted.Count} (Whisper descartó {rejected.Count}, {(ms.Count > 0 ? ms.Average() : 0):0} ms por verificación)");
+        foreach (var a in accepted) Console.WriteLine($"      sí  {a}");
+        foreach (var r in rejected) Console.WriteLine($"      no  {r}");
+    }
     // 2) Transcripción libre, para ver qué oye realmente.
     using (var free = new VoskRecognizer(model, 16000f))
     {
@@ -146,6 +188,23 @@ static double NameConfidence(string json, bool final)
     foreach (var w in arr.EnumerateArray())
         if (w.TryGetProperty("word", out var word) && (word.GetString() ?? "").Contains("ura") && w.TryGetProperty("conf", out var c)) return c.GetDouble();
     return -1;
+}
+static string Transcribe(WhisperFactory factory, byte[] pcm16k, string? prompt)
+{
+    using var wav = new MemoryStream();
+    using (var w = new BinaryWriter(wav, System.Text.Encoding.ASCII, leaveOpen: true))
+    {
+        w.Write("RIFF"u8); w.Write(36 + pcm16k.Length); w.Write("WAVE"u8); w.Write("fmt "u8); w.Write(16);
+        w.Write((short)1); w.Write((short)1); w.Write(16000); w.Write(32000); w.Write((short)2); w.Write((short)16);
+        w.Write("data"u8); w.Write(pcm16k.Length); w.Write(pcm16k);
+    }
+    wav.Position = 0;
+    var builder = factory.CreateBuilder().WithLanguage("es");
+    if (!string.IsNullOrWhiteSpace(prompt)) builder = builder.WithPrompt(prompt);
+    using var processor = builder.Build();
+    var sb = new System.Text.StringBuilder();
+    foreach (var segment in processor.ProcessAsync(wav).ToBlockingEnumerable()) sb.Append(segment.Text?.Trim()).Append(' ');
+    return sb.ToString().Trim();
 }
 static string Read(string json, string p) { using var d = JsonDocument.Parse(json); return d.RootElement.TryGetProperty(p, out var v) ? v.GetString() ?? "" : ""; }
 
