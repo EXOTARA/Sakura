@@ -16,8 +16,8 @@ public sealed class VoiceGlancePolicyTests
             wakeWordEnabled: true,
             wakeWordPhrase: "Oye Sakura",
             modelsReady: true,
-            inputDeviceName: "Micrófono (Realtek)",
-            dictationEnabled: true);
+            inputDeviceName: "Micrófono (Realtek)");
+
 
     [Fact]
     public void WhenEverythingWorks_NothingAsksForAttention()
@@ -36,7 +36,6 @@ public sealed class VoiceGlancePolicyTests
 
     [Theory]
     [InlineData(false, true, "Micrófono (Realtek)", "Escucha")]
-    [InlineData(true, false, "Micrófono (Realtek)", "Modelos de voz")]
     [InlineData(true, true, null, "Micrófono")]
     public void EachReasonSakuraCannotHearYou_IsMarked(
         bool wakeWordEnabled,
@@ -45,7 +44,7 @@ public sealed class VoiceGlancePolicyTests
         string expectedLabel)
     {
         var rows = VoiceGlancePolicy.Describe(
-            wakeWordEnabled, "Oye Sakura", modelsReady, device, dictationEnabled: true);
+            wakeWordEnabled, "Oye Sakura", modelsReady, device);
 
         var flagged = rows.Where(row => row.NeedsAttention).ToList();
 
@@ -54,26 +53,13 @@ public sealed class VoiceGlancePolicyTests
     }
 
     [Fact]
-    public void TheShortcutsAreThere_BecauseThisIsWhereSomeoneLooksForThem()
+    public void ModelsNotDownloadedYet_AreNotAProblem_TheyComeOnFirstUse()
     {
-        var rows = Healthy();
-
-        Assert.Contains(rows, row => row.Value == "Alt + V");
-        Assert.Contains(rows, row => row.Value == "Ctrl + Shift + D");
-    }
-
-    [Fact]
-    public void DictationBeingOff_IsNotAProblem_JustAState()
-    {
-        // Nadie está esperando que el dictado conteste; tenerlo apagado es una elección, no un
-        // fallo, y marcarlo en rojo enseñaría a ignorar las marcas.
         var rows = VoiceGlancePolicy.Describe(
-            wakeWordEnabled: true,
-            wakeWordPhrase: "Oye Sakura",
-            modelsReady: true,
-            inputDeviceName: "Micrófono (Realtek)",
-            dictationEnabled: false);
+            wakeWordEnabled: true, "Oye Sakura", modelsReady: false, "Micrófono (Realtek)");
 
-        Assert.All(rows, row => Assert.False(row.NeedsAttention, row.Label));
+        var models = rows.Single(row => row.Label == "Modelos de voz");
+        Assert.False(models.NeedsAttention);
+        Assert.Equal("Se descargan al usar la voz", models.Value);
     }
 }

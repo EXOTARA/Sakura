@@ -172,8 +172,8 @@ public sealed class TabStripSnapshotTests
                     wakeWordEnabled: true,
                     wakeWordPhrase: "Oye Sakura",
                     modelsReady: true,
-                    inputDeviceName: null,
-                    dictationEnabled: true));
+                    inputDeviceName: null),
+                dictationEnabled: true);
 
             // Sin animaciones: el subrayado de la tira viaja hasta la pestaña nueva a lo largo de
             // unos cientos de milisegundos, y un retrato que se dibuja al instante lo captura
@@ -183,7 +183,7 @@ public sealed class TabStripSnapshotTests
 
             try
             {
-                view.SelectTab(DashboardTab.Voice);
+                view.SelectTab(DashboardTab.Cheats);
                 host.UpdateLayout();
             }
             finally

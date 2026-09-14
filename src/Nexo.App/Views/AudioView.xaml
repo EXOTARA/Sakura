@@ -72,7 +72,7 @@
                         ValueChanged="MasterVolumeSlider_ValueChanged"
                         PreviewMouseLeftButtonUp="MasterVolumeSlider_MouseUp"
                         PreviewKeyUp="MasterVolumeSlider_KeyUp"
-                        Style="{StaticResource NexoSliderStyle}" />
+                        Style="{StaticResource LiquidSliderStyle}" />
             </Grid>
         </Border>
 

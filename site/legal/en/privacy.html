@@ -62,9 +62,11 @@
         public release list on <code>api.github.com</code>. It sends no identifier and no information
         about your machine beyond what any connection carries (your IP address). It can be switched off
         in Settings. Nothing is installed unless you accept it.</li>
-        <li><strong>The transcription model, the first time you open Sakura.</strong> Also automatic:
-        Sakura downloads the Whisper speech model once (about 140 MB) from Hugging Face and stores it on
-        your disk, so dictation works offline. It only requests the file; nothing of yours is sent.</li>
+        <li><strong>The transcription model, the first time you use voice.</strong> Sakura downloads the
+        Whisper model once (about 140 MB) from Hugging Face and stores it on your disk, so dictation works
+        offline. It only requests the file; nothing of yours is sent. In version 0.30.0 this download
+        happened the first time Sakura opened, even if voice was never used; from 0.30.1 on it waits until
+        you use it.</li>
         <li><strong>Downloads you ask for.</strong> The wake word model (from
         <code>alphacephei.com</code>), when you turn on or test «Oye Sakura»; Ollama, if you let Sakura
         install it from GitHub (the Microsoft Store version does not install it: it only links to its

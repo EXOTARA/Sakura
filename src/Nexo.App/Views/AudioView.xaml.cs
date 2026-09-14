@@ -138,8 +138,9 @@ public partial class AudioView : UserControl
             Maximum = 100,
             Value = session.VolumePercent,
             Margin = new Thickness(0, 10, 0, 0),
-            Style = (Style)FindResource("NexoSliderStyle")
+            Style = (Style)FindResource("LiquidSliderStyle")
         };
+        System.Windows.Automation.AutomationProperties.SetName(slider, $"Volumen de {session.DisplayName}");
 
         slider.ValueChanged += (_, args) =>
         {

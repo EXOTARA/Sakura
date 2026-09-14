@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Nexo.App.Motion;
+using Nexo.App.Views.Controls;
 using Nexo.Core.Assistant;
 using Nexo.Core.Shell;
 
@@ -689,6 +690,14 @@ public partial class AssistantView : UserControl
             Foreground = (Brush)Application.Current.FindResource("BrushTextPrimary")
         };
 
+        // 2026-09-14 — una respuesta de Sakura ya terminada se dibuja con su formato (negritas,
+        // listas, tablas) en vez de enseñar los asteriscos y las barras. Lo que escribe la persona y
+        // la respuesta mientras llega se quedan como texto: la primera es suya, y la segunda a medias
+        // partiría una tabla o una negrita por donde el modelo aún no ha terminado.
+        UIElement content = !isUser && allowSections
+            ? AnswerRenderer.Render(text)
+            : textBlock;
+
         var bubble = new Border
         {
             Margin = new Thickness(0, 7, 0, 0),
@@ -702,12 +711,13 @@ public partial class AssistantView : UserControl
             BorderThickness = new Thickness(1),
             HorizontalAlignment = alignment,
             MaxWidth = isUser ? 370 : 430,
-            Child = textBlock
+            Child = content
         };
 
         // Se lee del TextBlock y no del texto de creación: una respuesta que llega a trozos sigue
-        // creciendo, y copiar lo que había al construirla daría media frase.
-        AttachCopyMenu(bubble, () => textBlock.Text, isUser);
+        // creciendo, y copiar lo que había al construirla daría media frase. La ya terminada se
+        // copia tal cual la escribió el modelo.
+        AttachCopyMenu(bubble, () => ReferenceEquals(content, textBlock) ? textBlock.Text : text, isUser);
         return bubble;
     }
 
@@ -723,7 +733,6 @@ public partial class AssistantView : UserControl
         Brush background)
     {
         var stack = new StackPanel();
-        var textPrimary = (Brush)Application.Current.FindResource("BrushTextPrimary");
 
         foreach (var section in sections)
         {
@@ -734,15 +743,9 @@ public partial class AssistantView : UserControl
                     continue;
                 }
 
-                stack.Children.Add(new TextBlock
-                {
-                    Text = section.Body,
-                    TextWrapping = TextWrapping.Wrap,
-                    FontSize = 13,
-                    LineHeight = 20,
-                    Margin = new Thickness(0, 0, 0, 4),
-                    Foreground = textPrimary
-                });
+                var intro = (FrameworkElement)AnswerRenderer.Render(section.Body);
+                intro.Margin = new Thickness(0, 0, 0, 4);
+                stack.Children.Add(intro);
                 continue;
             }
 
@@ -758,15 +761,9 @@ public partial class AssistantView : UserControl
 
             if (section.Body.Length > 0)
             {
-                card.Children.Add(new TextBlock
-                {
-                    Text = section.Body,
-                    TextWrapping = TextWrapping.Wrap,
-                    FontSize = 13,
-                    LineHeight = 20,
-                    Margin = new Thickness(0, 5, 0, 0),
-                    Foreground = textPrimary
-                });
+                var body = (FrameworkElement)AnswerRenderer.Render(section.Body);
+                body.Margin = new Thickness(0, 5, 0, 0);
+                card.Children.Add(body);
             }
 
             stack.Children.Add(new Border

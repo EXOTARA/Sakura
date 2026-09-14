@@ -135,8 +135,9 @@ HOW TO TEST
   key for a cloud provider configured in Personalizar > Inteligencia artificial. Without either, the
   app still works as a command, task, focus and dictation assistant. This dependency is disclosed at
   the start of the description (policy 10.2.4).
-- On first launch the app downloads its local speech recognition model (Whisper, about 140 MB, from
-  Hugging Face) so dictation works offline. It is a data file, not executable code.
+- The first time voice is used, the app downloads its local speech recognition model (Whisper, about
+  140 MB, from Hugging Face) so dictation works offline. It is a data file, not executable code.
+  (0.30.0 downloaded it on first launch; 0.30.1 and later wait until voice is used.)
 
 CAPABILITIES
 - runFullTrust: standard WPF desktop application.

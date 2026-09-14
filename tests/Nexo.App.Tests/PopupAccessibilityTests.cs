@@ -85,6 +85,7 @@ public sealed class PopupAccessibilityTests(StaWpfFixture wpf)
         wpf.Invoke(() =>
         {
             Assert.Equal("Micrófono: Listo", new DashboardView.AccessibleVoiceRow("Micrófono", "Listo", Brushes.White, Visibility.Collapsed).ToString());
+            Assert.Equal("Volumen: baja Spotify al 50, silencia Discord", new DashboardView.VoiceExampleRow("Volumen", ["baja Spotify al 50", "silencia Discord"]).ToString());
             Assert.Equal("Conexión", new DiagnosticsWindow.DiagnosticItemRow("Conexión", "Lista", Brushes.White).ToString());
             Assert.Null(UIElementAutomationPeer.CreatePeerForElement(new DecorativeMark()));
             Assert.Null(UIElementAutomationPeer.CreatePeerForElement(new DecorativeText()));

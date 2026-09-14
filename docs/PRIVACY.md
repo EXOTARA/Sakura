@@ -32,8 +32,7 @@ la otra cambia en el mismo commit.
 
 ### 1. Comprobación de actualizaciones — automática, solo en la versión de GitHub
 
-Ocurre **sin que el usuario lo pida en ese momento**, igual que la descarga del modelo de transcripción
-(punto 2). La versión de Microsoft Store no la hace: la actualiza la Store. Como máximo una vez cada
+Ocurre **sin que el usuario lo pida en ese momento**. La versión de Microsoft Store no la hace: la actualiza la Store. Como máximo una vez cada
 24 horas, la versión de GitHub consulta la lista de versiones publicadas del repositorio:
 
 ```
@@ -55,8 +54,9 @@ Quien no quiera ni eso puede desactivar la comprobación en Ajustes.
 Son grandes, así que no van dentro del instalador:
 
 - El modelo de transcripción, de [Hugging Face](https://huggingface.co/) (Whisper `ggml` base, MIT,
-  unos 140 MB). **Se descarga solo, la primera vez que se abre Sakura** (`InitializeVoiceFeaturesAsync`
-  al arrancar), para que el dictado funcione sin conexión.
+  unos 140 MB). **Se descarga la primera vez que se usa la voz**: el micrófono, Alt + V, «Oye Sakura»
+  o el dictado (`PrepareVoiceAsync`). En 0.30.0 se descargaba al arrancar aunque no se usara la voz;
+  desde 0.30.1, al arrancar solo se carga si ya está en el disco.
 - El modelo de palabra de activación, de [alphacephei.com](https://alphacephei.com/vosk/models)
   (Vosk, Apache-2.0). Se descarga cuando el usuario activa o prueba «Oye Sakura».
 
@@ -136,7 +136,7 @@ Everything that leaves the machine is listed above. In short:
    Updates are never installed without the user accepting them. Can be disabled in Settings. The
    Microsoft Store version does not check; the Store updates it.
 2. **Voice model download:** the Whisper `ggml` base model from Hugging Face (about 140 MB) is
-   downloaded automatically on first launch; the Vosk wake word model from alphacephei.com when the
+   downloaded the first time voice is used (on first launch in 0.30.0); the Vosk wake word model from alphacephei.com when the
    user turns on or tests the wake word. Downloaded once, then all recognition is local.
 3. **Cloud AI providers (opt-in only):** if the user configures one, conversation text — and, only
    when Lens or window sharing is used, a redacted screenshot, or with the screen translator the

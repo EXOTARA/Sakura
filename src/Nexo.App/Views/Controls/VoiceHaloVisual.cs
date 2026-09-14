@@ -15,6 +15,11 @@ namespace Nexo.App.Views.Controls;
 ///
 /// Las brochas y la geometría se congelan: una brocha sin congelar se comprueba por hilo en cada
 /// acceso, y aquí se accede sesenta veces por segundo.
+///
+/// 2026-09-14 — la marca va dentro de una burbuja (Adler: «casi no se ve»). Era el contorno fino de
+/// la flor en el color de acento, directamente sobre el escritorio: sobre un fondo claro o del mismo
+/// tono desaparecía. Ahora es un círculo oscuro con borde y sombra, como las píldoras, con los pétalos
+/// macizos y el destello dentro, y los anillos nacen desde su borde.
 /// </summary>
 public sealed class VoiceHaloVisual : FrameworkElement
 {
@@ -38,8 +43,13 @@ public sealed class VoiceHaloVisual : FrameworkElement
     /// </summary>
     private const double MarkTilt = 14;
 
+    /// <summary>Radio de la burbuja respecto al radio interior de los anillos.</summary>
+    private const double BubbleRatio = 1.3;
+
     private readonly VoiceHaloPolicy _halo = new();
     private Geometry? _mark;
+    private Geometry? _petals;
+    private Geometry? _spark;
     private Brush _markBrush = Brushes.Transparent;
     private Color _ringColor = Colors.White;
 
@@ -65,6 +75,25 @@ public sealed class VoiceHaloVisual : FrameworkElement
 
         _mark = mark.Clone();
         _mark.Freeze();
+
+        // De la marca se usan la silueta exterior —pétalos macizos— y el destello, igual que en el
+        // pomo de los mandos líquidos. Si llega otra geometría, se dibuja tal cual.
+        _petals = null;
+        _spark = null;
+        if (mark is GeometryGroup { Children.Count: >= 2 } group &&
+            group.Children[0] is PathGeometry { Figures.Count: > 0 } outline &&
+            group.Children[1] is PathGeometry spark)
+        {
+            // Las piezas sueltas pierden la escala del grupo (de la retícula de 48 a la de 24), y sin
+            // ella la flor salía al doble de tamaño y descentrada: se les devuelve.
+            var petals = new PathGeometry([outline.Figures[0].Clone()]) { Transform = group.Transform?.Clone() };
+            petals.Freeze();
+            var sparkCopy = spark.Clone();
+            sparkCopy.Transform = group.Transform?.Clone();
+            sparkCopy.Freeze();
+            _petals = petals;
+            _spark = sparkCopy;
+        }
 
         _ringColor = accent;
 
@@ -98,7 +127,9 @@ public sealed class VoiceHaloVisual : FrameworkElement
         }
 
         var centre = new Point(ActualWidth / 2, ActualHeight / 2);
-        var inner = side * InnerRadiusRatio;
+        var level = Math.Clamp(_halo.Level, 0, 1);
+        var bubble = side * InnerRadiusRatio * BubbleRatio * (1 + (0.06 * level));
+        var inner = bubble;
         var outer = side * OuterRadiusRatio;
 
         foreach (var ring in _halo.Rings)
@@ -123,18 +154,32 @@ public sealed class VoiceHaloVisual : FrameworkElement
             drawingContext.DrawEllipse(null, pen, centre, radius, radius);
         }
 
-        // El resplandor detrás de la marca crece con la voz. Es lo que evita que la flor parezca
-        // pegada sobre el escritorio en vez de encendida.
+        // El resplandor detrás crece con la voz. Siempre hay un poco, aunque haya silencio: es lo que
+        // separa la burbuja de un fondo del mismo tono.
         var glow = new RadialGradientBrush(
-            Color.FromArgb((byte)(70 * Math.Clamp(_halo.Level, 0, 1)), _ringColor.R, _ringColor.G, _ringColor.B),
+            Color.FromArgb((byte)(60 + (90 * level)), _ringColor.R, _ringColor.G, _ringColor.B),
             Colors.Transparent);
         glow.Freeze();
-        drawingContext.DrawEllipse(glow, null, centre, inner * 2.1, inner * 2.1);
+        drawingContext.DrawEllipse(glow, null, centre, bubble * 1.9, bubble * 1.9);
+
+        // La burbuja: sombra, cuerpo oscuro y un canto del color de acento.
+        var shadow = new RadialGradientBrush(Color.FromArgb(120, 0, 0, 0), Colors.Transparent);
+        shadow.Freeze();
+        drawingContext.DrawEllipse(shadow, null, new Point(centre.X, centre.Y + (bubble * 0.14)), bubble * 1.22, bubble * 1.22);
+
+        var body = new RadialGradientBrush(Color.FromArgb(242, 0x2E, 0x26, 0x2F), Color.FromArgb(242, 0x17, 0x14, 0x1A))
+        {
+            GradientOrigin = new Point(0.35, 0.3)
+        };
+        body.Freeze();
+        var rim = new Pen(new SolidColorBrush(_ringColor) { Opacity = 0.55 + (0.35 * level) }, Math.Max(1.5, side * 0.008));
+        rim.Freeze();
+        drawingContext.DrawEllipse(body, rim, centre, bubble, bubble);
 
         // La marca respira: entre el silencio y el máximo crece un catorce por ciento. Se escala
         // desde el centro, así que no toca la medida de nada.
-        var scale = 1 + (MarkGrowth * Math.Clamp(_halo.Level, 0, 1));
-        var markSide = inner * 1.9 * scale;
+        var scale = 1 + (MarkGrowth * level);
+        var markSide = bubble * 1.12 * scale;
 
         // La inclinación va alrededor del centro de la marca, no del origen del control: rotar
         // sobre la esquina la mandaría de paseo por la pantalla.
@@ -147,7 +192,17 @@ public sealed class VoiceHaloVisual : FrameworkElement
             markSide / _mark.Bounds.Height));
         drawingContext.PushTransform(new TranslateTransform(-_mark.Bounds.X, -_mark.Bounds.Y));
 
-        drawingContext.DrawGeometry(_markBrush, null, _mark);
+        if (_petals is not null && _spark is not null)
+        {
+            drawingContext.DrawGeometry(_markBrush, null, _petals);
+            var sparkBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x16, 0x1C));
+            sparkBrush.Freeze();
+            drawingContext.DrawGeometry(sparkBrush, null, _spark);
+        }
+        else
+        {
+            drawingContext.DrawGeometry(_markBrush, null, _mark);
+        }
 
         drawingContext.Pop();
         drawingContext.Pop();

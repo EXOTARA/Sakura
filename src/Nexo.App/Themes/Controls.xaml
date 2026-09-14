@@ -781,6 +781,61 @@
     </Style>
 
     <!--
+        2026-09-14 — el deslizador líquido, el mismo de los controles rápidos pero en horizontal, para
+        los volúmenes de la pestaña Audio (Adler).
+
+        La plantilla conserva un Track de verdad con sus RepeatButton y su Thumb, todos transparentes:
+        el arrastre, el clic en un punto, el teclado y el lector de pantalla siguen siendo los del
+        Slider. Lo que se ve lo pinta LiquidSliderTrack, colocado debajo y sin recibir clics. El
+        pulgar mide lo mismo que el hueco que el dibujo reserva al pomo, para que vayan a la par.
+    -->
+    <Style x:Key="LiquidSliderTransparentPartStyle" TargetType="Control">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Control">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="LiquidSliderStyle" TargetType="Slider">
+        <Setter Property="IsMoveToPointEnabled" Value="True" />
+        <Setter Property="SmallChange" Value="1" />
+        <Setter Property="LargeChange" Value="5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid Background="Transparent">
+                        <controls:LiquidSliderTrack Value="{TemplateBinding Value}"
+                                                    Minimum="{TemplateBinding Minimum}"
+                                                    Maximum="{TemplateBinding Maximum}" />
+                        <Track x:Name="PART_Track"
+                               Height="28"
+                               VerticalAlignment="Top"
+                               Orientation="Horizontal">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static Slider.DecreaseLarge}"
+                                              Style="{StaticResource LiquidSliderTransparentPartStyle}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Width="26" Style="{StaticResource LiquidSliderTransparentPartStyle}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="{x:Static Slider.IncreaseLarge}"
+                                              Style="{StaticResource LiquidSliderTransparentPartStyle}" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
         Diseño D47 — la casilla y el botón de opción, escritos de cero.
 
         Hasta ahora no tenían plantilla: WPF dibujaba la suya, que es el cuadrito gris de la época
