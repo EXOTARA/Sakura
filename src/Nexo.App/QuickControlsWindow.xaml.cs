@@ -5,7 +5,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using Nexo.App.Motion;
 using Nexo.Core.Settings;
@@ -30,9 +29,6 @@ public partial class QuickControlsWindow : Window
     private const int WsExNoActivate = 0x08000000;
     private const int WsExToolWindow = 0x00000080;
 
-    private const double TrackHeight = 164;
-    private const double TrackWidth = 52;
-
     /// <summary>
     /// Se cierra solo al rato de dejar de usarlo. Sin esto se quedaría encima de todo hasta que
     /// alguien se acordara de apartarlo, que es justo lo que un panel de borde no debe pedir.
@@ -40,7 +36,7 @@ public partial class QuickControlsWindow : Window
     private static readonly TimeSpan IdleDismiss = TimeSpan.FromSeconds(4);
 
     private readonly DispatcherTimer _idleTimer;
-    private readonly Dictionary<QuickControlKind, Border> _fills = new();
+    private readonly Dictionary<QuickControlKind, Views.Controls.LiquidLevelGauge> _gauges = new();
 
     private bool _dismissing;
     private QuickControlKind? _dragging;
@@ -62,11 +58,7 @@ public partial class QuickControlsWindow : Window
         SourceInitialized += OnSourceInitialized;
         MouseEnter += (_, _) => _idleTimer.Stop();
         MouseLeave += (_, _) => RestartIdle();
-        MouseLeftButtonUp += (_, _) =>
-        {
-            _dragging = null;
-            FlushPendingWrite();
-        };
+        MouseLeftButtonUp += (_, _) => EndDrag();
         MouseMove += OnMouseMove;
         KeyDown += (_, e) =>
         {
@@ -110,8 +102,8 @@ public partial class QuickControlsWindow : Window
         IsHitTestVisible = true;
 
         BuildControls(kinds);
-        SetLevel(QuickControlKind.Volume, volumePercent);
-        SetLevel(QuickControlKind.Brightness, brightnessPercent);
+        Reveal(QuickControlKind.Volume, volumePercent);
+        Reveal(QuickControlKind.Brightness, brightnessPercent);
 
         var edge = QuickControlsPolicy.ControlsEdgeFor(kohanaSide);
         Position(edge);
@@ -119,6 +111,10 @@ public partial class QuickControlsWindow : Window
         if (!IsVisible)
         {
             Show();
+
+            // Antes de mostrarse la ventana no se mide, y el ancho lo decide el contenido: se vuelve
+            // a colocar ya medida para que el borde quede donde toca. El panel aún es transparente.
+            Position(edge);
         }
 
         PanelBorder.BeginAnimation(OpacityProperty, null);
@@ -170,107 +166,66 @@ public partial class QuickControlsWindow : Window
     /// </summary>
     private void SetLevel(QuickControlKind kind, double percent, bool animate)
     {
-        if (!_fills.TryGetValue(kind, out var fill))
+        if (!_gauges.TryGetValue(kind, out var gauge))
         {
             return;
         }
 
         var normalized = QuickControlsPolicy.NormalizePercent(percent);
-        foreach (var track in ControlsPanel.Children.OfType<Views.Controls.AccessibleLevelTrack>())
-            if (Equals(track.Tag, kind)) track.UpdateValue(normalized);
-        var target = TrackHeight * normalized / 100.0;
+        UpdateAccessibleValue(kind, normalized);
+        gauge.SetLevel(normalized, follow: !animate);
+    }
 
-        if (!animate || !SakuraMotion.AnimationsEnabled)
+    private void Reveal(QuickControlKind kind, double percent)
+    {
+        if (!_gauges.TryGetValue(kind, out var gauge))
         {
-            fill.BeginAnimation(HeightProperty, null);
-            fill.Height = target;
             return;
         }
 
-        var animation = SakuraMotion.CreateAnimation(
-            target, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
-        fill.BeginAnimation(HeightProperty, animation);
+        var normalized = QuickControlsPolicy.NormalizePercent(percent);
+        UpdateAccessibleValue(kind, normalized);
+        gauge.Reveal(normalized);
+    }
+
+    private void UpdateAccessibleValue(QuickControlKind kind, double percent)
+    {
+        foreach (var track in ControlsPanel.Children.OfType<Views.Controls.AccessibleLevelTrack>())
+        {
+            if (Equals(track.Tag, kind))
+            {
+                track.UpdateValue(percent);
+            }
+        }
     }
 
     private void BuildControls(IReadOnlyList<QuickControlKind> kinds)
     {
         ControlsPanel.Children.Clear();
-        _fills.Clear();
+        _gauges.Clear();
 
         for (var index = 0; index < kinds.Count; index++)
         {
             var kind = kinds[index];
 
+            // El carril es transparente pero no vacío: sin fondo no recibiría los clics de las zonas
+            // donde no hay nada dibujado, y pulsar entre dos marcas de la regla no haría nada.
             var track = new Views.Controls.AccessibleLevelTrack
             {
-                Style = (Style)FindResource("ControlTrackStyle"),
-                Margin = new Thickness(0, index == 0 ? 0 : 12, 0, 0),
+                Width = Views.Controls.LiquidLevelGauge.GaugeWidth,
+                Height = Views.Controls.LiquidLevelGauge.GaugeHeight,
+                Background = Brushes.Transparent,
+                Margin = new Thickness(index == 0 ? 0 : 4, 0, 0, 0),
                 Tag = kind,
-                Cursor = Cursors.Hand,
-
-                // Diseño D39 — el recorte es una geometría redondeada y no ClipToBounds.
-                //
-                // ClipToBounds recorta al RECTÁNGULO de la caja, sin enterarse del radio: el
-                // relleno tiene sus esquinas redondeadas, pero al llegar arriba se le cortaban
-                // contra un borde recto y la píldora se veía cuadrada por dos lados. Es justo el
-                // defecto que se reportó. Una geometría con el mismo radio recorta por donde el
-                // ojo espera.
-                Clip = new RectangleGeometry(
-                    new Rect(0, 0, TrackWidth, TrackHeight),
-                    TrackWidth / 2,
-                    TrackWidth / 2)
-            };
-
-            // El relleno va anclado abajo para que crezca hacia arriba, como el boceto.
-            //
-            // Diseño D78 — se redondea ARRIBA y solo arriba.
-            //
-            // Antes llevaba el mismo radio en las cuatro esquinas, con la idea de que así el borde
-            // de arriba sería una cúpula y no un corte. Lo era, pero el de abajo también, y ahí
-            // está el defecto: el relleno se curvaba hacia dentro justo donde tenía que apoyarse.
-            // A media altura se despegaba del fondo del carril, y por debajo de su propio diámetro
-            // WPF encoge los radios para que quepan y el resultado era una lenteja —o directamente
-            // un círculo suelto a 52— flotando en mitad de la píldora en vez de un nivel.
-            //
-            // Abajo no hace falta radio ninguno: el recorte redondeado del carril ya le da la
-            // curva por donde el ojo la espera. El de arriba, el único que se ve moverse, sigue
-            // siendo una cúpula.
-            var fill = new Border
-            {
-                Width = TrackWidth,
-                Height = 0,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                CornerRadius = new CornerRadius(TrackWidth / 2, TrackWidth / 2, 0, 0),
-                Background = (Brush)FindResource("BrushAccent")
+                Cursor = Cursors.Hand
             };
 
             // El altavoz es una silueta maciza y el sol son trazos: pintar los dos igual dejaba el
             // brillo como un punto, porque unos rayos dibujados como líneas no tienen interior que
             // rellenar.
             var isSolid = kind == QuickControlKind.Volume;
-            var inkBrush = (Brush)FindResource("BrushTextPrimary");
-
-            var icon = new Path
-            {
-                Width = 18,
-                Height = 18,
-                Stretch = Stretch.Uniform,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(0, 0, 0, 14),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Fill = isSolid ? inkBrush : null,
-                Stroke = isSolid ? null : inkBrush,
-                StrokeThickness = isSolid ? 0 : 2,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round,
-                Data = Geometry.Parse(isSolid ? VolumeGlyph : BrightnessGlyph),
-                IsHitTestVisible = false
-            };
-
-            var layers = new Grid();
-            layers.Children.Add(fill);
-            layers.Children.Add(icon);
-            track.Child = layers;
+            var gauge = new Views.Controls.LiquidLevelGauge(isSolid ? VolumeGlyph : BrightnessGlyph, isSolid);
+            track.Child = gauge;
 
             System.Windows.Automation.AutomationProperties.SetName(track,
                 kind == QuickControlKind.Volume ? "Volumen" : "Brillo");
@@ -286,7 +241,7 @@ public partial class QuickControlsWindow : Window
             track.MouseWheel += OnTrackWheel;
 
             ControlsPanel.Children.Add(track);
-            _fills[kind] = fill;
+            _gauges[kind] = gauge;
         }
     }
 
@@ -316,6 +271,11 @@ public partial class QuickControlsWindow : Window
         track.CaptureMouse();
         e.Handled = true;
 
+        if (_gauges.TryGetValue(kind, out var gauge))
+        {
+            gauge.SetPressed(true);
+        }
+
         // Sigue al dedo sin animación, pero escribe al hardware ya: una pulsación suelta es una
         // orden completa, no un tramo intermedio de arrastre.
         SetLevel(kind, PercentFromPointer(track, e.GetPosition(track).Y), animate: false);
@@ -329,6 +289,17 @@ public partial class QuickControlsWindow : Window
             track.ReleaseMouseCapture();
         }
 
+        EndDrag();
+    }
+
+    /// <summary>Fin de un arrastre por la vía que sea: el pomo se vuelve a inflar y se escribe lo pendiente.</summary>
+    private void EndDrag()
+    {
+        if (_dragging is { } kind && _gauges.TryGetValue(kind, out var gauge))
+        {
+            gauge.SetPressed(false);
+        }
+
         _dragging = null;
         FlushPendingWrite();
     }
@@ -337,22 +308,18 @@ public partial class QuickControlsWindow : Window
     /// Si algo le quita la captura al carril —otra ventana, un cambio de escritorio, Alt+Tab— el
     /// arrastre termina aquí. Sin esto, la captura perdida dejaba <see cref="_dragging"/> puesto.
     /// </summary>
-    private void OnTrackLostCapture(object sender, MouseEventArgs e)
-    {
-        _dragging = null;
-        FlushPendingWrite();
-    }
+    private void OnTrackLostCapture(object sender, MouseEventArgs e) => EndDrag();
 
-    private static double PercentFromPointer(Border track, double pointerY)
-    {
-        // Arriba del carril es el 100%: la coordenada crece hacia abajo, así que se invierte.
-        var height = track.ActualHeight > 0 ? track.ActualHeight : TrackHeight;
-        return (1 - (pointerY / height)) * 100.0;
-    }
+    /// <summary>
+    /// La altura del puntero dentro del mando. La regla no ocupa todo el alto —arriba hay aire y abajo
+    /// va el icono—, así que pulsar por encima del 100 % o por debajo del 0 % se queda en el extremo.
+    /// </summary>
+    private static double PercentFromPointer(Border track, double pointerY) =>
+        Views.Controls.LiquidLevelGauge.PercentAt(pointerY);
 
     private void WriteNow(QuickControlKind kind)
     {
-        if (!_fills.TryGetValue(kind, out var fill))
+        if (!_gauges.TryGetValue(kind, out var gauge))
         {
             return;
         }
@@ -364,7 +331,7 @@ public partial class QuickControlsWindow : Window
             this,
             new QuickControlChangedEventArgs(
                 kind,
-                QuickControlsPolicy.NormalizePercent(fill.Height / TrackHeight * 100.0)));
+                QuickControlsPolicy.NormalizePercent(gauge.Target)));
     }
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -388,12 +355,12 @@ public partial class QuickControlsWindow : Window
     private void OnTrackWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is not Border { Tag: QuickControlKind kind } ||
-            !_fills.TryGetValue(kind, out var fill))
+            !_gauges.TryGetValue(kind, out var gauge))
         {
             return;
         }
 
-        var current = fill.Height / TrackHeight * 100.0;
+        var current = gauge.Target;
         var step = e.Delta > 0 ? 5 : -5;
         Apply(kind, current + step, dragging: false);
     }
@@ -533,7 +500,8 @@ public partial class QuickControlsWindow : Window
         const double margin = 18;
 
         UpdateLayout();
-        var height = ActualHeight > 0 ? ActualHeight : 260;
+        var height = ActualHeight > 0 ? ActualHeight : 320;
+        var width = ActualWidth > 0 ? ActualWidth : 360;
 
         // Se descuenta el hueco de la sombra: lo que tiene que quedar a la distancia pedida del
         // borde es el panel que se ve, no la ventana que lo contiene. Sin esto, ampliar la ventana
@@ -541,7 +509,7 @@ public partial class QuickControlsWindow : Window
         Top = workArea.Top + Math.Max(0, (workArea.Height - height) / 2);
         Left = edge == SidebarPosition.Left
             ? workArea.Left + margin - ShadowMargin
-            : workArea.Right - Width - margin + ShadowMargin;
+            : workArea.Right - width - margin + ShadowMargin;
     }
 
     private const string VolumeGlyph =
