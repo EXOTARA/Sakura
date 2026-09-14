@@ -1,0 +1,47 @@
+name: Reportar una respuesta de IA
+description: Avisa de una respuesta de Sakura inapropiada, ofensiva, peligrosa o engañosa.
+title: "[Contenido de IA] "
+labels: ["contenido-ia"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por avisar. Este reporte es **público**: no pegues contraseñas, datos personales ni nada que no quieras que vea cualquiera.
+
+        Sakura no guarda ni envía tus conversaciones, así que solo vemos lo que escribas aquí.
+  - type: textarea
+    id: respuesta
+    attributes:
+      label: La respuesta
+      description: Si la copiaste desde Sakura con «Reportar esta respuesta», ya está en tu portapapeles. Pégala y borra lo que no quieras compartir.
+    validations:
+      required: true
+  - type: dropdown
+    id: motivo
+    attributes:
+      label: Qué tiene de malo
+      options:
+        - Ofensiva o que incita al odio
+        - Peligrosa (daño, violencia, conductas de riesgo)
+        - Sexual o inapropiada para menores
+        - Falsa o engañosa
+        - Otra
+    validations:
+      required: true
+  - type: dropdown
+    id: proveedor
+    attributes:
+      label: Qué IA la escribió
+      description: Está en Personalizar → Inteligencia artificial.
+      options:
+        - Ollama en mi equipo
+        - Anthropic
+        - OpenAI
+        - Google Gemini
+        - Groq
+        - OpenRouter
+        - No lo sé
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Qué le habías pedido (opcional)

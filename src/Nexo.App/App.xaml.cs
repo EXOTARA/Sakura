@@ -75,7 +75,8 @@ public partial class App : System.Windows.Application
 
         var settingsStore = new JsonSettingsStore();
         var preferences = settingsStore.Load();
-        var requestedHiddenStart = StartupCommandBuilder.ShouldStartHidden(e.Args);
+        var requestedHiddenStart = StartupCommandBuilder.ShouldStartHidden(e.Args) ||
+            Nexo.Windows.Distribution.WindowsDistributionChannel.WasLaunchedByStartupTask();
 
         if (!preferences.HasCompletedOnboarding)
         {

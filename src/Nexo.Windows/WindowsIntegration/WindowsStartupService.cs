@@ -1,6 +1,9 @@
 using Microsoft.Win32;
 using Nexo.Core.Branding;
+using Nexo.Core.Distribution;
 using Nexo.Core.WindowsIntegration;
+using Nexo.Windows.Distribution;
+using Windows.ApplicationModel;
 
 namespace Nexo.Windows.WindowsIntegration;
 
@@ -10,8 +13,19 @@ public sealed class WindowsStartupService
     private const string ValueName = ProductIdentity.ProductName;
     private const string LegacyValueName = ProductIdentity.PreviousProductName;
 
+    /// <summary>
+    /// Diseño D89 — el identificador de la tarea de inicio en el manifiesto del paquete
+    /// (<c>packaging/msix/AppxManifest.template.xml</c>). Tienen que coincidir.
+    /// </summary>
+    public const string PackageStartupTaskId = "SakuraStartup";
+
     public bool IsEnabled()
     {
+        if (DistributionPolicy.Startup(WindowsDistributionChannel.Current) == StartupRegistration.PackageStartupTask)
+        {
+            return IsPackageTaskEnabled();
+        }
+
         try
         {
             using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true);
@@ -57,6 +71,11 @@ public sealed class WindowsStartupService
 
     public StartupRegistrationResult SetEnabled(bool enabled)
     {
+        if (DistributionPolicy.Startup(WindowsDistributionChannel.Current) == StartupRegistration.PackageStartupTask)
+        {
+            return SetPackageTaskEnabled(enabled);
+        }
+
         try
         {
             using var key = Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
@@ -104,6 +123,58 @@ public sealed class WindowsStartupService
         {
             return StartupRegistrationResult.Failed(
                 $"No pude actualizar el inicio automático: {exception.Message}");
+        }
+    }
+
+    // Dentro de un paquete, escribir en la clave Run no sirve: Windows guarda la escritura en una copia
+    // privada del paquete y el arranque nunca la ve. La tarea de inicio es el mecanismo soportado.
+    // Las llamadas WinRT completan en el grupo de hilos, así que esperarlas aquí no bloquea la
+    // finalización contra el hilo de interfaz.
+    private static bool IsPackageTaskEnabled()
+    {
+        try
+        {
+            var task = StartupTask.GetAsync(PackageStartupTaskId).AsTask().GetAwaiter().GetResult();
+            return task.State is StartupTaskState.Enabled or StartupTaskState.EnabledByPolicy;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static StartupRegistrationResult SetPackageTaskEnabled(bool enabled)
+    {
+        try
+        {
+            var task = StartupTask.GetAsync(PackageStartupTaskId).AsTask().GetAwaiter().GetResult();
+            if (!enabled)
+            {
+                task.Disable();
+                return StartupRegistrationResult.Completed(
+                    $"{ProductIdentity.ProductName} ya no se iniciará con Windows.");
+            }
+
+            var state = task.RequestEnableAsync().AsTask().GetAwaiter().GetResult();
+            return state switch
+            {
+                StartupTaskState.Enabled or StartupTaskState.EnabledByPolicy =>
+                    StartupRegistrationResult.Completed(
+                        $"{ProductIdentity.ProductName} se iniciará en segundo plano cuando abras sesión en Windows."),
+                // Si la persona lo apagó en Configuración > Aplicaciones > Inicio, Windows no deja que
+                // la app lo vuelva a encender sola. Hay que decir dónde se hace.
+                StartupTaskState.DisabledByUser => StartupRegistrationResult.Failed(
+                    "Lo desactivaste en Configuración de Windows > Aplicaciones > Inicio. Actívalo desde ahí."),
+                StartupTaskState.DisabledByPolicy => StartupRegistrationResult.Failed(
+                    "Una directiva de tu equipo no permite que las aplicaciones se inicien con Windows."),
+                _ => StartupRegistrationResult.Failed(
+                    "Windows no permitió activar el inicio automático.")
+            };
+        }
+        catch (Exception exception)
+        {
+            return StartupRegistrationResult.Failed(
+                $"No pude cambiar el inicio automático: {exception.Message}");
         }
     }
 
