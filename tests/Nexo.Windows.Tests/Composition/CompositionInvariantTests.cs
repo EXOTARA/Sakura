@@ -246,7 +246,7 @@ public sealed class CompositionInvariantTests
     {
         var body = ExtractMethodBody(
             ReadMainWindowSource(),
-            "private async Task PrepareVoiceAsync()",
+            "private async Task PrepareVoiceAsync(bool continueListening = false)",
             "private async Task InitializeVoiceFeaturesAsync()");
 
         Assert.Contains("_voiceCoordinator.IsVoiceInputReady", body, StringComparison.Ordinal);
@@ -332,7 +332,7 @@ public sealed class CompositionInvariantTests
             StringComparison.Ordinal);
         Assert.DoesNotContain("_voiceGate", body, StringComparison.Ordinal);
         Assert.Contains("await PauseWakeWordAsync();", body, StringComparison.Ordinal);
-        Assert.Contains("await PrepareVoiceAsync();", body, StringComparison.Ordinal);
+        Assert.Contains("await PrepareVoiceAsync(continueListening: true);", body, StringComparison.Ordinal);
         Assert.Contains("TimeSpan.FromSeconds(20)", body, StringComparison.Ordinal);
         Assert.Contains("TimeSpan.FromMilliseconds(1_500)", body, StringComparison.Ordinal);
         Assert.Contains("e.PreRollAudio", body, StringComparison.Ordinal);

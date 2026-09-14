@@ -1,5 +1,12 @@
 # Changelog
 
+## [Sin publicar]
+
+### Cambiado
+
+- **La píldora de respuesta también muestra el formato.** Lo que preguntas con Ctrl + Espacio llega con negritas y listas bien dibujadas, como en el chat, en vez de con asteriscos.
+- **La primera vez que usas la voz se ve cuánto falta.** Mientras se descarga el modelo, la burbuja de Sakura muestra un anillo que se va llenando y el porcentaje debajo, en lugar de un aviso arriba sin avance. Si pediste escuchar, al terminar la burbuja se queda y empieza a escucharte sin desaparecer.
+
 ## [0.30.1-beta]
 
 ### Cambiado

@@ -51,13 +51,62 @@ public partial class VoiceHaloWindow : Window
     /// </summary>
     public void ReportLevel(double level) => _visual.RawLevel = level;
 
+    /// <summary>
+    /// 2026-09-14 — la burbuja mientras se descarga la voz por primera vez, con un anillo de progreso
+    /// y el porcentaje debajo. Sustituye a la cápsula «Preparando voz local», que decía lo mismo con
+    /// un texto pequeño arriba del todo y sin decir cuánto faltaba.
+    /// </summary>
+    public void ShowPreparing(Geometry mark, Color accent)
+    {
+        _visual.PreparingFraction = 0;
+        _visual.Caption = "Preparando la voz…";
+        ShowHalo(mark, accent);
+        _visual.PreparingFraction = 0;
+        _visual.Caption = "Preparando la voz…";
+    }
+
+    public void ReportPreparation(double fraction, string caption)
+    {
+        _visual.PreparingFraction = Math.Clamp(fraction, 0, 1);
+        _visual.Caption = caption;
+    }
+
+    /// <summary>
+    /// Fin de la preparación. Con <paramref name="keepListening"/> la burbuja se queda y pasa a
+    /// escuchar sin irse y volver; sin él, se desinfla.
+    /// </summary>
+    public void EndPreparing(bool keepListening)
+    {
+        _visual.PreparingFraction = null;
+        _visual.Caption = null;
+
+        if (!keepListening)
+        {
+            HideHalo();
+        }
+    }
+
     /// <summary>Coloca el halo y lo enciende. Idempotente: llamarlo dos veces no reinicia nada.</summary>
     public void ShowHalo(Geometry mark, Color accent)
     {
         _visual.Configure(mark, accent);
 
-        if (_running)
+        if (_running && !_dismissing)
         {
+            return;
+        }
+
+        if (_running && _dismissing)
+        {
+            // Se estaba yendo y hace falta otra vez —la preparación terminó y empieza a escuchar—:
+            // se da la vuelta desde donde está en vez de esperar a que desaparezca.
+            _dismissing = false;
+            HaloRoot.Animate(OpacityProperty, 1, SakuraMotion.Fast, SakuraMotion.DecelerateCurve);
+            HaloScale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
+            HaloScale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
+            SakuraMotion.AnimateTransform(HaloRise, TranslateTransform.YProperty, 0, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
+            _lastFrame = TimeSpan.Zero;
+            CompositionTarget.Rendering += OnRendering;
             return;
         }
 

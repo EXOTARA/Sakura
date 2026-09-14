@@ -30,4 +30,20 @@ public sealed class VoicePreparationResultTests
         Assert.Equal(0, progress.BytesDownloaded);
         Assert.Contains("0 MB", progress.Detail);
     }
+
+    [Fact]
+    public void Fraction_FollowsTheDownload_AndWaitsAt99UntilItIsComplete()
+    {
+        Assert.Null(VoicePreparationProgress.Preparing("Preparando…").Fraction);
+        Assert.Null(VoicePreparationProgress.Downloading(0).Fraction);
+
+        var half = VoicePreparationProgress.Downloading(VoicePreparationProgress.ExpectedWhisperBaseBytes / 2);
+        Assert.Equal(0.5, half.Fraction!.Value, 2);
+
+        var all = VoicePreparationProgress.Downloading(VoicePreparationProgress.ExpectedWhisperBaseBytes);
+        Assert.Equal(0.99, all.Fraction);
+
+        var more = VoicePreparationProgress.Downloading(VoicePreparationProgress.ExpectedWhisperBaseBytes * 2);
+        Assert.Equal(0.99, more.Fraction);
+    }
 }

@@ -148,6 +148,9 @@ public partial class AnswerPillWindow : Window
 
         QuestionText.Text = question.Trim();
         AnswerText.Text = "Pensando…";
+        AnswerText.Visibility = Visibility.Visible;
+        AnswerRich.Content = null;
+        AnswerRich.Visibility = Visibility.Collapsed;
         OpenInSakuraText.Visibility = Visibility.Collapsed;
         HintText.Text = "Esc";
 
@@ -219,6 +222,13 @@ public partial class AnswerPillWindow : Window
         if (AnswerPillPolicy.DeservesOpeningInSakura(answer))
         {
             OpenInSakuraText.Visibility = Visibility.Visible;
+        }
+
+        if (answer.Trim().Length > 0)
+        {
+            AnswerRich.Content = Views.Controls.AnswerRenderer.Render(answer.Trim());
+            AnswerRich.Visibility = Visibility.Visible;
+            AnswerText.Visibility = Visibility.Collapsed;
         }
 
         ReconcileHeight();
@@ -316,6 +326,7 @@ public partial class AnswerPillWindow : Window
         var budget = MaximumHeight() - reserved - AnswerText.Margin.Top;
 
         AnswerText.MaxHeight = Math.Max(40, budget);
+        AnswerRich.MaxHeight = AnswerText.MaxHeight;
 
         ContentPanel.Measure(new Size(available, double.PositiveInfinity));
 
