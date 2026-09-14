@@ -179,6 +179,63 @@ incumpliendo el escenario 22 de `TEST_MATRIX`.
 **Para estable:** un candidato debe **ganar medido** en Voice Lab. Si ninguno gana, Vosk sigue y se
 documenta como limitación aceptada.
 
+**Falsos despertares por la gramática cerrada (medido con voz sintética, 2026-09-13).** La
+gramática que recibe Vosk solo contiene variantes de la frase y `[unk]`, así que ante una frase
+parecida no escribe lo que oye sino lo más cercano de la lista. «Voy a sacar la basura», «Oye, saca
+la ropa», «Oye, ¿sabes a qué hora cierra?», «Oye, se acabó el café» y «Hoy sí cura la herida» salen
+escritas como «oye sakura» y despiertan a Sakura, **también en sensibilidad Precisa**. Las pruebas
+no lo veían porque comprueban el comparador con texto ya transcrito, nunca con audio.
+
+| Estrategia | Aciertos (5 «Oye Sakura» dichos) | Falsos despertares (15 frases trampa) |
+| --- | --- | --- |
+| Actual: gramática cerrada | 5 | 9 |
+| Gramática + confirmación del reconocedor libre | 5 | 0 |
+
+**Con grabaciones reales de Adler (2026-09-13)**, capturadas con la grabación de escritorio de
+NVIDIA —una sola pista, micrófono y audio del sistema mezclados, así que la música de la segunda
+entra más limpia de lo que la oiría un micrófono—. Veces dichas contadas con Whisper y tramos de voz.
+
+| Grabación | Dichas | Actual | Híbrido | Confusores en la gramática |
+| --- | --- | --- | --- | --- |
+| Cerca, en silencio (69 s) | ~12 | 10 | 9 | 10 |
+| A dos metros con música (95 s) | ~16 | 14 | **4** | 12 |
+| Frases trampa, nunca la dice (44 s) | 0 | **8 falsos** | 0 | 2 falsos |
+
+- **El fallo se confirma con voz real:** ocho despertares falsos en 44 segundos de «voy a sacar la
+  basura», «saca la ropa», «se acabó el café».
+- **El híbrido queda descartado:** a distancia el reconocedor libre casi nunca escribe «sakura».
+- **La confianza por palabra de Vosk no discrimina:** marca 1,00 también en las frases trampa.
+- **Confusores** (la gramática ofrece además «saca», «sacar», «sabes», «se» y palabras frecuentes,
+  para que Vosk tenga dónde escribir lo que oye) es el mejor equilibrio medido.
+
+**Validación con una tanda nueva (2026-09-13)**, grabada después de elegir la lista: 70 s de un texto
+lleno de «sacar», «salero», «salida», «saciarse», que nombra «Sakura» tres veces pero nunca dice «oye
+Sakura». Con «Oye Sakura»: actual **2 falsos**, confusores **0**. Con la frase corta «Sakura»: actual
+14 despertares, confusores 2 (uno es el «Sakura» dicho de verdad).
+
+**Llevado al producto — Diseño D88.** `WakeWordGrammarConfusers` en Core, usado por
+`VoskWakeWordService.BuildGrammar` para las tres frases de Sakura; las heredadas no cambian. El banco
+de `scripts/voice/WakeBench` mide la lista del producto, no una copia. Resumen con esa lista:
+
+| | Cerca (~12) | 2 m con música (~16) | Trampas 44 s | Validación 70 s |
+| --- | --- | --- | --- | --- |
+| «Oye Sakura», antes | 10 | 14 | 8 falsos | 2 falsos |
+| «Oye Sakura», D88 | 10 | 12 | 1 falso | 0 |
+| «Sakura», antes | 14 | 18 | 10 falsos | 14 |
+| «Sakura», D88 | 10 | 14 | 1 falso | 2 |
+
+**Dos trampas encontradas por el camino:**
+- La gramática viaja como JSON y `JsonSerializer` escapa lo que no es ASCII; Vosk no lo decodifica y
+  **descarta la palabra sin avisar**. Por eso la lista no lleva tildes, y una prueba lo exige.
+- Seis variantes fonéticas que la gramática ya ofrecía (`sacura`, `zacura`, `sakuro`, `sakuras`,
+  `saqura`, `sagura`) y el prefijo `oye,` **no están en el vocabulario de Vosk**: nunca hicieron nada
+  en la gramática. Siguen sirviendo al comparador de texto, así que no se tocan.
+
+**Límites de la medida:** una sola voz (la de Adler), un micrófono, grabaciones de escritorio de NVIDIA
+con micrófono y audio del sistema mezclados en una pista, y «Hey Sakura» sin medir aparte. La
+sensibilidad Alta sigue aceptando «basura» o «segura» por parecido, igual que antes. Falta probarlo
+en vivo con la aplicación.
+
 ### L5 — TTS sin naturalidad ni barge-in
 **Qué:** SAPI5 (`System.Speech`). Sin streaming, sin interrupción, sin AEC.
 **Impacto:** Afecta directamente la experiencia D2 del día 1.
