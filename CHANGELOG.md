@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.29.3-beta]
+
+### Corregido
+
+- **El Narrador se quedaba callado en dos sitios.** Al recorrer la ventana con Tab, el foco caía en dos cosas invisibles —el marco donde se cargan las vistas y la flor del logo— y el lector de pantalla no decía nada, como si Sakura se hubiera colgado. Ahora cada parada de Tab tiene nombre.
+- **La ayuda de «Recoger Sakura» decía «Oculta el shell».** Ahora dice «Oculta la ventana sin cerrar Sakura».
+- **El área de la conversación no tenía nombre** para el lector de pantalla. Ahora se llama «Conversación».
+
 ## [0.29.2-beta]
 
 ### Corregido
