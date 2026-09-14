@@ -179,6 +179,23 @@ incumpliendo el escenario 22 de `TEST_MATRIX`.
 **Para estable:** un candidato debe **ganar medido** en Voice Lab. Si ninguno gana, Vosk sigue y se
 documenta como limitación aceptada.
 
+**Falsos despertares por la gramática cerrada (medido con voz sintética, 2026-09-13).** La
+gramática que recibe Vosk solo contiene variantes de la frase y `[unk]`, así que ante una frase
+parecida no escribe lo que oye sino lo más cercano de la lista. «Voy a sacar la basura», «Oye, saca
+la ropa», «Oye, ¿sabes a qué hora cierra?», «Oye, se acabó el café» y «Hoy sí cura la herida» salen
+escritas como «oye sakura» y despiertan a Sakura, **también en sensibilidad Precisa**. Las pruebas
+no lo veían porque comprueban el comparador con texto ya transcrito, nunca con audio.
+
+| Estrategia | Aciertos (5 «Oye Sakura» dichos) | Falsos despertares (15 frases trampa) |
+| --- | --- | --- |
+| Actual: gramática cerrada | 5 | 9 |
+| Gramática + confirmación del reconocedor libre | 5 | 0 |
+
+El banco está en `scripts/voice/WakeBench`. **No se ha cambiado el producto todavía:** es una sola voz
+sintética, cerca y sin ruido. Falta repetirlo con grabaciones reales —cerca, a dos metros con ruido,
+y una tanda de frases trampa— antes de tocar `VoskWakeWordService`, porque la confirmación podría
+costar aciertos a distancia.
+
 ### L5 — TTS sin naturalidad ni barge-in
 **Qué:** SAPI5 (`System.Speech`). Sin streaming, sin interrupción, sin AEC.
 **Impacto:** Afecta directamente la experiencia D2 del día 1.
