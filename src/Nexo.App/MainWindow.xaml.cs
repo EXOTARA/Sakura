@@ -4849,7 +4849,28 @@ public partial class MainWindow : Window
             ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
 
         StaggerNavigationEntrance();
+        PlayFirstOpenEntrance();
         FocusCurrentView();
+    }
+
+    private bool _firstOpenEntrancePlayed;
+
+    /// <summary>
+    /// La primera vez que se abre el shell en la sesión, el asistente se organiza solo: bloques que
+    /// crecen, el saludo palabra a palabra y las sugerencias una a una (vídeo 2 de referencia de
+    /// Adler). Las siguientes aperturas conservan la entrada corta; ver <see cref="EntranceChoreography"/>.
+    /// </summary>
+    private void PlayFirstOpenEntrance()
+    {
+        if (!EntranceChoreography.PlaysFull(!_firstOpenEntrancePlayed, ShellAnimationsAllowed) ||
+            _currentDestination != "Assistant")
+        {
+            return;
+        }
+
+        _firstOpenEntrancePlayed = true;
+        UpdateLayout();
+        _assistantView.PlayEntrance();
     }
 
     /// <summary>
