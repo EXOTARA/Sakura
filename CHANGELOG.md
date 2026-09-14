@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.29.1-beta]
+
+### Corregido
+
+- **Cada actualización borraba el desinstalador.** Después de actualizar desde la propia app, Sakura seguía apareciendo en «Aplicaciones instaladas», pero el botón de desinstalar apuntaba a un archivo que ya no existía. A partir de esta versión el desinstalador se conserva al actualizar, y al desinstalar se va también todo lo que llegó con las actualizaciones. Tus datos, en `%LOCALAPPDATA%\Sakura`, no se tocan.
+- **Windows mostraba una versión vieja** en «Aplicaciones instaladas», hasta dos por detrás de la que tenías. Ahora se corrige sola al abrir Sakura.
+
+### Importante si ya tenías Sakura instalado
+
+El arreglo lo lleva la versión nueva, así que **actualizar a esta desde el botón de la app todavía pierde el desinstalador una última vez**. Para dejarlo bien, descarga `Sakura-0.29.1-beta-Setup.exe` y ábrelo encima de tu instalación: la encuentra sola, devuelve el desinstalador y conserva tus datos. No desinstales antes ni borres nada a mano.
+
 ## [0.29.0-beta]
 
 ### Agregado
