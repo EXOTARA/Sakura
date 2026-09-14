@@ -1,3 +1,0 @@
-# La salida del extractor se regenera con `python training/mine_voice.py`. Se versiona igualmente:
-# es la evidencia sobre la que se escribe el conjunto de datos, y verla cambiar en un diff es la
-# forma de enterarse de que la voz de la aplicación se movió.
