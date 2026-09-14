@@ -13,22 +13,32 @@ el tamaño del instalador y el SHA-256, porque requieren `dotnet publish` y comp
 build/test **no** mide latencia de voz, wake word ni TTS, que exigen micrófono y escenarios reales.
 **Para estable:** medir artefactos en Fase 10 y calibrar latencias en Fase 3 (Voice Lab).
 
-### L2 — `MainWindow.xaml.cs` como God Object
-**Qué:** 4.044 líneas, 49 campos `readonly` (25 siguen instanciados con `new` en la declaración
-tras la fase 1.2; los seis servicios de interfaz ya no). *(Cifra de líneas medida el 2026-07-23
-sobre el checkpoint `82a36fb`, antes de tocar nada en 1.2: 4.027 — no coincide con las 3.532 que
-documentaba la revisión de 1.1.1; discrepancia no investigada, ver `IMPLEMENTATION_LOG.md` riesgo
-#14. La cifra de 119 métodos tampoco se remidió en esta fase.)*
-**Por qué:** Crecimiento incremental. La fase 1.2 (2026-07-23) añadió un composition root
-(`Nexo.Windows/Composition/KohanaCompositionRoot.cs` + `Microsoft.Extensions.DependencyInjection`)
-y desacopló los **seis** servicios de interfaz que bloqueaban el Adaptive Engine Registry
-(`IAiChatService`, `IAudioMixerService`, `IVoiceInputService`, `IVoiceOutputService`,
-`IWakeWordService`, `IScreenCaptureService`). El archivo **no se redujo** — ese es el trabajo de
-1.3–1.7 — pero ya no es imposible seleccionar motor por hardware para esos seis.
-**Aislamiento:** Los seis servicios de interfaz ya se resuelven desde un contenedor DI real,
-verificado por prueba. El resto del God Object (25 campos restantes con `new`, navegación,
-tareas/enfoque/rutinas, IA y Vision fusionados con la vista) sigue intacto.
-**Para estable:** completar los pasos 1.3–1.7 de la Fase 1 (ADR 0001).
+### L2 — `MainWindow.xaml.cs` como God Object ⚠️ (en extracción desde el 2026-09-14)
+**Qué:** medido el 2026-09-14: **9.546 líneas, 254 métodos, 92 campos `readonly`**. La cifra de julio
+(4.044) es de antes de todos los sprints de interfaz. Métodos más grandes: `WireSettingsEvents` (628
+líneas), `SendPromptToAiCoreAsync` (293), `BuildCommandRegistry` (255), `ExecuteLensAsync` (167).
+**Reparto aproximado por capacidad** (por nombre de método): shell y ventanas ~1.490 líneas, IA y
+asistente ~970, voz ~950, ajustes ~760, proyecto ~715, tareas/enfoque/rutinas ~585, sistema y
+métricas ~570, catálogo de órdenes ~525, Lens y traductor ~500, Computer Use y permisos ~315,
+actualizaciones ~240, memoria y packs ~215, sin clasificar ~935.
+
+**Método** (el de `docs/design/SAKURA_WPF_UI_PLAYBOOK.md` §2): una capacidad cada vez; se leen sus
+métodos, se escriben pruebas que fijan lo que hacen **antes** de moverlos, se mueven a una clase que se
+prueba sin ventana, la ventana se queda con los enganches, y se comprueba en la aplicación publicada.
+Como `MainWindow` no se puede construir en una prueba, la caracterización se hace contra el código
+leído; cualquier asimetría heredada se conserva y se nombra en la prueba, y si es un fallo se cambia
+aparte.
+
+**Hecho:**
+1. **Actualizaciones** → `Nexo.App/Updates/UpdateFlowCoordinator` (13 pruebas). −155 líneas. Comprobado
+   con la aplicación publicada: «Buscar actualizaciones» consulta GitHub y responde.
+
+**Orden previsto**, de lo más aislado a lo más atado a WPF: memoria y packs → Computer Use, permisos y
+auditoría → tareas, enfoque y rutinas → sistema, métricas y optimización → Lens y traductor → proyecto
+(con cuidado: escribe archivos de la persona) → voz → IA y asistente → `WireSettingsEvents`, partido
+por sección → shell y ventanas, lo último. Cada orden del catálogo viaja con su capacidad.
+
+**Para estable:** que ninguna capacidad tenga decisiones de producto en la ventana.
 
 ### L3 — Accesibilidad: el Narrador ya se ha oído ⚠️ (reducido el 2026-09-14)
 **Qué había:** la nota original decía «0 `AutomationProperties` en los 22 archivos XAML». Ya no es
