@@ -10,8 +10,8 @@
     todo el motivo de ir por la Store. Para probarlo en local se registra la carpeta preparada con
     Add-AppxPackage -Register, que con el modo desarrollador de Windows no necesita firma.
 
-    Name y Publisher tienen que ser los que da Partner Center al reservar el nombre; los valores por
-    omisión solo sirven para probar en local.
+    Los valores por omisión son la identidad real de Partner Center para «Sakura Assistant». Para una
+    prueba local que no choque con una instalación de la Store, pasa otro -IdentityName.
 
 .EXAMPLE
     .\scripts\build-msix.ps1 -PublishDirectory artifacts\publish\win-x64
@@ -19,9 +19,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$PublishDirectory,
-    [string]$IdentityName = "EXO.Sakura.Local",
-    [string]$IdentityPublisher = "CN=EXO",
-    [string]$PublisherDisplayName = "EXO",
+    [string]$IdentityName = "EXOTARA.SakuraAssistant",
+    [string]$IdentityPublisher = "CN=B069792F-C54F-4B21-8E04-959CF4734C01",
+    [string]$PublisherDisplayName = "EXOTARA",
+    [string]$DisplayName = "Sakura Assistant",
     [string]$OutputDirectory = ""
 )
 
@@ -94,6 +95,7 @@ $tokens = @{
     "{{IDENTITY_PUBLISHER}}"     = $IdentityPublisher
     "{{PUBLISHER_DISPLAY_NAME}}" = $PublisherDisplayName
     "{{PACKAGE_VERSION}}"        = $packageVersion
+    "{{DISPLAY_NAME}}"           = $DisplayName
 }
 foreach ($key in $tokens.Keys) { $manifest = $manifest.Replace($key, $tokens[$key]) }
 if ($manifest -match '\{\{[A-Z_]+\}\}') { throw "Quedaron marcas sin rellenar en el manifiesto." }
