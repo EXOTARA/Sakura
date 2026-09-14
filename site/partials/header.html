@@ -1,0 +1,35 @@
+<a class="skip" href="#contenido">{{t:nav.skip}}</a>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="{{HOME}}#inicio" aria-label="{{t:nav.brand.aria}}">
+      <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+        <path fill="#F5B3CF" d="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z"/>
+        <path fill="#F5B3CF" d="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z"/>
+        <path fill="#F5B3CF" d="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z"/>
+        <path fill="#F5B3CF" d="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z"/>
+        <path fill="#AC333F" d="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z"/>
+      </svg>
+      <span>Sakura</span>
+    </a>
+
+    <nav aria-label="{{t:nav.sections.aria}}">
+      <a href="{{HOME}}#capacidades">{{t:nav.what}}</a>
+      <a href="{{HOME}}#descargas">{{t:nav.downloads}}</a>
+      <a href="{{HOME}}#instalar">{{t:nav.install}}</a>
+      <a href="{{HOME}}#privacidad">{{t:nav.privacy}}</a>
+      <a href="{{HOME}}#firma">{{t:nav.signing}}</a>
+    </nav>
+
+    <a class="lang-switch" href="{{ALT_HREF}}" hreflang="{{t:lang.other.code}}"
+       aria-label="{{t:lang.switch.aria}}" data-lang-pick="{{t:lang.other.code}}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.2 9h17.6M3.2 15h17.6"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>
+      <span lang="{{t:lang.other.code}}">{{ALT_CODE}}</span>
+    </a>
+
+    <a class="btn btn-primary btn-sm" href="{{INSTALLER_URL}}" data-download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+      {{t:nav.download}}
+    </a>
+  </div>
+</header>

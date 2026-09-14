@@ -176,13 +176,56 @@ if ($missing) {
     throw "Los textos no están completos:`n  $(($missing | Sort-Object -Unique) -join "`n  ")"
 }
 
+# Las páginas legales. Cada una tiene su cuerpo por idioma en site/legal/<idioma>/<slug>.html y su
+# título y descripción en strings.json como legal.<id>.title / legal.<id>.description.
+$legalPages = @(
+    [pscustomobject]@{ Id = "privacy"; Slugs = @{ es = "privacidad"; en = "privacy" }; Token = "{{LEGAL_PRIVACY}}" }
+    [pscustomobject]@{ Id = "terms";   Slugs = @{ es = "terminos";   en = "terms" };   Token = "{{LEGAL_TERMS}}" }
+    [pscustomobject]@{ Id = "cookies"; Slugs = @{ es = "cookies";    en = "cookies" }; Token = "{{LEGAL_COOKIES}}" }
+)
+
+foreach ($page in $legalPages) {
+    foreach ($language in $languages) {
+        $body = Join-Path $sourceDirectory "legal" $language "$($page.Slugs[$language]).html"
+        if (-not (Test-Path $body)) {
+            throw "Falta el cuerpo de la página legal '$($page.Id)' en '$language': $body"
+        }
+        foreach ($suffix in @("title", "description")) {
+            if ($keysByLanguage[$language] -notcontains "legal.$($page.Id).$suffix") {
+                throw "Falta el texto 'legal.$($page.Id).$suffix' en '$language'."
+            }
+        }
+    }
+}
+
+# Cabecera y pie compartidos. Se insertan antes de traducir, así que sus claves cuentan como usadas.
+$partials = @{}
+foreach ($file in Get-ChildItem (Join-Path $sourceDirectory "partials") -Filter "*.html") {
+    $partials["{{PARTIAL:$($file.BaseName)}}"] = Get-Content $file.FullName -Raw -Encoding UTF8
+}
+
+function Expand-Partials {
+    param([Parameter(Mandatory)][string]$Text)
+    foreach ($key in $partials.Keys) {
+        $Text = $Text.Replace($key, $partials[$key])
+    }
+    $Text
+}
+
 # Claves que nadie usa: no rompen la página, pero son texto que alguien mantiene para nada.
-$templateText = Get-Content (Join-Path $sourceDirectory "index.html") -Raw -Encoding UTF8
-$usedKeys = [regex]::Matches($templateText, '\{\{t:([^}]+)\}\}') |
+$templateText = Expand-Partials (Get-Content (Join-Path $sourceDirectory "index.html") -Raw -Encoding UTF8)
+$pageTemplateText = Expand-Partials (Get-Content (Join-Path $sourceDirectory "page.html") -Raw -Encoding UTF8)
+$legalBodies = foreach ($language in $languages) {
+    foreach ($page in $legalPages) {
+        Get-Content (Join-Path $sourceDirectory "legal" $language "$($page.Slugs[$language]).html") -Raw -Encoding UTF8
+    }
+}
+
+$usedKeys = [regex]::Matches(($templateText + $pageTemplateText + ($legalBodies -join "")), '\{\{t:([^}]+)\}\}') |
     ForEach-Object { $_.Groups[1].Value } |
     Sort-Object -Unique
 
-$unused = $keysByLanguage["es"] | Where-Object { $_ -notlike "_*" -and $usedKeys -notcontains $_ }
+$unused = $keysByLanguage["es"] | Where-Object { $_ -notlike "_*" -and $_ -notlike "legal.*" -and $usedKeys -notcontains $_ }
 if ($unused) {
     Write-Warning ("Textos que la plantilla no usa: {0}" -f (($unused | Sort-Object) -join ", "))
 }
@@ -216,32 +259,27 @@ $dateFormats = @{ es = "d 'de' MMMM 'de' yyyy"; en = "d MMMM yyyy" }
 $paths = @{ es = ""; en = "en/" }
 $bases = @{ es = ""; en = "../" }
 
-foreach ($language in $languages) {
-    # @() alrededor del filtro: con dos idiomas devuelve una sola cadena, y [0] sobre una cadena
-    # da su primer carácter, no la cadena.
-    $other = @($languages | Where-Object { $_ -ne $language })[0]
-    $culture = [System.Globalization.CultureInfo]::GetCultureInfo($cultures[$language])
+function Write-SitePage {
+    param(
+        [Parameter(Mandatory)][string]$Language,
+        [Parameter(Mandatory)][string]$Template,
+        [Parameter(Mandatory)][hashtable]$Tokens,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$RelativePath
+    )
 
-    $text = $templateText
-
-    foreach ($property in $strings.$language.PSObject.Properties) {
+    $text = $Template
+    foreach ($property in $strings.$Language.PSObject.Properties) {
         $text = $text.Replace("{{t:$($property.Name)}}", $property.Value)
     }
 
-    $tokens = $release_tokens.Clone()
-    $tokens["{{RELEASE_DATE}}"]  = $published.ToString($dateFormats[$language], $culture)
-    $tokens["{{BASE}}"]          = $bases[$language]
-    $tokens["{{ALT_HREF}}"]      = if ($language -eq "es") { "en/" } else { "../" }
-    $tokens["{{ALT_CODE}}"]      = $other.ToUpperInvariant()
-    $tokens["{{SITE_ROOT}}"]     = $SiteRoot
-    $tokens["{{CANONICAL}}"]     = $SiteRoot + $paths[$language]
-    $tokens["{{ALT_CANONICAL}}"] = $SiteRoot + $paths[$other]
-
-    foreach ($key in $tokens.Keys) {
-        $text = $text.Replace($key, $tokens[$key])
+    # Dos pasadas: hay textos (strings.json, cuerpos legales) que llevan marcas dentro.
+    foreach ($pass in 1..2) {
+        foreach ($key in $Tokens.Keys) {
+            $text = $text.Replace($key, $Tokens[$key])
+        }
     }
 
-    $target = Join-Path $OutputDirectory $paths[$language]
+    $target = Join-Path $OutputDirectory $RelativePath
     if (-not (Test-Path $target)) {
         New-Item $target -ItemType Directory -Force | Out-Null
     }
@@ -253,10 +291,59 @@ foreach ($language in $languages) {
     $leftovers = [regex]::Matches($text, '\{\{[A-Za-z_:.]+\}\}')
     if ($leftovers.Count -gt 0) {
         $names = ($leftovers.Value | Sort-Object -Unique) -join ", "
-        throw "Quedaron marcas sin rellenar en '$language': $names"
+        throw "Quedaron marcas sin rellenar en '$RelativePath' ($Language): $names"
     }
 
-    Write-Host ("  {0,-3} -> {1}" -f $language, $file)
+    Write-Host ("  {0,-3} -> {1}" -f $Language, $file)
+}
+
+foreach ($language in $languages) {
+    # @() alrededor del filtro: con dos idiomas devuelve una sola cadena, y [0] sobre una cadena
+    # da su primer carácter, no la cadena.
+    $other = @($languages | Where-Object { $_ -ne $language })[0]
+    $culture = [System.Globalization.CultureInfo]::GetCultureInfo($cultures[$language])
+
+    # Portada. Desde ella, las legales cuelgan de la misma carpeta.
+    $tokens = $release_tokens.Clone()
+    $tokens["{{RELEASE_DATE}}"]  = $published.ToString($dateFormats[$language], $culture)
+    $tokens["{{BASE}}"]          = $bases[$language]
+    $tokens["{{HOME}}"]          = ""
+    $tokens["{{ALT_HREF}}"]      = if ($language -eq "es") { "en/" } else { "../" }
+    $tokens["{{ALT_CODE}}"]      = $other.ToUpperInvariant()
+    $tokens["{{SITE_ROOT}}"]     = $SiteRoot
+    $tokens["{{CANONICAL}}"]     = $SiteRoot + $paths[$language]
+    $tokens["{{ALT_CANONICAL}}"] = $SiteRoot + $paths[$other]
+    foreach ($page in $legalPages) {
+        $tokens[$page.Token] = "$($page.Slugs[$language])/"
+    }
+
+    Write-SitePage -Language $language -Template $templateText -Tokens $tokens -RelativePath $paths[$language]
+
+    # Páginas legales: un nivel más abajo que su portada.
+    foreach ($page in $legalPages) {
+        $slug = $page.Slugs[$language]
+        $otherSlug = $page.Slugs[$other]
+        $relative = "$($paths[$language])$slug/"
+
+        $pageTokens = $release_tokens.Clone()
+        $pageTokens["{{RELEASE_DATE}}"]     = $published.ToString($dateFormats[$language], $culture)
+        $pageTokens["{{BASE}}"]             = "../" + $bases[$language]
+        $pageTokens["{{HOME}}"]             = "../"
+        # De /privacidad/ a /en/privacy/ hay que subir a la raíz; de /en/privacy/ a /privacidad/, dos.
+        $pageTokens["{{ALT_HREF}}"]         = if ($language -eq "es") { "../en/$otherSlug/" } else { "../../$otherSlug/" }
+        $pageTokens["{{ALT_CODE}}"]         = $other.ToUpperInvariant()
+        $pageTokens["{{SITE_ROOT}}"]        = $SiteRoot
+        $pageTokens["{{CANONICAL}}"]        = $SiteRoot + $relative
+        $pageTokens["{{ALT_CANONICAL}}"]    = $SiteRoot + "$($paths[$other])$otherSlug/"
+        $pageTokens["{{PAGE_TITLE}}"]       = $strings.$language."legal.$($page.Id).title"
+        $pageTokens["{{PAGE_DESCRIPTION}}"] = $strings.$language."legal.$($page.Id).description"
+        $pageTokens["{{CONTENT}}"]          = Get-Content (Join-Path $sourceDirectory "legal" $language "$slug.html") -Raw -Encoding UTF8
+        foreach ($linked in $legalPages) {
+            $pageTokens[$linked.Token] = "../$($linked.Slugs[$language])/"
+        }
+
+        Write-SitePage -Language $language -Template $pageTemplateText -Tokens $pageTokens -RelativePath $relative
+    }
 }
 
 Write-Host ""

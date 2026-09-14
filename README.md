@@ -45,9 +45,9 @@ el .NET necesario va dentro de los dos.
 
 Windows va a mostrar un aviso de SmartScreen diciendo que el programa no está firmado, porque no lo
 está. Hay que darle a "Más información" → "Ejecutar de todas formas". Es un inconveniente real y
-está en la lista de cosas por resolver: la vía es
-[SignPath Foundation](https://signpath.org/), que firma gratis proyectos de código abierto, y lo que
-se firmará y quién lo aprueba está escrito en la
+está en la lista de cosas por resolver: la solicitud a SignPath Foundation, que firma gratis proyectos
+de código abierto, fue rechazada en septiembre de 2026 por falta de adopción pública y se puede
+repetir más adelante. Lo que se firmaría y quién lo aprueba está en la
 [política de firma de código](docs/CODE_SIGNING_POLICY.md). Mientras tanto, cada versión publica su
 `.sha256` al lado del archivo.
 

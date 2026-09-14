@@ -29,6 +29,17 @@ que hacen falta, y se guardan en la carpeta de datos del usuario.
 | `vosk-model-small-es-0.42` | alphacephei.com | Apache-2.0 |
 | `ggml-base` (Whisper) | ggerganov/whisper.cpp | MIT |
 
+## Página de descargas
+
+La página de `site/` no carga nada de terceros: ni tipografías, ni guiones, ni imágenes externas.
+
+| Componente | Licencia | Para qué se usa |
+|---|---|---|
+| Iconos de [Lucide](https://lucide.dev/), algunos derivados de [Feather](https://feathericons.com/) | ISC (Lucide) y MIT (Feather) | Iconos de la página, escritos a mano en SVG siguiendo su diseño |
+
+Los avisos completos de las dos licencias se publican en la propia página, en los términos de uso
+(apartado «Contenido de la página y créditos»), porque las dos piden conservarlos junto a la copia.
+
 ## Herramientas que no se distribuyen
 
 Estas hacen falta para construir o publicar, y no forman parte de lo que se instala:

@@ -26,54 +26,33 @@
 <link rel="alternate" hreflang="{{t:html.lang}}" href="{{CANONICAL}}">
 <link rel="alternate" hreflang="{{t:lang.other.code}}" href="{{ALT_CANONICAL}}">
 <link rel="alternate" hreflang="x-default" href="{{SITE_ROOT}}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+<!--
+  Sin tipografías de Google Fonts, a propósito: cargarlas desde sus servidores entrega la dirección IP
+  de cada visitante a Google antes de que nadie haya aceptado nada, y un tribunal de Múnich ya
+  condenó por eso (LG München I, 3 O 17493/20, 20-01-2022). Esta página no carga nada de terceros:
+  usa las fuentes que ya tiene el equipo de quien la visita.
+-->
 <link rel="stylesheet" href="{{BASE}}styles.css">
+<script>document.documentElement.className += " js";</script>
 </head>
-<body data-lang="{{t:html.lang}}" data-alt-href="{{ALT_HREF}}">
+<body data-lang="{{t:html.lang}}" data-alt-href="{{ALT_HREF}}" data-auto-lang="true">
 
-<a class="skip" href="#contenido">{{t:nav.skip}}</a>
-
-<header class="topbar">
-  <div class="wrap topbar-inner">
-    <a class="brand" href="#inicio" aria-label="{{t:nav.brand.aria}}">
-      <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
-        <path fill="#F5B3CF" d="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z"/>
-        <path fill="#F5B3CF" d="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z"/>
-        <path fill="#F5B3CF" d="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z"/>
-        <path fill="#F5B3CF" d="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z"/>
-        <path fill="#AC333F" d="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z"/>
-      </svg>
-      <span>Sakura</span>
-    </a>
-
-    <nav aria-label="{{t:nav.sections.aria}}">
-      <a href="#capacidades">{{t:nav.what}}</a>
-      <a href="#descargas">{{t:nav.downloads}}</a>
-      <a href="#instalar">{{t:nav.install}}</a>
-      <a href="#privacidad">{{t:nav.privacy}}</a>
-      <a href="#firma">{{t:nav.signing}}</a>
-    </nav>
-
-    <a class="lang-switch" href="{{ALT_HREF}}" hreflang="{{t:lang.other.code}}"
-       aria-label="{{t:lang.switch.aria}}" data-lang-pick="{{t:lang.other.code}}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.2 9h17.6M3.2 15h17.6"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>
-      <span>{{ALT_CODE}}</span>
-    </a>
-
-    <a class="btn btn-primary btn-sm" href="{{INSTALLER_URL}}" data-download>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
-      {{t:nav.download}}
-    </a>
-  </div>
-</header>
+{{PARTIAL:header}}
 
 <main id="contenido">
 
 <!-- ============================ Portada ============================ -->
 <section class="hero" id="inicio">
   <canvas id="petals" aria-hidden="true"></canvas>
+  <!--
+    WCAG 2.2.2: lo que se mueve solo durante más de cinco segundos tiene que poder pararse. Pedir menos
+    movimiento al sistema ya lo para, pero no todo el mundo sabe que existe ese ajuste. El botón solo
+    aparece con JavaScript, que es lo único que anima los pétalos.
+  -->
+  <button type="button" class="motion-toggle" aria-pressed="false" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14"/><path d="M15 5v14"/></svg>
+    <span>{{t:motion.pause}}</span>
+  </button>
   <div class="hero-glow" aria-hidden="true"></div>
 
   <div class="wrap hero-inner">
@@ -125,8 +104,7 @@
   </div>
 </section>
 
-<!-- ================= Qué hace — lo exige SignPath: la página de descargas ================= -->
-<!-- ================= tiene que describir para qué sirve el programa    ================= -->
+<!-- ============================ Qué hace ============================ -->
 <section id="capacidades">
   <div class="wrap">
     <p class="eyebrow reveal">{{t:caps.eyebrow}}</p>
@@ -218,7 +196,7 @@
             <button type="button" class="copy" data-copy="hash-installer" aria-describedby="hash-installer-label"
                     data-copied-label="{{t:dl.copy.done}}" data-failed-label="{{t:dl.copy.failed}}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-              <span class="copy-label">{{t:dl.copy}}</span>
+              <span class="copy-label" aria-live="polite">{{t:dl.copy}}</span>
             </button>
           </div>
         </div>
@@ -239,7 +217,7 @@
             <button type="button" class="copy" data-copy="hash-zip" aria-describedby="hash-zip-label"
                     data-copied-label="{{t:dl.copy.done}}" data-failed-label="{{t:dl.copy.failed}}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-              <span class="copy-label">{{t:dl.copy}}</span>
+              <span class="copy-label" aria-live="polite">{{t:dl.copy}}</span>
             </button>
           </div>
         </div>
@@ -314,7 +292,7 @@
           </li>
         </ul>
 
-        <h3 style="font-size:19px">{{t:privacy.leaves.title}}</h3>
+        <h3 class="panel-subtitle">{{t:privacy.leaves.title}}</h3>
         <ul class="list no">
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
@@ -330,22 +308,11 @@
           </li>
         </ul>
 
-        <a class="btn btn-ghost btn-sm" href="https://github.com/EXOTARA/Sakura/blob/main/docs/PRIVACY.md">{{t:privacy.cta}}</a>
+        <a class="btn btn-ghost btn-sm" href="{{LEGAL_PRIVACY}}">{{t:privacy.cta}}</a>
       </article>
 
       <article class="panel reveal" data-stagger="2" id="firma">
         <h3>{{t:signing.title}}</h3>
-
-        <!--
-          Atribución exigida por SignPath Foundation, palabra por palabra y en inglés en las dos
-          versiones de la página porque así es como la piden. Va arriba y no en una nota al pie: el
-          formulario dice que la página de descargas tiene que mencionar que el proyecto usa
-          SignPath Foundation para firmar, y quien lo revise no debería tener que buscarlo.
-        -->
-        <p class="attribution">
-          Free code signing provided by <a href="https://signpath.io/">SignPath.io</a>,
-          certificate by <a href="https://signpath.org/">SignPath Foundation</a>.
-        </p>
 
         <p>{{t:signing.status}}</p>
         <p>{{t:signing.builds}}</p>
@@ -358,52 +325,7 @@
 
 </main>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-grid">
-      <div>
-        <a class="brand" href="#inicio" aria-label="{{t:nav.brand.aria}}">
-          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
-            <path fill="#F5B3CF" d="M15.2395 19.5795C13.9036 12.8696 14.1881 7.2979 16.0583 5.01096C10.2621 1.8771 5.45046 1.02618 3.23833 3.23831C0.200656 6.27465 2.93647 14.2108 9.42593 22.8643C11.0757 21.7289 13.038 20.6148 15.2395 19.5795Z"/>
-            <path fill="#F5B3CF" d="M42.9886 16.0582C46.1225 10.2621 46.9747 5.4504 44.7626 3.23827C41.7249 0.200592 33.79 2.93637 25.1352 9.42583C26.2707 11.0756 27.3848 13.0379 28.42 15.2394C35.1313 13.9035 40.7017 14.1881 42.9886 16.0582Z"/>
-            <path fill="#F5B3CF" d="M32.7615 28.4212C34.0973 35.1311 33.8114 40.7015 31.9413 42.9884C37.7374 46.1223 42.5491 46.9746 44.7626 44.7624C47.7989 41.7247 45.0631 33.7899 38.5737 25.1351C36.9252 26.2719 34.9616 27.386 32.7615 28.4212Z"/>
-            <path fill="#F5B3CF" d="M5.01096 31.9414C1.8771 37.7376 1.02484 42.5492 3.23831 44.7627C6.27465 47.799 14.2108 45.0632 22.8643 38.5738C21.7288 36.9254 20.6148 34.9617 19.5795 32.7616C12.8683 34.0974 7.29656 33.8116 5.01096 31.9414Z"/>
-            <path fill="#AC333F" d="M38.0247 19.5379L24.84 22.3766L19.5381 9.97473L22.3768 23.1594L9.97496 28.4613L23.1596 25.6226L28.4615 38.0245L25.6229 24.8398L38.0247 19.5379Z"/>
-          </svg>
-          <span>Sakura</span>
-        </a>
-        <p class="foot-note">{{t:foot.note}}</p>
-      </div>
-
-      <div>
-        <h4>{{t:foot.project}}</h4>
-        <ul class="foot-links">
-          <li><a href="https://github.com/EXOTARA/Sakura">{{t:foot.project.source}}</a></li>
-          <li><a href="{{RELEASE_URL}}">{{t:foot.project.releases}}</a></li>
-          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/docs/product/SAKURA_CAPABILITIES_GUIDE.md">{{t:foot.project.guide}}</a></li>
-          <li><a href="https://github.com/EXOTARA/Sakura/issues">{{t:foot.project.issues}}</a></li>
-          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/LICENSE">{{t:foot.project.license}}</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <h4>{{t:foot.trust}}</h4>
-        <ul class="foot-links">
-          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/docs/PRIVACY.md">{{t:foot.trust.privacy}}</a></li>
-          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/docs/CODE_SIGNING_POLICY.md">{{t:foot.trust.signing}}</a></li>
-          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/SECURITY.md">{{t:foot.trust.security}}</a></li>
-          <li><a href="https://github.com/EXOTARA/Sakura/security/advisories/new">{{t:foot.trust.report}}</a></li>
-          <li><a href="https://github.com/EXOTARA/Sakura/blob/main/CODE_OF_CONDUCT.md">{{t:foot.trust.conduct}}</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <p class="colophon">
-      <span>Sakura {{VERSION}} · {{RELEASE_DATE}}</span>
-      <span>{{t:hero.tagline}}</span>
-    </p>
-  </div>
-</footer>
+{{PARTIAL:footer}}
 
 <script src="{{BASE}}app.js" defer></script>
 </body>
