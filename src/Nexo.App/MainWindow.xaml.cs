@@ -6365,7 +6365,11 @@ public partial class MainWindow : Window
     private const string VoiceDownloadsOnFirstUse =
         "La voz se prepara la primera vez que la uses: descarga un modelo de unos 140 MB.";
 
-    private async Task PrepareVoiceAsync()
+    /// <param name="continueListening">
+    /// Si justo después se va a escuchar (Alt + V, «Oye Sakura»): la burbuja de la descarga se queda y
+    /// pasa a escuchar, en vez de irse y volver a aparecer.
+    /// </param>
+    private async Task PrepareVoiceAsync(bool continueListening = false)
     {
         var requiresDownload = !_voiceCoordinator.IsVoiceInputReady;
         _voicePreparing = true;
@@ -6373,20 +6377,23 @@ public partial class MainWindow : Window
             available: false,
             "Preparando Whisper local…");
 
-        if (requiresDownload && !_isClosed)
-        {
-            _capsuleWindow.ShowMessage(
-                CapsuleKind.Information,
-                "Preparando voz local",
-                "La primera vez Sakura descarga un modelo multilingüe.",
-                _preferences.Position);
-        }
+        // 2026-09-14 — la primera descarga se enseña en la burbuja de voz, con su porcentaje, en vez de
+        // en una cápsula arriba sin avance (Adler). Se nota que Sakura está preparando algo y cuánto
+        // falta, y no que se ha quedado colgada.
+        var showingPreparation = requiresDownload && !_isClosed && TryShowVoicePreparation();
 
         var progress = new Progress<VoicePreparationProgress>(update =>
         {
             _assistantView.SetVoiceAvailability(
                 available: false,
                 update.Detail);
+
+            if (showingPreparation && update.Fraction is { } fraction)
+            {
+                _voiceHaloWindow.ReportPreparation(
+                    fraction,
+                    $"Preparando la voz · {fraction * 100:0} %");
+            }
         });
 
         try
@@ -6398,7 +6405,14 @@ public partial class MainWindow : Window
             // Aunque falle, el botón vuelve a estar disponible: es la única forma de reintentarlo.
             _voicePreparing = false;
             _assistantView.SetVoiceAvailability(true, result.Detail);
-            if (result.IsReady && requiresDownload && !_isClosed)
+
+            if (showingPreparation)
+            {
+                _voiceHaloWindow.EndPreparing(keepListening: continueListening && result.IsReady);
+            }
+
+            // Si la burbuja sigue para escuchar, no hace falta otra cápsula diciendo que ya está lista.
+            if (result.IsReady && requiresDownload && !_isClosed && !(showingPreparation && continueListening))
             {
                 _capsuleWindow.ShowMessage(
                     CapsuleKind.Success,
@@ -6418,11 +6432,27 @@ public partial class MainWindow : Window
         catch (OperationCanceledException)
         {
             // Nexo se está cerrando.
+            if (showingPreparation)
+            {
+                _voiceHaloWindow.HideImmediately();
+            }
         }
         finally
         {
             _voicePreparing = false;
         }
+    }
+
+    private bool TryShowVoicePreparation()
+    {
+        if (FindResource("IconSakuraMark") is not Geometry mark ||
+            FindResource("BrushAccent") is not SolidColorBrush accent)
+        {
+            return false;
+        }
+
+        _voiceHaloWindow.ShowPreparing(mark, accent.Color);
+        return true;
     }
 
     /// <summary>
@@ -6884,7 +6914,7 @@ public partial class MainWindow : Window
 
             if (!_voiceCoordinator.IsVoiceInputReady)
             {
-                await PrepareVoiceAsync();
+                await PrepareVoiceAsync(continueListening: true);
                 if (!_voiceCoordinator.IsVoiceInputReady)
                 {
                     return;

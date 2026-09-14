@@ -100,6 +100,18 @@
                        Foreground="{DynamicResource BrushTextPrimary}" />
 
             <!--
+                2026-09-14 — la respuesta ya terminada, con su formato (AnswerRenderer), igual que en el
+                chat. Mientras llega se sigue viendo como texto en AnswerText: formatear a trozos
+                partiría una negrita o una lista por donde el modelo aún no ha terminado.
+            -->
+            <ContentControl x:Name="AnswerRich"
+                            Grid.Row="1"
+                            Margin="0,10,0,0"
+                            Focusable="False"
+                            IsTabStop="False"
+                            Visibility="Collapsed" />
+
+            <!--
                 En su propia fila y no debajo del texto dentro de una pila: cuando la respuesta
                 llenaba la píldora, este aviso quedaba fuera del recorte. Es decir, la única pista
                 de que el texto seguía era justamente la que no se veía.

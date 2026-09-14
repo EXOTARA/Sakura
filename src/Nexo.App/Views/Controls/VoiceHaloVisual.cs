@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using Nexo.Core.Voice;
@@ -66,6 +67,18 @@ public sealed class VoiceHaloVisual : FrameworkElement
     public double Level => _halo.Level;
 
     /// <summary>
+    /// 2026-09-14 — mientras se prepara la voz por primera vez: cuánto va la descarga, de 0 a 1. Con
+    /// valor, la burbuja enseña un anillo de progreso en vez de las ondas de la voz, y
+    /// <see cref="Caption"/> debajo. Nulo es el halo de siempre.
+    /// </summary>
+    public double? PreparingFraction { get; set; }
+
+    /// <summary>El texto bajo la burbuja mientras se prepara la voz.</summary>
+    public string? Caption { get; set; }
+
+    private double _shownFraction;
+
+    /// <summary>
     /// La marca y el color se pasan desde fuera para que este control no sepa nada del tema ni de
     /// los diccionarios de recursos: recibe una geometría y un color, y dibuja.
     /// </summary>
@@ -106,6 +119,11 @@ public sealed class VoiceHaloVisual : FrameworkElement
     public void Advance(TimeSpan elapsed)
     {
         _halo.Advance(RawLevel, elapsed);
+
+        // El anillo llega a su valor deslizándose: la descarga avisa a saltos de 4 MB, y dibujar esos
+        // saltos tal cual hace que el progreso parezca atascarse y dar tirones.
+        var target = PreparingFraction ?? 0;
+        _shownFraction += (target - _shownFraction) * Math.Min(1, elapsed.TotalSeconds * 6);
         InvalidateVisual();
     }
 
@@ -113,6 +131,9 @@ public sealed class VoiceHaloVisual : FrameworkElement
     {
         _halo.Reset();
         RawLevel = 0;
+        PreparingFraction = null;
+        Caption = null;
+        _shownFraction = 0;
         InvalidateVisual();
     }
 
@@ -132,7 +153,7 @@ public sealed class VoiceHaloVisual : FrameworkElement
         var inner = bubble;
         var outer = side * OuterRadiusRatio;
 
-        foreach (var ring in _halo.Rings)
+        foreach (var ring in PreparingFraction is null ? _halo.Rings : [])
         {
             // El radio avanza con una curva que empieza rápida y se frena: es como se comporta una
             // onda al abrirse, y evita que los anillos se vean equiespaciados como un blanco de tiro.
@@ -176,6 +197,11 @@ public sealed class VoiceHaloVisual : FrameworkElement
         rim.Freeze();
         drawingContext.DrawEllipse(body, rim, centre, bubble, bubble);
 
+        if (PreparingFraction is not null)
+        {
+            DrawPreparation(drawingContext, centre, bubble, side);
+        }
+
         // La marca respira: entre el silencio y el máximo crece un catorce por ciento. Se escala
         // desde el centro, así que no toca la medida de nada.
         var scale = 1 + (MarkGrowth * level);
@@ -208,5 +234,57 @@ public sealed class VoiceHaloVisual : FrameworkElement
         drawingContext.Pop();
         drawingContext.Pop();
         drawingContext.Pop();
+    }
+    /// <summary>El anillo de la descarga alrededor de la burbuja, y el texto debajo.</summary>
+    private void DrawPreparation(DrawingContext drawingContext, Point centre, double bubble, double side)
+    {
+        var radius = bubble + (side * 0.035);
+        var thickness = Math.Max(3, side * 0.016);
+
+        var track = new Pen(new SolidColorBrush(_ringColor) { Opacity = 0.2 }, thickness);
+        track.Freeze();
+        drawingContext.DrawEllipse(null, track, centre, radius, radius);
+
+        var fraction = Math.Clamp(_shownFraction, 0, 0.999);
+        if (fraction > 0.002)
+        {
+            var angle = fraction * 2 * Math.PI;
+            var start = new Point(centre.X, centre.Y - radius);
+            var end = new Point(centre.X + (radius * Math.Sin(angle)), centre.Y - (radius * Math.Cos(angle)));
+            var arc = new StreamGeometry();
+            using (var context = arc.Open())
+            {
+                context.BeginFigure(start, false, false);
+                context.ArcTo(end, new Size(radius, radius), 0, fraction > 0.5, SweepDirection.Clockwise, true, false);
+            }
+
+            arc.Freeze();
+            var pen = new Pen(new SolidColorBrush(_ringColor), thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+            pen.Freeze();
+            drawingContext.DrawGeometry(null, pen, arc);
+        }
+
+        if (string.IsNullOrWhiteSpace(Caption))
+        {
+            return;
+        }
+
+        var text = new FormattedText(
+            Caption,
+            CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface(new FontFamily("Segoe UI Variable Text, Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal),
+            12,
+            Brushes.White,
+            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+        // Sobre una pastilla oscura: el texto va encima del escritorio, y sobre un fondo claro sin ella
+        // no se leería.
+        var top = centre.Y + radius + 10;
+        var plate = new Rect(centre.X - (text.Width / 2) - 10, top, text.Width + 20, text.Height + 6);
+        var plateBrush = new SolidColorBrush(Color.FromArgb(230, 0x1A, 0x16, 0x1C));
+        plateBrush.Freeze();
+        drawingContext.DrawRoundedRectangle(plateBrush, null, plate, plate.Height / 2, plate.Height / 2);
+        drawingContext.DrawText(text, new Point(centre.X - (text.Width / 2), top + 3));
     }
 }

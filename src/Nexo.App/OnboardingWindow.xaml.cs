@@ -1,12 +1,16 @@
 using System.ComponentModel;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using Nexo.App.Motion;
 using Nexo.Core.Ai;
 using Nexo.Core.Distribution;
 using Nexo.Core.Settings;
 using Nexo.Core.Voice;
 using Nexo.Windows.Ai;
 using Nexo.Windows.Distribution;
+using Nexo.Windows.Shell;
 using Nexo.Windows.Settings;
 using Nexo.Windows.Voice;
 using Nexo.Windows.WindowsIntegration;
@@ -26,11 +30,13 @@ public partial class OnboardingWindow : Window
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly string[] _stepTitles =
     [
-        "Bienvenido",
+        "Bienvenido a Sakura",
         "Configura la voz",
         "Conecta la IA local",
         "Privacidad y Windows"
     ];
+
+    private readonly List<Border> _dots = [];
 
     private CancellationTokenSource? _aiOperationCancellation;
     private OllamaRuntimeSnapshot? _runtimeSnapshot;
@@ -56,7 +62,58 @@ public partial class OnboardingWindow : Window
         WindowsNotificationsCheckBox.IsChecked = preferences.ShowWindowsNotifications;
         NotificationSoundsCheckBox.IsChecked = preferences.PlayNotificationSounds;
         AiModelComboBox.Text = preferences.AiModel;
+        BuildStepDots();
         ShowStep(0);
+    }
+
+    /// <summary>La barra de título del color de la ventana, no del acento de Windows (ver WindowsDwmChrome).</summary>
+    private void Window_SourceInitialized(object? sender, EventArgs e)
+    {
+        if (TryFindResource("BrushBackground") is SolidColorBrush background &&
+            TryFindResource("BrushTextSecondary") is SolidColorBrush text)
+        {
+            WindowsDwmChrome.TrySetCaptionColors(
+                new System.Windows.Interop.WindowInteropHelper(this).Handle,
+                background.Color.R, background.Color.G, background.Color.B,
+                text.Color.R, text.Color.G, text.Color.B);
+        }
+    }
+
+    private void BuildStepDots()
+    {
+        for (var i = 0; i < _stepTitles.Length; i++)
+        {
+            var dot = new Border
+            {
+                Width = 8,
+                Height = 8,
+                Margin = new Thickness(i == 0 ? 0 : 6, 0, 0, 0),
+                CornerRadius = new CornerRadius(4),
+                Background = (Brush)FindResource("BrushBorder")
+            };
+            _dots.Add(dot);
+            StepDots.Children.Add(dot);
+        }
+    }
+
+    /// <summary>
+    /// La píldora del paso actual se alarga con un pequeño rebote y toma el acento; las ya recorridas
+    /// quedan en acento tenue y las que faltan, en gris.
+    /// </summary>
+    private void UpdateStepDots()
+    {
+        var accent = (Brush)FindResource("BrushAccent");
+        var soft = (Brush)FindResource("BrushAccentSoft");
+        var pending = (Brush)FindResource("BrushBorder");
+
+        for (var i = 0; i < _dots.Count; i++)
+        {
+            var dot = _dots[i];
+            dot.Background = i == _step ? accent : i < _step ? soft : pending;
+            dot.Animate(WidthProperty, i == _step ? 26 : 8, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
+        }
+
+        System.Windows.Automation.AutomationProperties.SetName(StepDots, $"Paso {_step + 1} de {_dots.Count}");
     }
 
     public bool WasCompleted { get; private set; }
@@ -283,15 +340,48 @@ public partial class OnboardingWindow : Window
 
     private void ShowStep(int step)
     {
+        var previous = _step;
         _step = Math.Clamp(step, 0, 3);
         WelcomePanel.Visibility = _step == 0 ? Visibility.Visible : Visibility.Collapsed;
         VoicePanel.Visibility = _step == 1 ? Visibility.Visible : Visibility.Collapsed;
         AiPanel.Visibility = _step == 2 ? Visibility.Visible : Visibility.Collapsed;
         PrivacyPanel.Visibility = _step == 3 ? Visibility.Visible : Visibility.Collapsed;
         StepTitleText.Text = _stepTitles[_step];
-        StepIndicatorText.Text = $"{_step + 1} de 4";
+        UpdateStepDots();
         BackButton.IsEnabled = !_aiBusy && _step > 0;
         NextButton.Content = _step == 3 ? "Terminar" : "Siguiente";
+
+        // 2026-09-14 — el paso nuevo entra por el lado hacia el que se avanza y su contenido llega
+        // escalonado, como el resto de Sakura. Sin animación en el primer paso al abrir: la ventana ya
+        // aparece por su cuenta.
+        if (_step != previous && IsLoaded)
+        {
+            PlayStepEntrance(_step > previous ? 1 : -1);
+        }
+    }
+
+    private void PlayStepEntrance(int direction)
+    {
+        if (!SakuraMotion.AnimationsEnabled)
+        {
+            return;
+        }
+
+        StepHost.EnterFrom(StepHostTranslate, fromOffset: 36 * direction);
+
+        var panel = _step switch
+        {
+            0 => WelcomePanel,
+            1 => VoicePanel,
+            2 => AiPanel,
+            _ => PrivacyPanel
+        };
+
+        var index = 0;
+        foreach (var child in panel.Children.OfType<FrameworkElement>())
+        {
+            EntranceMotion.Rise(child, TimeSpan.FromMilliseconds(60) + SakuraMotion.StaggerAt(index++), offset: 8);
+        }
     }
 
     private void BackButton_Click(object sender, RoutedEventArgs e) =>
