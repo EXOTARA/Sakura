@@ -555,7 +555,7 @@
                                     Click="HideShellButton_Click"
                                     ToolTip="Recoger Sakura · Esc"
                                     AutomationProperties.Name="Recoger Sakura"
-                                    AutomationProperties.HelpText="Oculta el shell sin cerrar Sakura. Atajo: Esc.">
+                                    AutomationProperties.HelpText="Oculta la ventana sin cerrar Sakura. Atajo: Esc.">
                                 <Grid Width="17" Height="17">
                                     <Path Data="{StaticResource IconSakuraClose}"
                                           Stretch="Uniform"
@@ -573,7 +573,12 @@
                             Margin="5,0,5,5"
                             Padding="17"
                             Style="{StaticResource SakuraShellCardStyle}">
-                        <ContentControl x:Name="ModuleHost" />
+                        <!--
+                            IsTabStop en falso: un ContentControl acepta el foco por omisión, y este
+                            era una parada de Tab vacía entre «Recoger Sakura» y la vista. El Narrador
+                            no decía nada en ella (oído el 2026-09-14 grabando su voz).
+                        -->
+                        <ContentControl x:Name="ModuleHost" IsTabStop="False" />
                     </Border>
 
                     <Grid Visibility="Collapsed">
