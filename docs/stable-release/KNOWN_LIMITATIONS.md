@@ -205,15 +205,36 @@ entra más limpia de lo que la oiría un micrófono—. Veces dichas contadas co
   basura», «saca la ropa», «se acabó el café».
 - **El híbrido queda descartado:** a distancia el reconocedor libre casi nunca escribe «sakura».
 - **La confianza por palabra de Vosk no discrimina:** marca 1,00 también en las frases trampa.
-- **Confusores** (la gramática ofrece además «saca», «sacar», «sabes», «se», «acabó» y palabras
-  frecuentes, para que Vosk tenga dónde escribir lo que oye) es el mejor equilibrio medido, pero la
-  lista se probó contra las mismas frases trampa de las que salió: falta una tanda de validación que
-  no se haya usado para elegirla antes de llevarlo al producto.
+- **Confusores** (la gramática ofrece además «saca», «sacar», «sabes», «se» y palabras frecuentes,
+  para que Vosk tenga dónde escribir lo que oye) es el mejor equilibrio medido.
 
-El banco está en `scripts/voice/WakeBench`. **No se ha cambiado el producto todavía:** es una sola voz
-sintética, cerca y sin ruido. Falta repetirlo con grabaciones reales —cerca, a dos metros con ruido,
-y una tanda de frases trampa— antes de tocar `VoskWakeWordService`, porque la confirmación podría
-costar aciertos a distancia.
+**Validación con una tanda nueva (2026-09-13)**, grabada después de elegir la lista: 70 s de un texto
+lleno de «sacar», «salero», «salida», «saciarse», que nombra «Sakura» tres veces pero nunca dice «oye
+Sakura». Con «Oye Sakura»: actual **2 falsos**, confusores **0**. Con la frase corta «Sakura»: actual
+14 despertares, confusores 2 (uno es el «Sakura» dicho de verdad).
+
+**Llevado al producto — Diseño D88.** `WakeWordGrammarConfusers` en Core, usado por
+`VoskWakeWordService.BuildGrammar` para las tres frases de Sakura; las heredadas no cambian. El banco
+de `scripts/voice/WakeBench` mide la lista del producto, no una copia. Resumen con esa lista:
+
+| | Cerca (~12) | 2 m con música (~16) | Trampas 44 s | Validación 70 s |
+| --- | --- | --- | --- | --- |
+| «Oye Sakura», antes | 10 | 14 | 8 falsos | 2 falsos |
+| «Oye Sakura», D88 | 10 | 12 | 1 falso | 0 |
+| «Sakura», antes | 14 | 18 | 10 falsos | 14 |
+| «Sakura», D88 | 10 | 14 | 1 falso | 2 |
+
+**Dos trampas encontradas por el camino:**
+- La gramática viaja como JSON y `JsonSerializer` escapa lo que no es ASCII; Vosk no lo decodifica y
+  **descarta la palabra sin avisar**. Por eso la lista no lleva tildes, y una prueba lo exige.
+- Seis variantes fonéticas que la gramática ya ofrecía (`sacura`, `zacura`, `sakuro`, `sakuras`,
+  `saqura`, `sagura`) y el prefijo `oye,` **no están en el vocabulario de Vosk**: nunca hicieron nada
+  en la gramática. Siguen sirviendo al comparador de texto, así que no se tocan.
+
+**Límites de la medida:** una sola voz (la de Adler), un micrófono, grabaciones de escritorio de NVIDIA
+con micrófono y audio del sistema mezclados en una pista, y «Hey Sakura» sin medir aparte. La
+sensibilidad Alta sigue aceptando «basura» o «segura» por parecido, igual que antes. Falta probarlo
+en vivo con la aplicación.
 
 ### L5 — TTS sin naturalidad ni barge-in
 **Qué:** SAPI5 (`System.Speech`). Sin streaming, sin interrupción, sin AEC.

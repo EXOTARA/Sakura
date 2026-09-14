@@ -696,7 +696,8 @@ public sealed class VoskWakeWordService : IWakeWordService
             phrase,
             sensitivity,
             CustomAliases);
-        return JsonSerializer.Serialize(phrases.Append("[unk]").ToArray());
+        // Diseño D88 — sin palabras con las que confundirse, Vosk escribía «oye sakura» por «oye, saca».
+        return JsonSerializer.Serialize(WakeWordGrammarConfusers.ComposeGrammar(phrase, phrases));
     }
 
     private void PublishRecognitionObservation(

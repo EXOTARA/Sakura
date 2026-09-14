@@ -5,7 +5,7 @@
 // cuenta los despertares con varias estrategias lado a lado. No está en Nexo.slnx: es una
 // herramienta de medición, no parte del producto.
 //
-//   dotnet run -c Release -- grabacion1.m4a grabacion2.wav      (SENS=Strict|Balanced|High)
+//   dotnet run -c Release -- grabacion1.m4a grabacion2.wav      (SENS=Strict|Balanced|High, PHRASE=OyeSakura|Sakura|HeySakura)
 //   dotnet run -c Release -- --tts "Oye Sakura, abre la calculadora." salida.wav
 //
 // Estrategias:
@@ -14,6 +14,8 @@
 //   libre          sin gramática; se busca la frase dentro de lo que se transcribe.
 //   libre-finales  igual, solo finales.
 //   hibrido        la gramática propone y el reconocedor libre confirma que el nombre suena.
+//   confusores     la gramática del producto desde D88 (WakeWordGrammarConfusers); CONFUSORES=a,b,c prueba otra lista.
+//   confianza      confianza por palabra de Vosk en los finales (no discrimina: 1,00 también en trampas).
 //
 // Por qué existe (2026-09-13): con voz sintética, «Voy a sacar la basura», «Oye, saca la ropa»,
 // «Oye, ¿sabes a qué hora cierra?» u «Oye, se acabó el café» despiertan a Sakura con la estrategia
@@ -26,13 +28,12 @@ using System.Text.Json;
 using Nexo.Core.Voice;
 using Vosk;
 
-const string DefaultConfusers = "saca,sacar,sacas,saco,sacó,sacarla,sacarlo,sácalo,sabes,sabe,se,acabó,acaba,cura,oye,hoy,voy,a,la,el,ropa,basura,café,cara,casa,sacude,zapato,sábado,seca,segura,seguro,azúcar,ahora,ayuda,dura,pura,cultura,altura,que,de,no,sí,es,y,en,un,una,por,con,para,lo,me,ya,mira,eso,esto";
 var modelDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
     "Sakura", "models", "Vosk", "vosk-model-small-es-0.42");
 if (args.Length > 0 && args[0] == "--tts") { Synth(args[1], args[2]); return; }
 
 var sensitivity = Enum.Parse<WakeWordSensitivity>(Environment.GetEnvironmentVariable("SENS") ?? "Balanced");
-var phrase = WakeWordPhrase.OyeSakura;
+var phrase = Enum.Parse<WakeWordPhrase>(Environment.GetEnvironmentVariable("PHRASE") ?? "OyeSakura");
 Vosk.Vosk.SetLogLevel(-1);
 using var model = new Model(modelDir);
 var grammar = JsonSerializer.Serialize(WakeWordTextMatcher.GetGrammarPhrases(phrase, sensitivity).Append("[unk]").ToArray());
@@ -89,7 +90,7 @@ foreach (var file in args)
     {
         // Confusores: la gramática ofrece también las palabras con las que «sakura» se confunde, para
         // que Vosk tenga dónde escribir «saca» en vez de verse obligado a escribir «sakura».
-        var confusers = (Environment.GetEnvironmentVariable("CONFUSORES") ?? DefaultConfusers).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var confusers = Environment.GetEnvironmentVariable("CONFUSORES")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? WakeWordGrammarConfusers.For(phrase).ToArray();
         var cg = JsonSerializer.Serialize(WakeWordTextMatcher.GetGrammarPhrases(phrase, sensitivity).Concat(confusers).Append("[unk]").ToArray());
         using var rec = new VoskRecognizer(model, 16000f, cg);
         rec.SetWords(true); rec.SetPartialWords(true);
