@@ -5,17 +5,15 @@ namespace Nexo.Core.Shell;
 ///
 /// Adler (2026-09-14) pidió que las barras se movieran «algo similar» a un vídeo de referencia: una
 /// línea vertical que se abomba alrededor del pomo como si fuera líquido, con un brillo detrás, un
-/// número grande al lado y un color que va del amarillo al naranja según el valor. Aquí se decide la
-/// forma de esa comba, el color de cada nivel y el muelle que la hace temblar al moverse; el control
-/// solo dibuja lo que esto calcula.
+/// número grande al lado y un color que cambia según el valor. Aquí se decide la forma de esa comba,
+/// el color de cada nivel y el muelle que la hace temblar al moverse; el control solo dibuja lo que
+/// esto calcula.
+///
+/// El color es el acento de quien usa Sakura, no el amarillo y naranja del vídeo: con la primera
+/// versión Adler pidió que los mandos tuvieran «el color que tenga el usuario».
 /// </summary>
 public static class LiquidLevelMath
 {
-    /// <summary>El tono al 0 %, al 50 % y al 100 %: lima, amarillo y naranja, como en la referencia.</summary>
-    public static readonly RgbColor Low = RgbColor.FromHex("#CFEF3F");
-    public static readonly RgbColor Middle = RgbColor.FromHex("#F4DE3D");
-    public static readonly RgbColor High = RgbColor.FromHex("#F79A3E");
-
     /// <summary>
     /// La comba: 1 en el centro, 0 a una distancia <paramref name="t"/> de ±1, y con pendiente cero en
     /// los dos extremos. Es media onda de coseno; al no tener esquinas en ningún punto, la línea entra y
@@ -34,9 +32,13 @@ public static class LiquidLevelMath
     /// <summary>
     /// Cuánto se aparta la línea de su sitio a la altura <paramref name="y"/>.
     ///
-    /// <paramref name="stretch"/> va de -1 a 1 y es la inercia del movimiento: al arrastrar hacia
-    /// arriba la comba se alarga y su centro se queda un poco atrás, como una gota que va detrás del
-    /// dedo, y al soltar vuelve a su forma con un pequeño rebote.
+    /// <paramref name="stretch"/> va de -1 a 1 y es la inercia del movimiento: al arrastrar, la cola
+    /// de la comba se alarga por detrás del pomo, como una gota, y al soltar vuelve a su forma con un
+    /// pequeño rebote.
+    ///
+    /// **El punto más abombado se queda siempre a la altura del pomo.** La primera versión desplazaba
+    /// el centro entero hacia atrás, y en movimiento el pomo quedaba fuera de su hueco: Adler lo vio
+    /// «desfasado». Ahora solo se estira el lado de atrás, así que el hueco sigue abrazando el círculo.
     /// </summary>
     public static double LineOffset(double y, double knobY, double amplitude, double radius, double stretch)
     {
@@ -46,20 +48,48 @@ public static class LiquidLevelMath
         }
 
         var s = Math.Clamp(stretch, -1, 1);
-        var reach = radius * (1 + (0.45 * Math.Abs(s)));
-        var lag = radius * 0.28 * s;
-        var height = amplitude * (1 + (0.18 * Math.Abs(s)));
+        var dy = y - knobY;
 
-        return height * Bump((y - (knobY + lag)) / reach);
+        // Subir (s > 0) deja la cola por debajo del pomo; bajar, por encima.
+        var trailing = (dy > 0 && s > 0) || (dy < 0 && s < 0);
+        var reach = trailing ? radius * (1 + (0.6 * Math.Abs(s))) : radius;
+        var height = amplitude * (1 + (0.08 * Math.Abs(s)));
+
+        return height * Bump(dy / reach);
     }
 
-    /// <summary>El color de un nivel, repartido en dos tramos para pasar por el amarillo a media altura.</summary>
-    public static RgbColor ColorAt(double percent)
+    /// <summary>
+    /// El color de un nivel a partir del acento: pálido abajo, el acento tal cual a media altura y más
+    /// vivo arriba. Se queda en el mismo tono para que siga siendo el color elegido; lo que cambia con
+    /// el valor es la intensidad, igual que en la referencia cambiaba el calor.
+    /// </summary>
+    public static RgbColor ColorAt(double percent, RgbColor accent)
     {
         var p = double.IsFinite(percent) ? Math.Clamp(percent, 0, 100) / 100 : 0;
+        var (low, high) = RampEnds(accent);
         return p <= 0.5
-            ? ColorMath.Mix(Low, Middle, p * 2)
-            : ColorMath.Mix(Middle, High, (p - 0.5) * 2);
+            ? ColorMath.Mix(low, accent, p * 2)
+            : ColorMath.Mix(accent, high, (p - 0.5) * 2);
+    }
+
+    /// <summary>Los dos extremos de la rampa: el acento aclarado y desaturado, y el acento más saturado.</summary>
+    public static (RgbColor Low, RgbColor High) RampEnds(RgbColor accent)
+    {
+        var r = accent.R / 255d;
+        var g = accent.G / 255d;
+        var b = accent.B / 255d;
+        var max = Math.Max(r, Math.Max(g, b));
+        var min = Math.Min(r, Math.Min(g, b));
+        var lightness = (max + min) / 2;
+        var chroma = max - min;
+        var saturation = chroma <= 0 ? 0 : chroma / (1 - Math.Abs((2 * lightness) - 1));
+        var hue = ColorMath.Hue(accent);
+
+        var low = ColorMath.FromHsl(hue, saturation * 0.7, Math.Min(0.88, lightness + ((1 - lightness) * 0.45)));
+        // Un acento gris sigue siendo gris: sumarle saturación le inventaría un tono que nadie eligió.
+        var vivid = saturation <= 0 ? 0 : Math.Min(1, (saturation * 1.15) + 0.05);
+        var high = ColorMath.FromHsl(hue, vivid, Math.Max(0.5, lightness - 0.04));
+        return (low, high);
     }
 
     /// <summary>

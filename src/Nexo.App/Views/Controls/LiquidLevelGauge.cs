@@ -18,6 +18,11 @@ namespace Nexo.App.Views.Controls;
 /// un panel que pasa la mayor parte del tiempo cerrado o quieto.
 ///
 /// La forma, el color y los muelles salen de <see cref="LiquidLevelMath"/>; esto solo los pinta.
+///
+/// Lo propio de Sakura está en el pomo: lleva dentro la flor de cuatro pétalos de la marca, que gira
+/// como un dial al cambiar el valor (un cuarto de vuelta de 0 a 100, que con cuatro pétalos es una
+/// vuelta completa del dibujo). La flor es la del icono, sacada de <c>IconSakuraMark</c>, no un
+/// dibujo parecido.
 /// </summary>
 public sealed class LiquidLevelGauge : FrameworkElement
 {
@@ -268,7 +273,8 @@ public sealed class LiquidLevelGauge : FrameworkElement
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         var shown = Math.Clamp(_value, 0, 100);
         var knobY = Math.Clamp(YFor(_value), TopInset - 6, GaugeHeight - BottomInset + 6);
-        var rgb = LiquidLevelMath.ColorAt(shown);
+        var accent = (FindResource("BrushAccent") as SolidColorBrush)?.Color ?? Color.FromRgb(0xE8, 0x73, 0x9E);
+        var rgb = LiquidLevelMath.ColorAt(shown, new RgbColor(accent.R, accent.G, accent.B));
         var color = Color.FromRgb(rgb.R, rgb.G, rgb.B);
         var ink = (FindResource("BrushTextSecondary") as SolidColorBrush)?.Color ?? Colors.Gray;
         var lineTop = LineTop;
@@ -354,7 +360,7 @@ public sealed class LiquidLevelGauge : FrameworkElement
         linePen.Freeze();
         dc.DrawGeometry(null, linePen, geometry);
 
-        // 4. El pomo, oscuro con dos flechas, inflado según su muelle.
+        // 4. El pomo, oscuro con la flor de Sakura dentro, inflado según su muelle.
         var radius = KnobRadius * Math.Max(0.1, _knob);
         var knobCenter = new Point(LineX, knobY);
         dc.DrawEllipse(new SolidColorBrush(Color.FromArgb(90, 0, 0, 0)), null, new Point(LineX, knobY + 2.5), radius + 1.5, radius + 1.5);
@@ -364,11 +370,7 @@ public sealed class LiquidLevelGauge : FrameworkElement
         rim.Freeze();
         dc.DrawEllipse(body, rim, knobCenter, radius, radius);
 
-        var arrowScale = radius / KnobRadius;
-        var arrowBrush = new SolidColorBrush(WithAlpha(ink, 0.75));
-        arrowBrush.Freeze();
-        DrawArrow(dc, arrowBrush, knobCenter, -1, arrowScale);
-        DrawArrow(dc, arrowBrush, knobCenter, 1, arrowScale);
+        DrawBlossom(dc, knobCenter, radius, shown, color);
 
         // 5. El número, grande y del color del nivel, que sigue al pomo.
         var number = new FormattedText(
@@ -404,21 +406,68 @@ public sealed class LiquidLevelGauge : FrameworkElement
         dc.Pop();
     }
 
-    private static void DrawArrow(DrawingContext dc, Brush brush, Point center, int direction, double scale)
+    private static (Geometry Petals, Geometry Spark)? _blossom;
+
+    /// <summary>
+    /// Los pétalos macizos y el destello de la marca, en su retícula de 48. Del contorno de la marca
+    /// solo se usa la silueta exterior: el contorno completo es un trazo hueco, y a este tamaño su
+    /// grosor quedaría por debajo del píxel y se vería como una mancha borrosa.
+    /// </summary>
+    private (Geometry Petals, Geometry Spark)? Blossom()
     {
-        var tip = center.Y + (direction * 6.2 * scale);
-        var baseY = center.Y + (direction * 2.6 * scale);
-        var half = 2.6 * scale;
-        var geometry = new StreamGeometry();
-        using (var context = geometry.Open())
+        if (_blossom is { } cached)
         {
-            context.BeginFigure(new Point(center.X, tip), true, true);
-            context.LineTo(new Point(center.X - half, baseY), true, false);
-            context.LineTo(new Point(center.X + half, baseY), true, false);
+            return cached;
         }
 
-        geometry.Freeze();
-        dc.DrawGeometry(brush, null, geometry);
+        if (TryFindResource("IconSakuraMark") is not GeometryGroup { Children.Count: >= 2 } mark ||
+            mark.Children[0] is not PathGeometry { Figures.Count: > 0 } outline ||
+            mark.Children[1] is not PathGeometry spark)
+        {
+            return null;
+        }
+
+        var petals = new PathGeometry([outline.Figures[0].Clone()]);
+        petals.Freeze();
+        var sparkCopy = spark.Clone();
+        sparkCopy.Transform = null;
+        sparkCopy.Freeze();
+        _blossom = (petals, sparkCopy);
+        return _blossom;
+    }
+
+    private void DrawBlossom(DrawingContext dc, Point center, double knobRadius, double percent, Color color)
+    {
+        if (Blossom() is not { } blossom)
+        {
+            return;
+        }
+
+        // La marca ocupa de 2 a 46 en su retícula; se deja un anillo del pomo alrededor.
+        var size = knobRadius * 1.5;
+        var scale = size / 44;
+
+        dc.PushTransform(new TranslateTransform(center.X, center.Y));
+        dc.PushTransform(new RotateTransform(percent * 0.9));
+        dc.PushTransform(new ScaleTransform(scale, scale));
+        dc.PushTransform(new TranslateTransform(-24, -24));
+
+        var petals = new SolidColorBrush(WithAlpha(color, Math.Clamp(0.5 + (0.2 * (_glow - 1)), 0.4, 0.75)));
+        petals.Freeze();
+        var spark = new SolidColorBrush(Color.FromRgb(0x1C, 0x1B, 0x1F));
+        spark.Freeze();
+
+        // El destello va oscuro, del color del pomo, recortado sobre los pétalos: a este tamaño un
+        // destello claro sobre pétalos claros se funde, y así la flor se lee como la del icono.
+        var sparkPen = new Pen(spark, 0.9 / scale) { LineJoin = PenLineJoin.Round };
+        sparkPen.Freeze();
+        dc.DrawGeometry(petals, null, blossom.Petals);
+        dc.DrawGeometry(spark, sparkPen, blossom.Spark);
+
+        dc.Pop();
+        dc.Pop();
+        dc.Pop();
+        dc.Pop();
     }
 
     private static Color WithAlpha(Color color, double alpha) =>

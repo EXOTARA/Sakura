@@ -27,25 +27,46 @@ public sealed class LiquidLevelMathTests
     }
 
     [Fact]
-    public void LineOffset_StretchesAndTrailsWhileMoving()
+    public void LineOffset_WhileMoving_StretchesOnlyTheTrailAndKeepsThePeakOnTheKnob()
     {
-        // Moviéndose (stretch 1) la comba llega más lejos que quieta y su centro queda desplazado.
-        var stillReach = LiquidLevelMath.LineOffset(135, 100, 16, 30, 0);
-        var movingReach = LiquidLevelMath.LineOffset(135, 100, 16, 30, 1);
+        // Subiendo (stretch 1) la cola de abajo llega más lejos; la de arriba no cambia.
+        Assert.Equal(0, LiquidLevelMath.LineOffset(135, 100, 16, 30, 0), 6);
+        Assert.True(LiquidLevelMath.LineOffset(135, 100, 16, 30, 1) > 0);
+        Assert.Equal(0, LiquidLevelMath.LineOffset(65, 100, 16, 30, 1), 6);
 
-        Assert.Equal(0, stillReach, 6);
-        Assert.True(movingReach > 0);
-        Assert.True(LiquidLevelMath.LineOffset(100, 100, 16, 30, 1) < LiquidLevelMath.LineOffset(108, 100, 16, 30, 1));
+        // El punto más abombado sigue a la altura del pomo: lo de «desfasado» que vio Adler.
+        var peak = LiquidLevelMath.LineOffset(100, 100, 16, 30, 1);
+        Assert.True(peak > LiquidLevelMath.LineOffset(98, 100, 16, 30, 1));
+        Assert.True(peak > LiquidLevelMath.LineOffset(102, 100, 16, 30, 1));
+    }
+
+    [Theory]
+    [InlineData("#E8739E")] // rosa de Sakura
+    [InlineData("#3A86FF")] // un azul
+    [InlineData("#2EA043")] // un verde
+    public void ColorAt_FollowsTheAccent_PaleLowVividHigh(string hex)
+    {
+        var accent = RgbColor.FromHex(hex);
+        var low = LiquidLevelMath.ColorAt(0, accent);
+        var high = LiquidLevelMath.ColorAt(100, accent);
+
+        Assert.Equal(accent, LiquidLevelMath.ColorAt(50, accent));
+        Assert.True(ColorMath.RelativeLuminance(low) > ColorMath.RelativeLuminance(accent));
+        Assert.True(ColorMath.Chroma(high) >= ColorMath.Chroma(accent));
+
+        // Mismo tono en los tres puntos, con margen por el redondeo a bytes.
+        Assert.InRange(Math.Abs(ColorMath.Hue(low) - ColorMath.Hue(accent)), 0, 6);
+        Assert.InRange(Math.Abs(ColorMath.Hue(high) - ColorMath.Hue(accent)), 0, 6);
+        Assert.Equal(low, LiquidLevelMath.ColorAt(double.NaN, accent));
     }
 
     [Fact]
-    public void ColorAt_GoesFromLimeThroughYellowToOrange()
+    public void ColorAt_AGreyAccentStaysGrey()
     {
-        Assert.Equal(LiquidLevelMath.Low, LiquidLevelMath.ColorAt(0));
-        Assert.Equal(LiquidLevelMath.Middle, LiquidLevelMath.ColorAt(50));
-        Assert.Equal(LiquidLevelMath.High, LiquidLevelMath.ColorAt(100));
-        Assert.Equal(LiquidLevelMath.High, LiquidLevelMath.ColorAt(250));
-        Assert.Equal(LiquidLevelMath.Low, LiquidLevelMath.ColorAt(double.NaN));
+        var grey = RgbColor.FromHex("#808080");
+
+        Assert.Equal(0, ColorMath.Chroma(LiquidLevelMath.ColorAt(0, grey)), 3);
+        Assert.Equal(0, ColorMath.Chroma(LiquidLevelMath.ColorAt(100, grey)), 3);
     }
 
     [Fact]
