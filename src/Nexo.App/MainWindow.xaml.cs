@@ -5562,15 +5562,15 @@ public partial class MainWindow : Window
         if (!configuration.IsEnabled)
         {
             const string unavailableMessage =
-                "La consulta es abierta, pero la IA está desactivada. Puedes elegir OpenAI, Ollama, LM Studio o un servidor compatible en Personalización.";
+                "La consulta es abierta, pero la IA está desactivada. Puedes elegir OpenAI, Ollama, LM Studio o un servidor compatible en Personalizar.";
             _assistantView.AddSakuraMessage(unavailableMessage);
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Information,
                 "IA desactivada",
-                "Elige un proveedor desde Personalización.",
+                "Elige un proveedor desde Personalizar.",
                 _preferences.Position);
             SpeakVoiceResult("La inteligencia artificial está desactivada.");
-            _pillFailure = "La IA está desactivada. Elígela en Personalización.";
+            _pillFailure = "La IA está desactivada. Elígela en Personalizar.";
             return;
         }
 
@@ -6011,7 +6011,7 @@ public partial class MainWindow : Window
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Warning,
                 "Lens está desactivado",
-                "Actívalo desde Personalización.",
+                "Actívalo desde Personalizar.",
                 _preferences.Position);
             return;
         }
@@ -6615,7 +6615,7 @@ public partial class MainWindow : Window
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Information,
                 "Voz desactivada",
-                "Activa una frase desde Personalización → Voz.",
+                "Activa una frase desde Personalizar → Voz.",
                 _preferences.Position);
             return;
         }
@@ -8027,11 +8027,11 @@ public partial class MainWindow : Window
             case LocalCommandType.ShowPeek:
                 if (!_preferences.PeekEnabled)
                 {
-                    _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalización.");
+                    _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalizar.");
                     _capsuleWindow.ShowMessage(
                         CapsuleKind.Warning,
                         "Peek está desactivado",
-                        "Puedes activarlo desde Personalización.",
+                        "Puedes activarlo desde Personalizar.",
                         _preferences.Position);
                     break;
                 }
@@ -9333,7 +9333,7 @@ public partial class MainWindow : Window
     {
         if (!_preferences.PeekEnabled)
         {
-            _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalización.");
+            _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalizar.");
             return;
         }
 
