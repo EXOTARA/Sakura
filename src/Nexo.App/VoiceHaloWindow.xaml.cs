@@ -28,7 +28,7 @@ public partial class VoiceHaloWindow : Window
     private const int WsExTransparent = 0x00000020;
 
     /// <summary>Lo que sube al entrar. Corto: un recorrido largo se lee como lentitud.</summary>
-    private const double RiseDistance = 34;
+    private const double RiseDistance = 18;
 
     /// <summary>Separación con el borde inferior del área de trabajo.</summary>
     private const double BottomMargin = 28;
@@ -72,18 +72,27 @@ public partial class VoiceHaloWindow : Window
         // donde vive el sistema, no de la nada en mitad de la pantalla. Es el mismo gesto con el
         // que entran las notificaciones de Windows y el que la referencia usa para el cajón, solo
         // que al revés.
+        //
+        // 2026-09-14 — y se infla como las píldoras (Adler): nace pequeña, se pasa un poco y se
+        // asienta. Sube menos que antes porque ahora el gesto principal es el de la burbuja.
         HaloRoot.BeginAnimation(OpacityProperty, null);
         HaloRise.BeginAnimation(TranslateTransform.YProperty, null);
+        HaloScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        HaloScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
         HaloRoot.Opacity = 0;
         HaloRise.Y = RiseDistance;
+        HaloScale.ScaleX = 0.45;
+        HaloScale.ScaleY = 0.45;
 
-        HaloRoot.Animate(OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
+        HaloRoot.Animate(OpacityProperty, 1, SakuraMotion.Fast, SakuraMotion.DecelerateCurve);
         SakuraMotion.AnimateTransform(
             HaloRise,
             TranslateTransform.YProperty,
             0,
             SakuraMotion.Reveal,
             SakuraMotion.DecelerateCurve);
+        HaloScale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
+        HaloScale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
 
         _lastFrame = TimeSpan.Zero;
         CompositionTarget.Rendering += OnRendering;
@@ -110,13 +119,15 @@ public partial class VoiceHaloWindow : Window
             return;
         }
 
-        // Y se va por donde vino, con la salida más corta que la entrada.
+        // Y se va por donde vino, con la salida más corta que la entrada, desinflándose.
         SakuraMotion.AnimateTransform(
             HaloRise,
             TranslateTransform.YProperty,
             RiseDistance * 0.6,
             SakuraMotion.Exit,
             SakuraMotion.AccelerateCurve);
+        HaloScale.AnimateTransform(ScaleTransform.ScaleXProperty, 0.6, SakuraMotion.Exit, SakuraMotion.AccelerateCurve);
+        HaloScale.AnimateTransform(ScaleTransform.ScaleYProperty, 0.6, SakuraMotion.Exit, SakuraMotion.AccelerateCurve);
 
         var fade = SakuraMotion.CreateAnimation(0, SakuraMotion.Exit, SakuraMotion.AccelerateCurve);
         fade.Completed += (_, _) => Finish();

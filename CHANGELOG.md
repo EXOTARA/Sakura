@@ -8,7 +8,8 @@
 - **Las respuestas se leen con su formato.** Las negritas, las listas, los pasos numerados y el código se ven como tales, sin asteriscos ni barras. Las tablas se muestran como una tarjeta por fila, que en un panel estrecho se leen mucho mejor.
 - **Sakura responde más ordenada**: párrafos cortos y listas en lugar de tablas, y avisa cuando algo que pregunta puede haber cambiado, como quién ocupa un cargo o un precio.
 - **Los volúmenes de la pestaña Audio usan el mismo control líquido** que el volumen y el brillo del borde de la pantalla.
-- **La pestaña Voz del panel enseña qué decir**: ejemplos para abrir, volumen, enfoque y tu equipo, todos funcionan sin IA.
+- **La pestaña Voz del panel ahora se llama «Cheats»**: todos los atajos de Sakura (Alt + A, Ctrl + Espacio, Alt + V…) y unos cuantos de Windows dibujados como teclas, las frases que Sakura entiende sin IA y el estado de la escucha en una línea.
+- **El logo que aparece cuando Sakura te escucha ya se ve**: va dentro de una burbuja oscura con borde, que se infla al aparecer y se desinfla al irse. Antes era un contorno fino que se perdía sobre el fondo de pantalla.
 
 ### Corregido
 
