@@ -385,8 +385,12 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                        <StackPanel>
+                        <StackPanel VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock x:Name="WorkspaceTitleText"
                                            Text="Inicio"
@@ -481,12 +485,29 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+                        </StackPanel>
+
+                        <!--
+                            2026-09-14 — el temporizador va en la línea del subtítulo y no junto a los
+                            botones. Al lado de los botones le quitaba el ancho al título, y con un
+                            temporizador en marcha se leía «Asiste…», «Sister…», «Perso…». Visto al
+                            preparar las capturas de la Store.
+                        -->
+                        <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
                             <TextBlock x:Name="WorkspaceSubtitleText"
-                                       Margin="0,5,0,0"
+                                       VerticalAlignment="Center"
                                        Text="Tu espacio de acciones y contexto"
                                        TextTrimming="CharacterEllipsis"
                                        Style="{StaticResource SakuraPageSubtitleStyle}" />
-                        </StackPanel>
+                            <views:FocusMiniTimer x:Name="FocusMiniTimerControl"
+                                                   Grid.Column="1"
+                                                   Margin="10,0,0,0"
+                                                   VerticalAlignment="Center" />
+                        </Grid>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                             <Border Width="9"
@@ -496,9 +517,6 @@
                                     CornerRadius="5"
                                     ToolTip="Sakura está activa"
                                     AutomationProperties.Name="Sakura está activa" />
-                            <views:FocusMiniTimer x:Name="FocusMiniTimerControl"
-                                                   Margin="0,0,10,0"
-                                                   VerticalAlignment="Center" />
                             <Button x:Name="CommandCenterButton"
                                     Width="42"
                                     Height="42"
