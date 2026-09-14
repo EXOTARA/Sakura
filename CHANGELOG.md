@@ -10,6 +10,21 @@
 ### Cambiado
 
 - **La versión de la Store se comporta distinto donde tiene que hacerlo:** no usa el actualizador propio, porque actualiza la Store; arranca con Windows por el mecanismo del paquete; y no instala Ollama por su cuenta, sino que lleva a su web. La copia descargada de GitHub no cambia en nada de esto.
+- **La ventana de Sakura tiene las mismas esquinas redondeadas que el panel de arriba.** A cambio, la transparencia ya no difumina lo que hay detrás: se ve a través, sin desenfoque.
+- **Ya no hay destello gris al abrir la ventana.** Antes se veía un instante un rectángulo vacío antes del contenido.
+- **Cuando baja el panel de arriba, la ventana de Sakura se encoge hacia abajo** para que no la tape, y recupera su tamaño en cuanto el panel se recoge.
+- **Volumen y brillo nuevos.** Una línea que se abomba alrededor del mando como si fuera líquido, con el valor en grande al lado y en el color que tengas elegido. El mando lleva la flor de Sakura y gira con el valor.
+- **La primera vez que abres el asistente en cada sesión, se organiza solo:** las tarjetas crecen, el saludo aparece palabra a palabra y las sugerencias entran una detrás de otra. Las veces siguientes se abre rápido, como siempre.
+- **Los avisos y las píldoras aparecen como burbujas:** nacen como un círculo que se estira hasta su forma, y al irse se recogen igual.
+- **La imagen o el GIF del panel tiene las esquinas redondeadas**, como la tarjeta de música, en vez de un rectángulo con picos.
+- **Textos más cortos.** El plan adaptativo de Sistema nombra cada motor una vez en lugar de cuatro, y Personalizar explica cada opción en una línea.
+
+### Corregido
+
+- **Mientras Sakura respondía en la píldora salían dos avisos** que decían lo mismo. Ahora sale uno.
+- **Los botones llevaban el texto pegado al borde**, y algunos, como «Siguiente» en la bienvenida, parecían cortados.
+- **Lo que se desplaza se cortaba en seco** contra el borde redondeado de las tarjetas. Ahora se desvanece.
+- **Algunos textos de Sistema salían cortados**: el procesador, la gráfica y la descripción de Sakura Runtime.
 
 ## [0.29.3-beta]
 
