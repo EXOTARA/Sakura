@@ -1,0 +1,39 @@
+<!doctype html>
+<!--
+  Plantilla de las páginas legales: privacidad, términos y cookies.
+
+  El cuerpo de cada una no está aquí sino en site/legal/<idioma>/<página>.html, y build-site.ps1 lo
+  pone en {{CONTENT}}. Cabecera y pie son los mismos parciales que usa la portada, para que un enlace
+  que cambia en uno no quede viejo en otro.
+-->
+<html lang="{{t:html.lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{PAGE_TITLE}} — Sakura</title>
+<meta name="description" content="{{PAGE_DESCRIPTION}}">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="{{BASE}}assets/sakura.svg" type="image/svg+xml">
+<link rel="canonical" href="{{CANONICAL}}">
+<link rel="alternate" hreflang="{{t:html.lang}}" href="{{CANONICAL}}">
+<link rel="alternate" hreflang="{{t:lang.other.code}}" href="{{ALT_CANONICAL}}">
+<link rel="stylesheet" href="{{BASE}}styles.css">
+<script>document.documentElement.className += " js";</script>
+</head>
+<body data-lang="{{t:html.lang}}" data-alt-href="{{ALT_HREF}}">
+
+{{PARTIAL:header}}
+
+<main id="contenido" class="legal">
+  <div class="wrap">
+    <article class="prose">
+{{CONTENT}}
+    </article>
+  </div>
+</main>
+
+{{PARTIAL:footer}}
+
+<script src="{{BASE}}app.js" defer></script>
+</body>
+</html>
