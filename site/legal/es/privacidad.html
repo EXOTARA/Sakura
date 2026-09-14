@@ -1,6 +1,6 @@
       <p class="eyebrow">Legal</p>
       <h1>Política de privacidad</h1>
-      <p class="legal-updated">Última actualización: 13 de septiembre de 2026</p>
+      <p class="legal-updated">Última actualización: 14 de septiembre de 2026</p>
 
       <p class="legal-lead">Esta política cubre dos cosas: esta página web y la aplicación Sakura. La
       respuesta corta es la misma para las dos: <strong>quien mantiene Sakura no recibe datos
@@ -59,13 +59,19 @@
 
       <h3>Lo que sale de tu equipo</h3>
       <ol>
-        <li><strong>Comprobación de actualizaciones.</strong> Es lo único automático. Como mucho una vez
-        cada 24 horas, Sakura lee la lista pública de versiones en <code>api.github.com</code>. No envía
-        ningún identificador ni datos de tu equipo más allá de lo que lleva cualquier conexión (tu
-        dirección IP). Se desactiva en Ajustes. Nada se instala sin que lo aceptes.</li>
-        <li><strong>Descargas que pides tú.</strong> Los modelos de voz (de <code>alphacephei.com</code>
-        y de Hugging Face), Ollama si dejas que Sakura lo instale (desde GitHub), y los modelos de
-        lenguaje que elijas descargar, que Ollama trae de su propio registro.</li>
+        <li><strong>Comprobación de actualizaciones.</strong> Automática, y solo en la versión descargada
+        de GitHub: la de Microsoft Store se actualiza desde la Store. Como mucho una vez cada 24 horas,
+        Sakura lee la lista pública de versiones en <code>api.github.com</code>. No envía ningún
+        identificador ni datos de tu equipo más allá de lo que lleva cualquier conexión (tu dirección
+        IP). Se desactiva en Ajustes. Nada se instala sin que lo aceptes.</li>
+        <li><strong>El modelo de transcripción, la primera vez que abres Sakura.</strong> También es
+        automático: Sakura descarga una sola vez el modelo de voz Whisper (unos 140 MB) desde Hugging Face
+        y lo guarda en tu disco, para que el dictado funcione sin conexión. Solo lo pide; no envía nada
+        tuyo.</li>
+        <li><strong>Descargas que pides tú.</strong> El modelo de la palabra de activación (de
+        <code>alphacephei.com</code>), cuando activas o pruebas «Oye Sakura»; Ollama, si dejas que Sakura
+        lo instale desde GitHub (la versión de Microsoft Store no lo instala: solo enlaza a su web); y los
+        modelos de lenguaje que elijas descargar, que Ollama trae de su propio registro.</li>
         <li><strong>Proveedores de IA en la nube, solo si configuras uno.</strong> Ninguno está activo
         por omisión. Si eliges uno (Anthropic, OpenAI, Google Gemini, Groq u OpenRouter), le llega el
         texto de la conversación y, cuando usas Lens o el traductor de pantalla, lo que se leyó de la
