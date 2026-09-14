@@ -24,6 +24,8 @@ public static class WindowsDwmChrome
     private const int DwmwaUseImmersiveDarkMode = 20;
     private const int DwmwaWindowCornerPreference = 33;
     private const int DwmwaBorderColor = 34;
+    private const int DwmwaCaptionColor = 35;
+    private const int DwmwaTextColor = 36;
     private const int DwmwaSystemBackdropType = 38;
 
     /// <summary>Valor documentado de <c>DWMWA_COLOR_NONE</c>: quita el borde en vez de pintarlo.</summary>
@@ -148,6 +150,25 @@ public static class WindowsDwmChrome
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// La barra de título del color de la ventana en vez del acento de Windows. Windows 11 pinta la
+    /// barra de las ventanas activas con el acento del sistema cuando está activado «Mostrar color de
+    /// énfasis en barras de título», y en una ventana oscura de Sakura una barra naranja o azul se lee
+    /// como otra aplicación pegada encima. En Windows 10 el atributo no existe y no pasa nada.
+    /// </summary>
+    public static bool TrySetCaptionColors(IntPtr windowHandle, byte red, byte green, byte blue, byte textRed, byte textGreen, byte textBlue)
+    {
+        if (windowHandle == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        TrySetAttribute(windowHandle, DwmwaUseImmersiveDarkMode, 1);
+        var caption = TrySetAttribute(windowHandle, DwmwaCaptionColor, red | (green << 8) | (blue << 16));
+        TrySetAttribute(windowHandle, DwmwaTextColor, textRed | (textGreen << 8) | (textBlue << 16));
+        return caption;
     }
 
     private static int CornerValue(WindowCorner corner) => corner switch

@@ -1,6 +1,7 @@
 <Window x:Class="Nexo.App.OnboardingWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Nexo.App.Views.Controls"
         Title="Configurar Sakura"
         Width="680"
         Height="610"
@@ -8,6 +9,7 @@
         MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BrushBackground}"
+        SourceInitialized="Window_SourceInitialized"
         Loaded="Window_Loaded"
         Closing="Window_Closing">
     <Grid Margin="26">
@@ -42,18 +44,35 @@
                 </StackPanel>
                 <TextBlock x:Name="StepTitleText"
                            Margin="0,10,0,0"
-                           Text="Bienvenido"
+                           Text="Bienvenido a Sakura"
                            Style="{StaticResource SectionTitleStyle}" />
             </StackPanel>
-            <TextBlock x:Name="StepIndicatorText"
-                       Grid.Column="1"
-                       VerticalAlignment="Center"
-                       Text="1 de 4"
-                       Style="{StaticResource MutedTextStyle}" />
+            <!--
+                2026-09-14 — el avance en cuatro píldoras en vez de «1 de 4»: la del paso actual se
+                alarga y toma el acento, las ya hechas quedan tenues. Se lee de un vistazo cuánto falta.
+            -->
+            <StackPanel x:Name="StepDots"
+                        Grid.Column="1"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,8"
+                        Orientation="Horizontal"
+                        AutomationProperties.Name="Paso 1 de 4" />
         </Grid>
 
-        <Border Grid.Row="1" Margin="0,20" Style="{StaticResource CardStyle}" Padding="22">
-            <Grid>
+        <!--
+            2026-09-14 — el contenido de cada paso se desplaza si no cabe. En el paso de la IA, con Ollama
+            conectado, la recomendación de modelo quedaba cortada por el borde de la tarjeta, y agrandar la
+            ventana no es opción: en un portátil pequeño con escalado ya roza el alto de la pantalla.
+        -->
+        <Border Grid.Row="1" Margin="0,20" Style="{StaticResource CardStyle}" Padding="22,22,10,22">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Focusable="False"
+                          controls:ScrollEdgeFade.IsEnabled="True">
+            <Grid x:Name="StepHost" Margin="0,0,12,0">
+                <Grid.RenderTransform>
+                    <TranslateTransform x:Name="StepHostTranslate" />
+                </Grid.RenderTransform>
                 <StackPanel x:Name="WelcomePanel">
                     <TextBlock Text="Tu asistente local para Windows"
                                FontSize="{DynamicResource FontSizeTitle1}"
@@ -66,20 +85,19 @@
                         <StackPanel>
                             <TextBlock Text="Durante esta configuración" FontWeight="SemiBold" />
                             <TextBlock Margin="0,8,0,0"
-                                       Text="• Elegirás el micrófono.&#x0a;• Sakura preparará la IA local con un solo botón.&#x0a;• Revisarás privacidad y funcionamiento en segundo plano."
+                                       Text="• Elegirás el micrófono.&#x0a;• Conectarás la IA local, si quieres usarla.&#x0a;• Revisarás la privacidad y cómo arranca Sakura."
                                        TextWrapping="Wrap"
                                        Style="{StaticResource MutedTextStyle}" />
                         </StackPanel>
                     </Border>
                     <TextBlock Margin="0,20,0,0"
-                               Text="Todo puede modificarse después desde Personalización."
+                               Text="Todo se puede cambiar después en Personalizar."
                                Style="{StaticResource MutedTextStyle}" />
                 </StackPanel>
 
                 <StackPanel x:Name="VoicePanel" Visibility="Collapsed">
-                    <TextBlock Text="Voz" FontSize="{DynamicResource FontSizeTitle1}" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,6,0,18"
-                               Text="Elige el micrófono que usarán Mic y la frase de activación. El audio se procesa localmente."
+                    <TextBlock Margin="0,0,0,18"
+                               Text="Elige el micrófono con el que le hablarás a Sakura. El audio se procesa en tu equipo, y el modelo de voz (unos 140 MB) se descarga la primera vez que la uses."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
                     <TextBlock Text="Micrófono" FontWeight="SemiBold" />
@@ -103,14 +121,13 @@
                               Margin="0,22,0,0"
                               Content="Activar la frase “Oye Sakura” (experimental)" />
                     <TextBlock Margin="24,7,0,0"
-                               Text="Puedes dejarla desactivada y usar el botón Mic."
+                               Text="Si la dejas apagada, puedes hablarle con Alt + V o con el botón del micrófono."
                                Style="{StaticResource MutedTextStyle}" />
                 </StackPanel>
 
                 <StackPanel x:Name="AiPanel" Visibility="Collapsed">
-                    <TextBlock Text="IA local" FontSize="{DynamicResource FontSizeTitle1}" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,6,0,16"
-                               Text="Sakura puede preparar su propia IA local sin pedirte instalar programas ni usar PowerShell."
+                    <TextBlock Margin="0,0,0,16"
+                               Text="La IA local de Sakura funciona con Ollama, en tu equipo. Si aún no lo tienes, desde aquí te ayuda a conseguirlo. Sin IA, Sakura sigue entendiendo órdenes, tareas y dictado."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
@@ -188,8 +205,7 @@
                 </StackPanel>
 
                 <StackPanel x:Name="PrivacyPanel" Visibility="Collapsed">
-                    <TextBlock Text="Privacidad y Windows" FontSize="{DynamicResource FontSizeTitle1}" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,6,0,18"
+                    <TextBlock Margin="0,0,0,18"
                                Text="Elige qué funciones quedan activas. Las capturas siempre requieren una acción explícita y una vista previa."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
@@ -213,6 +229,7 @@
                                Style="{StaticResource MutedTextStyle}" />
                 </StackPanel>
             </Grid>
+            </ScrollViewer>
         </Border>
 
         <Grid Grid.Row="2">

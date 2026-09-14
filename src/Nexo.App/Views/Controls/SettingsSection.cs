@@ -114,6 +114,7 @@ public sealed class SettingsSection : HeaderedContentControl
         }
 
         host.Animate(OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
+        StaggerContent();
         host.Animate(
             HeightProperty,
             MeasureContentHeight(host),
@@ -126,6 +127,25 @@ public sealed class SettingsSection : HeaderedContentControl
                 host.BeginAnimation(HeightProperty, null);
                 host.Height = double.NaN;
             });
+    }
+
+    /// <summary>
+    /// 2026-09-14 — al abrirse, las opciones de dentro llegan una detrás de otra en vez de a la vez,
+    /// como el resto de Sakura. Solo las primeras: en una sección larga, esperar a la vigésima opción
+    /// sería hacer esperar a alguien que ya sabe lo que busca.
+    /// </summary>
+    private void StaggerContent()
+    {
+        if (Content is not Panel panel)
+        {
+            return;
+        }
+
+        var index = 0;
+        foreach (var child in panel.Children.OfType<FrameworkElement>().Where(child => child.Visibility == Visibility.Visible).Take(10))
+        {
+            EntranceMotion.Rise(child, TimeSpan.FromMilliseconds(40) + SakuraMotion.StaggerAt(index++), offset: 6);
+        }
     }
 
     private void Close(bool animate)

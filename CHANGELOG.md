@@ -1,11 +1,18 @@
 # Changelog
 
-## [Sin publicar]
+## [0.30.2-beta]
 
 ### Cambiado
 
 - **La píldora de respuesta también muestra el formato.** Lo que preguntas con Ctrl + Espacio llega con negritas y listas bien dibujadas, como en el chat, en vez de con asteriscos.
 - **La primera vez que usas la voz se ve cuánto falta.** Mientras se descarga el modelo, la burbuja de Sakura muestra un anillo que se va llenando y el porcentaje debajo, en lugar de un aviso arriba sin avance. Si pediste escuchar, al terminar la burbuja se queda y empieza a escucharte sin desaparecer.
+- **El panel de arriba se organiza al bajar**: las tarjetas entran una detrás de otra, y lo mismo al cambiar entre Panel, Media, Rendimiento y Cheats.
+- **Una bienvenida más cuidada**: la barra de título ya no toma el color de acento de Windows, el avance se ve en cuatro píldoras, cada paso entra con movimiento y su contenido llega escalonado, y ya no se repite el título de cada paso. Si algo no cabe, se desplaza en vez de cortarse.
+- **Las secciones de Personalizar**, al abrirse, muestran sus opciones una detrás de otra.
+
+### Corregido
+
+- **La bienvenida decía que Sakura instala la IA local «con un solo botón»**, y en la versión de Microsoft Store no es así: ahí lleva a la web de Ollama. Ahora el texto vale para las dos versiones.
 
 ## [0.30.1-beta]
 

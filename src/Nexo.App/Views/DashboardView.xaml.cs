@@ -278,9 +278,9 @@ public partial class DashboardView : UserControl
         Show(PerformancePane, PerformancePaneTranslate, tab == DashboardTab.Performance, animate, offset);
         Show(CheatsPane, CheatsPaneTranslate, tab == DashboardTab.Cheats, animate, offset);
 
-        if (tab == DashboardTab.Cheats && animate)
+        if (animate)
         {
-            StaggerCheats();
+            StaggerCards(ActivePane(), TimeSpan.FromMilliseconds(40));
         }
 
         static void Show(
@@ -419,26 +419,70 @@ public partial class DashboardView : UserControl
     }
 
     /// <summary>
-    /// Las tarjetas de la pestaña Cheats entran una detrás de otra, como burbujas: se inflan un poco
-    /// desde más pequeñas. Solo al entrar en la pestaña, no en cada refresco del estado de la voz.
+    /// 2026-09-14 — las tarjetas de la pestaña que aparece entran una detrás de otra, como burbujas:
+    /// se inflan un poco desde más pequeñas, de arriba abajo y de izquierda a derecha (Adler: «seguir
+    /// así» con las animaciones). Empezó en Cheats y ahora lo tienen todas las pestañas, al cambiar de
+    /// una a otra y al bajar el panel.
+    ///
+    /// Las tarjetas se reconocen por su estilo, no por nombre: así una tarjeta nueva entra sola sin
+    /// que nadie se acuerde de añadirla a una lista. Lo que hay dentro de una tarjeta no se anima
+    /// aparte; una tarjeta entra entera.
     /// </summary>
-    private void StaggerCheats()
+    private void StaggerCards(FrameworkElement pane, TimeSpan baseDelay)
     {
-        CheatGroupItems.UpdateLayout();
-        var index = 0;
-
-        for (var i = 0; i < CheatGroupItems.Items.Count; i++)
+        if (!SakuraMotion.AnimationsEnabled || pane.Visibility != Visibility.Visible)
         {
-            if (CheatGroupItems.ItemContainerGenerator.ContainerFromIndex(i) is DependencyObject container &&
-                VisualTreeHelper.GetChildrenCount(container) > 0 &&
-                VisualTreeHelper.GetChild(container, 0) is FrameworkElement card)
-            {
-                EntranceMotion.Pop(card, SakuraMotion.StaggerAt(index++), from: 0.94);
-            }
+            return;
         }
 
-        EntranceMotion.Pop(VoiceExamplesCard, SakuraMotion.StaggerAt(index), from: 0.96);
+        var styles = new[] { "DashboardCardStyle", "NarrowMetricCapsuleStyle", "WideMetricCapsuleStyle" }
+            .Select(key => TryFindResource(key))
+            .OfType<Style>()
+            .ToHashSet();
+
+        pane.UpdateLayout();
+        var cards = new List<FrameworkElement>();
+        Collect(pane);
+
+        var ordered = cards
+            .Select(card => (Card: card, Position: card.TranslatePoint(new Point(0, 0), pane)))
+            .OrderBy(item => Math.Round(item.Position.Y / 24))
+            .ThenBy(item => item.Position.X)
+            .Select(item => item.Card)
+            .ToList();
+
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            EntranceMotion.Pop(ordered[i], baseDelay + SakuraMotion.StaggerAt(i), from: 0.94);
+        }
+
+        void Collect(DependencyObject node)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+            {
+                var child = VisualTreeHelper.GetChild(node, i);
+                if (child is FrameworkElement { IsVisible: true } element &&
+                    (element.Style is { } style && styles.Contains(style) || element is RoundedClipBorder))
+                {
+                    cards.Add(element);
+                    continue;
+                }
+
+                Collect(child);
+            }
+        }
     }
+
+    /// <summary>Al bajar el panel: la pestaña que se ve se organiza mientras cae.</summary>
+    public void PlayRevealStagger() => StaggerCards(ActivePane(), TimeSpan.FromMilliseconds(90));
+
+    private FrameworkElement ActivePane() => _activeTab switch
+    {
+        DashboardTab.Media => MediaPane,
+        DashboardTab.Performance => PerformancePane,
+        DashboardTab.Cheats => CheatsPane,
+        _ => PanelPane
+    };
 
     public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows, bool dictationEnabled)
     {

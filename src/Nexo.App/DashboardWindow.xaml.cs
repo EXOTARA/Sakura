@@ -212,6 +212,7 @@ public partial class DashboardWindow : Window
 
         RaiseCoverage();
         PlayRevealAnimation();
+        Dashboard.PlayRevealStagger();
 
         _outsideSince = null;
         _mouseWatch.Start();
