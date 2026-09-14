@@ -17,12 +17,13 @@ public partial class PeekWindow : Window
     public PeekWindow()
     {
         InitializeComponent();
+        Views.Controls.PopupKeyboardAccess.Attach(this, System.Windows.Input.Key.F11, () => HideImmediately());
 
         _hideTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(3.5)
         };
-        _hideTimer.Tick += (_, _) => HidePeekAnimated();
+        _hideTimer.Tick += (_, _) => { if (!IsKeyboardFocusWithin) HidePeekAnimated(); };
     }
 
     public void ShowSnapshot(SystemSnapshot snapshot, ShellPreferences preferences)

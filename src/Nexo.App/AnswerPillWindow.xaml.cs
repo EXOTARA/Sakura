@@ -82,12 +82,13 @@ public partial class AnswerPillWindow : Window
     public AnswerPillWindow()
     {
         InitializeComponent();
+        Views.Controls.PopupKeyboardAccess.Attach(this, System.Windows.Input.Key.F8, () => Dismiss());
 
         _growthTimer = new DispatcherTimer { Interval = GrowthInterval };
         _growthTimer.Tick += (_, _) => ReconcileHeight();
 
         _dismissTimer = new DispatcherTimer();
-        _dismissTimer.Tick += (_, _) => Dismiss();
+        _dismissTimer.Tick += (_, _) => { if (!IsKeyboardFocusWithin) Dismiss(); };
 
         _escapeWatcher = new DispatcherTimer { Interval = EscapeWatchInterval };
         _escapeWatcher.Tick += (_, _) =>
@@ -106,7 +107,7 @@ public partial class AnswerPillWindow : Window
         // un gesto inofensivo —apartar la píldora, pinchar cerca sin querer— en lo único que la
         // píldora existe para evitar. Ahora solo abre el enlace que lo dice, y un clic en el resto
         // la descarta, que es lo que alguien espera de un aviso de esquina.
-        OpenInSakuraText.MouseLeftButtonUp += (_, e) =>
+        OpenInSakuraText.Click += (_, e) =>
         {
             e.Handled = true;
             RaiseOpenRequested();

@@ -5,6 +5,9 @@ public sealed record OllamaModelInfo(
     long SizeBytes,
     DateTimeOffset? ModifiedAt)
 {
+    // Las listas de UIA necesitan una etiqueta humana, no el volcado del record.
+    public override string ToString() => Name;
+
     public string SizeDisplay => FormatSize(SizeBytes);
 
     private static string FormatSize(long bytes)

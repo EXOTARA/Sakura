@@ -26,10 +26,12 @@ public partial class CapsuleWindow : Window
     public CapsuleWindow()
     {
         InitializeComponent();
+        Views.Controls.PopupKeyboardAccess.Attach(this, System.Windows.Input.Key.F7, () => HideImmediately());
 
         _dismissTimer = new DispatcherTimer();
         _dismissTimer.Tick += (_, _) =>
         {
+            if (IsKeyboardFocusWithin) return;
             _dismissTimer.Stop();
             HideAnimated();
         };

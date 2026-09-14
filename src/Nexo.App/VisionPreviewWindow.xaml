@@ -34,9 +34,9 @@
                 BorderBrush="{StaticResource BrushBorder}"
                 BorderThickness="1"
                 Background="#080A0F">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+            <ScrollViewer Focusable="True" AutomationProperties.Name="Vista previa de la captura: desplazar" HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto">
-                <Image x:Name="PreviewImage"
+                <Image AutomationProperties.Name="{Binding Text, ElementName=SourceTitleText, StringFormat=Captura de {0}}" x:Name="PreviewImage"
                        Stretch="Uniform"
                        SnapsToDevicePixels="True" />
             </ScrollViewer>
@@ -53,13 +53,13 @@
                        TextWrapping="Wrap"
                        Foreground="{StaticResource BrushTextSecondary}"
                        FontSize="{DynamicResource FontSizeFootnote}" />
-            <Button Grid.Column="1"
+            <Button AutomationProperties.Name="Descartar" Grid.Column="1"
                     Margin="12,0,0,0"
                     Padding="14,8"
                     Content="Descartar"
                     Style="{StaticResource SecondaryButtonStyle}"
-                    Click="DiscardButton_Click" />
-            <Button Grid.Column="2"
+                    x:Name="DiscardButton" IsCancel="True" Click="DiscardButton_Click" />
+            <Button AutomationProperties.Name="Usar captura" Grid.Column="2"
                     Margin="10,0,0,0"
                     Padding="14,8"
                     Content="Usar captura"

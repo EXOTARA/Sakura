@@ -295,8 +295,9 @@
         <Setter Property="CornerRadius" Value="{DynamicResource RadiusShell}" />
     </Style>
 
+    <!-- Blanco sobre el acento rosa daba 2,86:1; la tinta oscura conserva 6,74:1. -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushBackground}" />
         <Setter Property="Background" Value="{DynamicResource BrushAccent}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="17,11" />
@@ -323,7 +324,7 @@
                             <Setter TargetName="PrimaryBorder" Property="BorderBrush" Value="White" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="PrimaryBorder" Property="Opacity" Value="0.68" />
+                            <Setter TargetName="PrimaryBorder" Property="Opacity" Value="0.88" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="PrimaryBorder" Property="Opacity" Value="0.42" />

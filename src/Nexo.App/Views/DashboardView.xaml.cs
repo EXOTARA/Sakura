@@ -398,19 +398,21 @@ public partial class DashboardView : UserControl
     /// pruebas, porque «Sakura no te oye» tiene tres causas concretas y cuál de ellas es no es una
     /// cuestión de presentación.
     /// </summary>
+    // Un objeto anónimo anuncia sus propiedades internas en vez del estado que se ve.
+    public sealed record AccessibleVoiceRow(string Label, string Value, Brush Foreground, Visibility MarkVisibility)
+    {
+        public override string ToString() => $"{Label}: {Value}";
+    }
+
     public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows)
     {
         var normal = (Brush)FindResource("BrushTextPrimary");
         var attention = (Brush)FindResource("BrushWarning");
 
         VoiceRowItems.ItemsSource = rows
-            .Select(row => new
-            {
-                row.Label,
-                row.Value,
-                Foreground = row.NeedsAttention ? attention : normal,
-                MarkVisibility = row.NeedsAttention ? Visibility.Visible : Visibility.Collapsed
-            })
+            .Select(row => new AccessibleVoiceRow(row.Label, row.Value,
+                row.NeedsAttention ? attention : normal,
+                row.NeedsAttention ? Visibility.Visible : Visibility.Collapsed))
             .ToArray();
     }
 
@@ -465,7 +467,7 @@ public partial class DashboardView : UserControl
                 Date: day.Date,
                 Day: day.Date.Day.ToString(CultureInfo.CurrentCulture),
                 IsToday: day.IsToday,
-                Foreground: day.IsToday ? Brushes.White : day.InMonth ? inMonth : outMonth,
+                Foreground: day.IsToday ? (Brush)FindResource("BrushBackground") : day.InMonth ? inMonth : outMonth,
                 Background: day.IsToday ? todayBackground : Brushes.Transparent,
                 Weight: day.IsToday || day.InMonth ? FontWeights.SemiBold : FontWeights.Normal));
         }
@@ -489,7 +491,10 @@ public partial class DashboardView : UserControl
         bool IsToday,
         Brush Foreground,
         Brush Background,
-        FontWeight Weight);
+        FontWeight Weight)
+    {
+        public override string ToString() => Date.ToString("D", CultureInfo.CurrentCulture) + (IsToday ? ", hoy" : "");
+    }
 
     // ---------- Métricas ----------
 

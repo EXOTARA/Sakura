@@ -342,6 +342,9 @@ public partial class DashboardWindow : Window
             return;
         }
 
+        // No se tiene en cuenta el foco del teclado. El cajón se activa al abrirse, así que el foco
+        // queda dentro siempre y, con esa condición, apartar el ratón dejaba de cerrarlo: solo se iba
+        // con Escape. Quien llega por teclado sigue teniendo Escape para salir.
         if (IsPointerInside())
         {
             _outsideSince = null;

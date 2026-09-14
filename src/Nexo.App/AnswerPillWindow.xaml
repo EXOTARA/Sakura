@@ -1,6 +1,8 @@
 <Window x:Class="Nexo.App.AnswerPillWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:a11y="clr-namespace:Nexo.App.Views.Controls"
+        AutomationProperties.Name="Respuesta de Sakura"
         xmlns:pill="clr-namespace:Nexo.App.Views.Controls"
         Width="480"
         Height="156"
@@ -73,7 +75,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <ContentControl Grid.Column="0"
+                <a11y:DecorativeMark Focusable="False" Grid.Column="0"
                                 Width="16"
                                 Height="16"
                                 VerticalAlignment="Center"
@@ -109,13 +111,15 @@
                 llenaba la píldora, este aviso quedaba fuera del recorte. Es decir, la única pista
                 de que el texto seguía era justamente la que no se veía.
             -->
-            <TextBlock x:Name="OpenInSakuraText"
+            <Button x:Name="OpenInSakuraText"
+                       Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Left"
+                       AutomationProperties.Name="Pulsa aquí para verla completa en Sakura"
                        Grid.Row="2"
                        Margin="0,10,0,0"
                        FontSize="{DynamicResource FontSizeCaption}"
                        Visibility="Collapsed"
                        Foreground="{DynamicResource BrushAccent}"
-                       Text="Pulsa aquí para verla completa en Sakura" />
+                       Content="Pulsa aquí para verla completa en Sakura" />
         </Grid>
     </Border>
 </Window>

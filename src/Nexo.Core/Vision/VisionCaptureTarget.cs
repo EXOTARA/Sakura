@@ -12,6 +12,9 @@ public sealed record VisionCaptureTarget(
     int Height,
     bool IsSensitive = false)
 {
+    // Las listas de UIA necesitan una etiqueta humana, no el volcado del record.
+    public override string ToString() => Title;
+
     public string DisplayName => string.IsNullOrWhiteSpace(Subtitle)
         ? Title
         : $"{Title} · {Subtitle}";

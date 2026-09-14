@@ -1,6 +1,8 @@
 <Window x:Class="Nexo.App.PeekWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:a11y="clr-namespace:Nexo.App.Views.Controls"
+        AutomationProperties.Name="Resumen del sistema"
         Title="Sakura Peek"
         Width="420"
         Height="132"
@@ -61,7 +63,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ContentControl Width="14"
+                <a11y:DecorativeMark Focusable="False" Width="14"
                                 Height="14"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource BrushAccent}"

@@ -1,6 +1,8 @@
 <Window x:Class="Nexo.App.CapsuleWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:a11y="clr-namespace:Nexo.App.Views.Controls"
+        AutomationProperties.Name="Aviso de Sakura"
         Width="370"
         Height="88"
         WindowStyle="None"
@@ -9,7 +11,7 @@
         Background="Transparent"
         ShowInTaskbar="False"
         ShowActivated="False"
-        Focusable="False"
+        Focusable="True"
         Topmost="True">
     <Border x:Name="CapsuleBorder"
             Padding="14,12"
@@ -43,7 +45,7 @@
                     VerticalAlignment="Center"
                     HorizontalAlignment="Left">
                 <Grid>
-                    <ContentControl x:Name="BrandFlowerIcon"
+                    <a11y:DecorativeMark Focusable="True" x:Name="BrandFlowerIcon"
                                     Width="19"
                                     Height="19"
                                     HorizontalAlignment="Center"
@@ -57,7 +59,7 @@
                             VerticalAlignment="Bottom"
                             Background="{DynamicResource BrushBackground}"
                             CornerRadius="7">
-                        <TextBlock x:Name="StatusIcon"
+                        <a11y:DecorativeText x:Name="StatusIcon"
                                    Text="•"
                                    FontSize="9"
                                    FontWeight="Bold"

@@ -9,6 +9,7 @@ public partial class VisionPreviewWindow : Window
     public VisionPreviewWindow(string sourceTitle, byte[] pngBytes)
     {
         InitializeComponent();
+        ContentRendered += (_, _) => DiscardButton.Focus();
         SourceTitleText.Text = sourceTitle;
         PreviewImage.Source = LoadBitmap(pngBytes);
     }

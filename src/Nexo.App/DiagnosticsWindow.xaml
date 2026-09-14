@@ -34,8 +34,8 @@
                    Style="{StaticResource MutedTextStyle}" />
 
         <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="8">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl x:Name="ItemsControl">
+            <ScrollViewer Focusable="True" AutomationProperties.Name="Detalles del diagnóstico: desplazar" VerticalScrollBarVisibility="Auto">
+                <ItemsControl AutomationProperties.Name="Resultados del diagnóstico" x:Name="ItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Margin="5" Padding="12" Style="{StaticResource SubtleCardStyle}">
@@ -74,35 +74,35 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button Content="Actualizar"
+            <Button AutomationProperties.Name="Actualizar" Content="Actualizar"
                     Style="{StaticResource SecondaryButtonStyle}"
                     Click="RefreshButton_Click" />
-            <Button Grid.Column="1"
+            <Button AutomationProperties.Name="Copiar" Grid.Column="1"
                     Margin="9,0,0,0"
                     Content="Copiar"
                     Style="{StaticResource SecondaryButtonStyle}"
                     Click="CopyButton_Click" />
-            <Button Grid.Column="2"
+            <Button AutomationProperties.Name="Abrir datos" Grid.Column="2"
                     Margin="9,0,0,0"
                     Content="Abrir datos"
                     Style="{StaticResource SecondaryButtonStyle}"
                     Click="OpenDataButton_Click" />
-            <Button x:Name="UpdateButton"
+            <Button AutomationProperties.Name="Buscar actualización" x:Name="UpdateButton"
                     Grid.Column="3"
                     Margin="9,0,0,0"
                     Content="Buscar actualización"
                     Style="{StaticResource SecondaryButtonStyle}"
                     Click="UpdateButton_Click" />
-            <Button Grid.Column="4"
+            <Button AutomationProperties.Name="Limpiar temporales" Grid.Column="4"
                     Margin="9,0,0,0"
                     HorizontalAlignment="Left"
                     Content="Limpiar temporales"
                     Style="{StaticResource SecondaryButtonStyle}"
                     Click="ClearTemporaryButton_Click" />
-            <Button Grid.Column="5"
+            <Button AutomationProperties.Name="Cerrar" Grid.Column="5"
                     Content="Cerrar"
                     Style="{StaticResource PrimaryButtonStyle}"
-                    Click="CloseButton_Click" />
+                    IsCancel="True" Click="CloseButton_Click" />
         </Grid>
     </Grid>
 </Window>

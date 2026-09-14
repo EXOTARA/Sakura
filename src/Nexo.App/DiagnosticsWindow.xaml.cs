@@ -42,6 +42,7 @@ public partial class DiagnosticsWindow : Window
         IAdaptiveEngineRegistry adaptiveEngineRegistry)
     {
         InitializeComponent();
+        ContentRendered += (_, _) => MoveFocus(new System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.First));
         _preferences = preferences;
         _voiceDevices = voiceDevices;
         _whisperReady = whisperReady;
@@ -322,5 +323,8 @@ public partial class DiagnosticsWindow : Window
     public sealed record DiagnosticItemRow(
         string Name,
         string Detail,
-        Brush StatusBrush);
+        Brush StatusBrush)
+    {
+        public override string ToString() => Name;
+    }
 }

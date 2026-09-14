@@ -1,6 +1,7 @@
 <UserControl x:Class="Nexo.App.Views.DashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:a11y="clr-namespace:Nexo.App.Views.Controls"
              xmlns:controls="clr-namespace:Nexo.App.Views.Controls">
     <UserControl.Resources>
         <!--
@@ -439,7 +440,7 @@
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center"
                                            Foreground="{DynamicResource BrushTextPrimary}" />
-                                <TextBlock Text="•••"
+                                <a11y:DecorativeText Text="•••"
                                            Margin="0,2"
                                            HorizontalAlignment="Center"
                                            FontSize="{DynamicResource FontSizeFootnote}"
@@ -506,7 +507,7 @@
                                     </Button>
                                 </Grid>
 
-                                <ItemsControl x:Name="CalendarWeekdayItems" Margin="0,12,0,0">
+                                <ItemsControl AutomationProperties.Name="Días de la semana" x:Name="CalendarWeekdayItems" Margin="0,12,0,0">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <UniformGrid Rows="1" Columns="7" />
@@ -522,7 +523,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <ItemsControl x:Name="CalendarDayItems" Margin="0,7,0,0">
+                                <ItemsControl AutomationProperties.Name="Calendario del mes" x:Name="CalendarDayItems" Margin="0,7,0,0">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <UniformGrid Rows="6" Columns="7" />
@@ -725,7 +726,7 @@
                             Cursor="Hand"
                             Click="PanelImageButton_Click"
                             ToolTip="Elige una imagen para este hueco"
-                            AutomationProperties.Name="Elegir la imagen del panel">
+                            AutomationProperties.Name="Tu imagen o un GIF: elegir la imagen del panel">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border Background="Transparent">
@@ -746,7 +747,7 @@
                                     BorderBrush="{DynamicResource BrushBorder}"
                                     BorderThickness="1">
                                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                    <TextBlock Text="+"
+                                    <a11y:DecorativeText Text="+"
                                                HorizontalAlignment="Center"
                                                FontSize="19"
                                                Foreground="{DynamicResource BrushTextTertiary}" />
@@ -1018,7 +1019,7 @@
                 </Grid.RenderTransform>
 
                 <Border Style="{StaticResource DashboardCardStyle}" Margin="-6,0,-6,0" Padding="4,2">
-                    <ItemsControl x:Name="VoiceRowItems">
+                    <ItemsControl AutomationProperties.Name="Estado de la voz" x:Name="VoiceRowItems">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="14,12">

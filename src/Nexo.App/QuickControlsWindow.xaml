@@ -1,6 +1,7 @@
 <Window x:Class="Nexo.App.QuickControlsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        AutomationProperties.Name="Volumen y brillo"
         Width="144"
         SizeToContent="Height"
         WindowStyle="None"

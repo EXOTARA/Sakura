@@ -20,6 +20,7 @@ public partial class ModelManagerWindow : Window
     public ModelManagerWindow(string baseUrl, string currentModel)
     {
         InitializeComponent();
+        ContentRendered += (_, _) => ModelNameTextBox.Focus();
         _baseUrl = string.IsNullOrWhiteSpace(baseUrl)
             ? "http://127.0.0.1:11434/v1"
             : baseUrl;
