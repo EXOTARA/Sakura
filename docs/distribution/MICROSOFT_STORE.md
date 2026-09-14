@@ -70,7 +70,29 @@ con `Add-AppxPackage -Register` y se abrió como app empaquetada:
 **No comprobado todavía:** el Kit de Certificación de Apps de Windows (WACK) sobre el paquete, el
 micrófono y el dictado dentro del paquete, y la revisión real de la Store.
 
-## Lo que tiene que hacer Adler (no se puede hacer por él)
+## Identidad en Partner Center (2026-09-14)
+
+«Sakura» ya estaba reservado por otra app, así que el producto se llama **Sakura Assistant**. Dentro de
+la aplicación sigue siendo Sakura.
+
+| Campo | Valor |
+| --- | --- |
+| Package/Identity/Name | `EXOTARA.SakuraAssistant` |
+| Package/Identity/Publisher | `CN=B069792F-C54F-4B21-8E04-959CF4734C01` |
+| Package/Properties/PublisherDisplayName | `EXOTARA` |
+| Package Family Name | `EXOTARA.SakuraAssistant_b32ke6sbb6xf8` |
+| Store ID | `9NSR5FJFCR01` |
+
+El Publisher se transcribió de una captura y se comprobó recalculando el hash del Package Family Name:
+el SHA-256 de la cadena en UTF-16, primeros 8 bytes, codificados en base 32 con el alfabeto de
+Crockford, da `b32ke6sbb6xf8`, igual que Partner Center.
+
+La reserva caduca si no se envía la app en **tres meses**.
+
+El flujo `release.yml` construye el paquete con esta identidad en cada versión y lo guarda como
+artefacto `sakura-msix-<versión>`, no como archivo de la release.
+
+## Lo que tuvo que hacer Adler (no se puede hacer por él)
 
 1. **Crear la cuenta** en [Partner Center](https://developer.microsoft.com/en-us/store/register) como
    desarrollador individual. Pide verificar la identidad; es gratis.

@@ -1,5 +1,5 @@
 ﻿#ifndef MyAppVersion
-  #define MyAppVersion "0.29.3-beta"
+  #define MyAppVersion "0.30.0-beta"
 #endif
 
 #ifndef MyNumericVersion

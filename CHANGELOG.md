@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.30.0-beta]
+
+### Agregado
+
+- **Reportar una respuesta de IA.** Cada respuesta de Sakura tiene en su menú (clic derecho) «Reportar esta respuesta»: copia el texto a tu portapapeles y abre un formulario para avisar si era ofensiva, peligrosa o falsa. No se envía nada por su cuenta. También está como orden en la paleta, para usarlo con el teclado.
+- **Sakura se prepara para llegar a Microsoft Store** como «Sakura Assistant». La versión de la Store la firma Microsoft, así que no mostrará el aviso de SmartScreen. La descarga desde GitHub sigue igual.
+
+### Cambiado
+
+- **La versión de la Store se comporta distinto donde tiene que hacerlo:** no usa el actualizador propio, porque actualiza la Store; arranca con Windows por el mecanismo del paquete; y no instala Ollama por su cuenta, sino que lleva a su web. La copia descargada de GitHub no cambia en nada de esto.
+
 ## [0.29.3-beta]
 
 ### Corregido

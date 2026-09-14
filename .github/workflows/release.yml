@@ -45,6 +45,22 @@ jobs:
         shell: pwsh
         run: .\scripts\verify-release.ps1 -Version "${{ steps.version.outputs.value }}"
 
+      # Diseño D89 — el paquete de Microsoft Store sale de la MISMA publicación que el instalador, y
+      # aquí, en la integración continua: la política de firma promete que solo se firma lo que se
+      # construye aquí, y la Store lo firma al publicarlo. Va como artefacto del flujo y no como
+      # archivo de la release: un .msix sin firmar no se puede instalar con doble clic, y ofrecerlo en
+      # la página de descargas solo confundiría.
+      - name: Paquete para Microsoft Store
+        shell: pwsh
+        run: .\scripts\build-msix.ps1 -PublishDirectory artifacts\publish\win-x64
+
+      - name: Guardar paquete de la Store
+        uses: actions/upload-artifact@v4
+        with:
+          name: sakura-msix-${{ steps.version.outputs.value }}
+          path: artifacts/msix/*.msix
+          if-no-files-found: error
+
       - name: Guardar artefactos
         uses: actions/upload-artifact@v4
         with:

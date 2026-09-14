@@ -2,9 +2,12 @@
 <!--
   Diseño D89 — manifiesto del paquete MSIX para Microsoft Store.
 
-  scripts/build-msix.ps1 rellena las marcas {{...}}. Name y Publisher tienen que ser exactamente los
-  que asigna Partner Center al reservar el nombre de la app: con otros valores la Store rechaza el
-  paquete. Para probar en local valen unos inventados.
+  scripts/build-msix.ps1 rellena las marcas {{...}} con la identidad de Partner Center (2026-09-14):
+  Name EXOTARA.SakuraAssistant, Publisher CN=B069792F-C54F-4B21-8E04-959CF4734C01, editor EXOTARA.
+  El Publisher se comprobó recalculando el hash del Package Family Name (b32ke6sbb6xf8).
+
+  El nombre en la Store es «Sakura Assistant» porque «Sakura» ya estaba reservado por otra app. El
+  DisplayName del paquete tiene que ser el nombre reservado; dentro de la aplicación sigue siendo Sakura.
 
   Lo que declara y por qué:
   - runFullTrust: Sakura es una app de escritorio WPF normal; sin esto no arranca.
@@ -28,7 +31,7 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>Sakura</DisplayName>
+    <DisplayName>{{DISPLAY_NAME}}</DisplayName>
     <PublisherDisplayName>{{PUBLISHER_DISPLAY_NAME}}</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -44,7 +47,7 @@
   <Applications>
     <Application Id="Sakura" Executable="Sakura.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="Sakura"
+        DisplayName="{{DISPLAY_NAME}}"
         Description="Asistente local para Windows: voz, pantalla y automatización con permisos."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
