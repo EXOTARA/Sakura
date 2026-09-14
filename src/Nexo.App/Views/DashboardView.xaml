@@ -1168,14 +1168,9 @@
                         <ItemsControl x:Name="VoiceExampleItems"
                                       Margin="0,8,0,0"
                                       AutomationProperties.Name="Ejemplos de órdenes por voz">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="2" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,2,12,6">
+                                    <Grid Margin="0,0,0,2">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" MinWidth="84" />
                                             <ColumnDefinition Width="*" />
