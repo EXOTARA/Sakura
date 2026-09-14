@@ -120,7 +120,10 @@ public static partial class SpanishVoiceTranscriptNormalizer
     private static int WordCount(string value) =>
         value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
-    [GeneratedRegex(@"^(?:(?:oye|oi|hey|ey|ei|ahi|ai|ay)\s+)?(?:sakura|sacura|zacura|kohana|koana|cohana|kojana|ohana|nexo|neso|nejo|exo)(?:\s+|$)", RegexOptions.IgnoreCase)]
+    // 2026-09-14 — «oy» y «hoy» por «oye», y la muletilla «esa» que Whisper mete a veces entre las dos
+    // palabras («oy esa sakura»): sin ellas, la activación se quedaba dentro de la pregunta que se
+    // mandaba a la IA. Visto en una conversación real de Adler.
+    [GeneratedRegex(@"^(?:(?:oye|oy|hoy|oi|hey|ey|ei|ahi|ai|ay)(?:\s+(?:esa|ese))?\s+)?(?:sakura|sacura|zacura|kohana|koana|cohana|kojana|ohana|nexo|neso|nejo|exo)(?:\s+|$)", RegexOptions.IgnoreCase)]
     private static partial Regex WakeWordPrefixRegex();
 
     [GeneratedRegex(@"\s+")]

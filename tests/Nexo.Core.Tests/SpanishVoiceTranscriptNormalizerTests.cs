@@ -26,6 +26,9 @@ public sealed class SpanishVoiceTranscriptNormalizerTests
     [InlineData("Ahí Nexo, qué es esto", "que es esto")]
     [InlineData("Ey Neso abre calculadora", "abre calculadora")]
     [InlineData("Hey Nexo", "")]
+    [InlineData("oy sakura que es el actual presidente", "que es el actual presidente")]
+    [InlineData("oy esa sakura cual es el estado mas grande de mexico", "cual es el estado mas grande de mexico")]
+    [InlineData("Hoy Sakura, abre PowerShell", "abre powershell")]
     public void Normalize_CorrectsFrequentShortCommandErrors(
         string transcript,
         string expected)
