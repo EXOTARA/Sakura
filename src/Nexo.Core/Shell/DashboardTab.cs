@@ -10,7 +10,8 @@ public enum DashboardTab
     Performance = 2,
 
     /// <summary>Diseño D81 — el estado de la voz de un vistazo, y los dos atajos.</summary>
-    Voice = 3
+    /// <summary>Antes «Voz»: atajos, frases que decir y el estado de la escucha (2026-09-14).</summary>
+    Cheats = 3
 }
 
 /// <summary>

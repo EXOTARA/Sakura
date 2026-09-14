@@ -77,7 +77,7 @@ public partial class DashboardView : UserControl
             new DashboardTabDefinition("Panel", FindResource("IconTabPanel") as Geometry),
             new DashboardTabDefinition("Media", FindResource("IconTabMedia") as Geometry),
             new DashboardTabDefinition("Rendimiento", FindResource("IconTabPerformance") as Geometry),
-            new DashboardTabDefinition("Voz", FindResource("IconSakuraMic") as Geometry)
+            new DashboardTabDefinition("Cheats", FindResource("IconTabCheats") as Geometry)
         ]);
         DashboardTabs.SelectionChanged += (_, index) => ShowTab((DashboardTab)index, animate: true);
 
@@ -276,7 +276,12 @@ public partial class DashboardView : UserControl
         Show(PanelPane, PanelPaneTranslate, tab == DashboardTab.Panel, animate, offset);
         Show(MediaPane, MediaPaneTranslate, tab == DashboardTab.Media, animate, offset);
         Show(PerformancePane, PerformancePaneTranslate, tab == DashboardTab.Performance, animate, offset);
-        Show(VoicePane, VoicePaneTranslate, tab == DashboardTab.Voice, animate, offset);
+        Show(CheatsPane, CheatsPaneTranslate, tab == DashboardTab.Cheats, animate, offset);
+
+        if (tab == DashboardTab.Cheats && animate)
+        {
+            StaggerCheats();
+        }
 
         static void Show(
             UIElement pane,
@@ -407,14 +412,38 @@ public partial class DashboardView : UserControl
         public override string ToString() => $"{Label}: {Value}";
     }
 
-    /// <summary>Un grupo de ejemplos de la pestaña Voz; el lector de pantalla lo anuncia entero.</summary>
+    /// <summary>Un grupo de ejemplos de la pestaña Cheats; el lector de pantalla lo anuncia entero.</summary>
     public sealed record VoiceExampleRow(string Title, IReadOnlyList<string> Phrases)
     {
         public override string ToString() => $"{Title}: {string.Join(", ", Phrases)}";
     }
 
-    public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows)
+    /// <summary>
+    /// Las tarjetas de la pestaña Cheats entran una detrás de otra, como burbujas: se inflan un poco
+    /// desde más pequeñas. Solo al entrar en la pestaña, no en cada refresco del estado de la voz.
+    /// </summary>
+    private void StaggerCheats()
     {
+        CheatGroupItems.UpdateLayout();
+        var index = 0;
+
+        for (var i = 0; i < CheatGroupItems.Items.Count; i++)
+        {
+            if (CheatGroupItems.ItemContainerGenerator.ContainerFromIndex(i) is DependencyObject container &&
+                VisualTreeHelper.GetChildrenCount(container) > 0 &&
+                VisualTreeHelper.GetChild(container, 0) is FrameworkElement card)
+            {
+                EntranceMotion.Pop(card, SakuraMotion.StaggerAt(index++), from: 0.94);
+            }
+        }
+
+        EntranceMotion.Pop(VoiceExamplesCard, SakuraMotion.StaggerAt(index), from: 0.96);
+    }
+
+    public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows, bool dictationEnabled)
+    {
+        CheatGroupItems.ItemsSource = CheatSheet.Build(dictationEnabled);
+
         var normal = (Brush)FindResource("BrushTextPrimary");
         var attention = (Brush)FindResource("BrushWarning");
 

@@ -24,8 +24,7 @@ public static class VoiceGlancePolicy
         bool wakeWordEnabled,
         string? wakeWordPhrase,
         bool modelsReady,
-        string? inputDeviceName,
-        bool dictationEnabled)
+        string? inputDeviceName)
     {
         var phrase = string.IsNullOrWhiteSpace(wakeWordPhrase) ? null : wakeWordPhrase.Trim();
 
@@ -49,16 +48,10 @@ public static class VoiceGlancePolicy
             new VoiceGlanceRow(
                 "Modelos de voz",
                 modelsReady ? "Listos, en este equipo" : "Se descargan al usar la voz",
-                NeedsAttention: false),
-
-            // Los dos atajos no son estado: son lo que hay que saber para usar la voz, y este es el
-            // único sitio donde alguien va a ir a buscarlos cuando no se acuerde.
-            new VoiceGlanceRow("Escuchar ahora", "Alt + V", NeedsAttention: false),
-
-            new VoiceGlanceRow(
-                "Dictado global",
-                dictationEnabled ? "Ctrl + Shift + D" : "Apagado",
                 NeedsAttention: false)
+
+            // Los atajos de voz vivían aquí; desde 2026-09-14 están con todos los demás en la
+            // pestaña Cheats (CheatSheet), que es donde se buscan.
         ];
     }
 }

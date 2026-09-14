@@ -9327,8 +9327,8 @@ public partial class MainWindow : Window
                 _preferences.WakeWordEnabled,
                 _preferences.WakeWordPhrase.ToSpokenText(),
                 _voiceCoordinator.IsVoiceInputReady,
-                deviceName,
-                _preferences.FlowEnabled));
+                deviceName),
+            _preferences.FlowEnabled);
     }
 
     /// <summary>

@@ -475,7 +475,8 @@ public partial class DashboardWindow : Window
     public void UpdateNow(NowGlance glance) => Dashboard.UpdateNow(glance);
 
     /// <summary>Diseño D81 — el estado de la voz, ya resuelto por la política.</summary>
-    public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows) => Dashboard.UpdateVoice(rows);
+    public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows, bool dictationEnabled) =>
+        Dashboard.UpdateVoice(rows, dictationEnabled);
 
     public void RefreshClock() => Dashboard.RefreshClock();
 

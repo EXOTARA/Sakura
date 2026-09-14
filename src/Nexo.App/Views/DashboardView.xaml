@@ -1015,88 +1015,173 @@
                     </UniformGrid>
                 </StackPanel>
             </Grid>
-            <!-- ============================ VOZ ============================ -->
+            <!-- ============================ CHEATS ============================ -->
             <!--
-                Diseño D81 — el estado de la voz, de un vistazo.
+                2026-09-14 — «Cheats», antes «Voz» (Adler). Los atajos de Sakura y unos cuantos de
+                Windows en tarjetas con teclas dibujadas, las frases que se le pueden decir y, arriba,
+                el estado de la escucha en una línea: sigue contestando a «¿por qué no me oye?», que
+                era para lo que existía la pestaña (D81), sin ocupar media pantalla.
 
-                Contesta a «¿por qué no me está oyendo?», que era una pregunta repartida entre
-                Personalizar, el estado del micrófono y acordarse de los atajos. No cambia nada:
-                lo que se toca sigue en Personalizar, que es donde hay sitio para explicarlo.
+                Todo sale de CheatSheet y VoiceCommandExamples, que tienen pruebas: una chuleta con
+                una combinación que no hace nada no se vuelve a mirar.
             -->
-            <Grid x:Name="VoicePane" Visibility="Collapsed">
+            <Grid x:Name="CheatsPane" Visibility="Collapsed">
                 <Grid.RenderTransform>
-                    <TranslateTransform x:Name="VoicePaneTranslate" />
+                    <TranslateTransform x:Name="CheatsPaneTranslate" />
                 </Grid.RenderTransform>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Border Style="{StaticResource DashboardCardStyle}" Margin="-6,0,-6,0" Padding="4,2">
-                    <ItemsControl AutomationProperties.Name="Estado de la voz" x:Name="VoiceRowItems">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="14,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" MinWidth="150" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock Grid.Column="0"
-                                               Text="{Binding Label}"
-                                               VerticalAlignment="Center"
-                                               FontSize="{DynamicResource FontSizeFootnote}"
-                                               Foreground="{DynamicResource BrushTextTertiary}" />
-
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding Value}"
-                                               VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"
-                                               FontSize="{DynamicResource FontSizeBody}"
-                                               Foreground="{Binding Foreground}" />
-
-                                    <!--
-                                        La marca es un punto, no un color de texto: el color solo
-                                        no distingue nada para quien no lo ve, y esta lista existe
-                                        justamente para señalar cuál de las líneas falla.
-                                    -->
-                                    <Ellipse Grid.Column="2"
-                                             Width="8"
-                                             Height="8"
+                <!-- La voz en una línea. La marca de atención sigue siendo un punto, no solo un color. -->
+                <ItemsControl x:Name="VoiceRowItems"
+                              Margin="-2,0,-2,0"
+                              AutomationProperties.Name="Estado de la voz">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="2,0,8,6"
+                                    Padding="12,6"
+                                    CornerRadius="12"
+                                    Background="{DynamicResource BrushSurfaceRaised}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="7"
+                                             Height="7"
+                                             Margin="0,0,8,0"
                                              VerticalAlignment="Center"
                                              Fill="{DynamicResource BrushWarning}"
                                              Visibility="{Binding MarkVisibility}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
+                                    <TextBlock Text="{Binding Label}"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FontSizeFootnote}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <TextBlock Text="{Binding Value}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FontSizeFootnote}"
+                                               Foreground="{Binding Foreground}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                <!--
-                    2026-09-14 — qué decirle, junto a cómo está la voz (Adler). Son ejemplos que se
-                    resuelven sin IA; VoiceCommandExamplesTests lo comprueba frase a frase.
-                -->
-                <Border Grid.Row="1"
+                <ItemsControl x:Name="CheatGroupItems"
+                              Grid.Row="1"
+                              Margin="-6,4,-6,0"
+                              AutomationProperties.Name="Atajos de teclado">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource DashboardCardStyle}"
+                                    Margin="6,0"
+                                    Padding="16,12,16,8">
+                                <Border.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform />
+                                        <TranslateTransform />
+                                    </TransformGroup>
+                                </Border.RenderTransform>
+                                <!-- Las descripciones empiezan todas a la misma altura dentro de cada tarjeta. -->
+                                <StackPanel Grid.IsSharedSizeScope="True">
+                                    <TextBlock Text="{Binding Title}"
+                                               Margin="0,0,0,8"
+                                               FontSize="{DynamicResource FontSizeFootnote}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource BrushAccent}" />
+                                    <ItemsControl ItemsSource="{Binding Items}" Focusable="False">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CheatKeys" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ItemsControl ItemsSource="{Binding KeyParts}" Focusable="False" VerticalAlignment="Center">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Orientation="Horizontal" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <!-- Una tecla: cara clara y un canto más oscuro abajo, como una tecla de verdad. -->
+                                                                <Border Margin="0,0,4,0"
+                                                                        MinWidth="24"
+                                                                        Padding="7,2,7,3"
+                                                                        CornerRadius="6"
+                                                                        Background="{DynamicResource BrushSurfaceRaised}"
+                                                                        BorderBrush="{DynamicResource BrushBorder}"
+                                                                        BorderThickness="1,1,1,2">
+                                                                    <TextBlock Text="{Binding}"
+                                                                               HorizontalAlignment="Center"
+                                                                               FontSize="11.5"
+                                                                               FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource BrushTextPrimary}" />
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Action}"
+                                                               Margin="10,0,0,0"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"
+                                                               FontSize="{DynamicResource FontSizeFootnote}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border x:Name="VoiceExamplesCard"
+                        Grid.Row="2"
                         Style="{StaticResource DashboardCardStyle}"
-                        Margin="-6,10,-6,0"
-                        Padding="18,14,18,8">
+                        Margin="-6,12,-6,0"
+                        Padding="18,12,18,6">
+                    <Border.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform />
+                            <TranslateTransform />
+                        </TransformGroup>
+                    </Border.RenderTransform>
                     <StackPanel>
-                        <TextBlock Text="Prueba a decir, después de la frase de activación o Alt + V:"
+                        <TextBlock Text="Dile a Sakura, después de la frase de activación o Alt + V"
                                    FontSize="{DynamicResource FontSizeFootnote}"
-                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource BrushAccent}" />
                         <ItemsControl x:Name="VoiceExampleItems"
                                       Margin="0,8,0,0"
                                       AutomationProperties.Name="Ejemplos de órdenes por voz">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="2" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,4,0,6">
+                                    <Grid Margin="0,2,12,6">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="136" />
+                                            <ColumnDefinition Width="Auto" MinWidth="84" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding Title}"
-                                                   Margin="0,6,0,0"
+                                                   Margin="0,5,0,0"
                                                    FontSize="{DynamicResource FontSizeFootnote}"
                                                    Foreground="{DynamicResource BrushTextTertiary}" />
                                         <ItemsControl Grid.Column="1" ItemsSource="{Binding Phrases}" Focusable="False">
