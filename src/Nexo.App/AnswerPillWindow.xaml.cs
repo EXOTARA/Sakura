@@ -158,30 +158,9 @@ public partial class AnswerPillWindow : Window
             Show();
         }
 
-        PillBorder.BeginAnimation(OpacityProperty, null);
-
-        if (!SakuraMotion.AnimationsEnabled)
-        {
-            PillBorder.Opacity = 1;
-            PillTranslate.Y = 0;
-            PillScale.ScaleX = 1;
-            PillScale.ScaleY = 1;
-        }
-        else
-        {
-            PillBorder.Opacity = 0;
-            PillTranslate.Y = -14;
-            PillScale.ScaleX = 0.97;
-            PillScale.ScaleY = 0.97;
-
-            PillBorder.Animate(OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
-            PillTranslate.AnimateTransform(
-                TranslateTransform.YProperty, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve);
-            PillScale.AnimateTransform(
-                ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
-            PillScale.AnimateTransform(
-                ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
-        }
+        // Nace como burbuja desde el lado de Sakura y se estira hacia el centro (Adler, 2026-09-14).
+        _side = side;
+        BubbleMotion.Inflate(PillBorder, AnchorFor(side));
 
         _animatedHeight = Height;
         _growthTimer.Start();
@@ -258,8 +237,14 @@ public partial class AnswerPillWindow : Window
         _dismissing = false;
         IsHitTestVisible = false;
         PillBorder.BeginAnimation(OpacityProperty, null);
+        PillBorder.Opacity = 0;
         Hide();
     }
+
+    private SidebarPosition _side = SidebarPosition.Right;
+
+    private static HorizontalAlignment AnchorFor(SidebarPosition side) =>
+        side == SidebarPosition.Left ? HorizontalAlignment.Left : HorizontalAlignment.Right;
 
     private void RaiseOpenRequested()
     {
@@ -297,16 +282,11 @@ public partial class AnswerPillWindow : Window
             return;
         }
 
-        PillBorder.Animate(
-            OpacityProperty,
-            0,
-            SakuraMotion.Exit,
-            SakuraMotion.AccelerateCurve,
-            completed: () =>
-            {
-                Hide();
-                _dismissing = false;
-            });
+        BubbleMotion.Deflate(PillBorder, AnchorFor(_side), () =>
+        {
+            Hide();
+            _dismissing = false;
+        });
     }
 
     /// <summary>

@@ -49,13 +49,6 @@
                               Opacity="0.42"
                               Color="#000000" />
         </Border.Effect>
-        <Border.RenderTransform>
-            <TransformGroup>
-                <ScaleTransform x:Name="PillScale" ScaleX="1" ScaleY="1" />
-                <TranslateTransform x:Name="PillTranslate" Y="-14" />
-            </TransformGroup>
-        </Border.RenderTransform>
-
         <!--
             El contenido se mide con este StackPanel para calcular a qué altura crecer. Va anclado
             arriba: si se centrara, el texto ya escrito se desplazaría hacia abajo con cada trozo
