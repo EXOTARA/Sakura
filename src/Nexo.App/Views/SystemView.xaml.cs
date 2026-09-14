@@ -135,7 +135,11 @@ public partial class SystemView : UserControl
         string Detail,
         string PermissionLine,
         string ReversalLine,
-        Visibility RevertVisibility);
+        Visibility RevertVisibility)
+    {
+        // El Narrador anuncia cada elemento con su ToString; el de un record vuelca todos los campos.
+        public override string ToString() => Headline;
+    }
 
     public void UpdateSnapshot(SystemSnapshot snapshot)
     {
@@ -330,7 +334,10 @@ public partial class SystemView : UserControl
         string ReasonText,
         string WarningText,
         Visibility WarningVisibility,
-        Visibility RecommendationOnlyVisibility);
+        Visibility RecommendationOnlyVisibility)
+    {
+        public override string ToString() => CategoryLabel;
+    }
 
     private void RestartVoiceButton_Click(object sender, RoutedEventArgs e) =>
         RestartVoiceRequested?.Invoke(this, EventArgs.Empty);

@@ -30,7 +30,7 @@
                                     Foreground="{DynamicResource BrushAccent}"
                                     Style="{StaticResource SakuraFlowerMarkStyle}" />
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="KOHANA"
+                        <TextBlock Text="SAKURA"
                                    Foreground="{DynamicResource BrushAccent}"
                                    FontSize="{DynamicResource FontSizeCallout}"
                                    FontWeight="Bold" />

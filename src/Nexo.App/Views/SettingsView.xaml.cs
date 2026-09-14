@@ -1399,7 +1399,12 @@ public partial class SettingsView : UserControl
         string Name,
         string Purpose,
         string StateLine,
-        string ButtonText);
+        string ButtonText)
+    {
+        // El Narrador anuncia cada elemento de la lista con su ToString. El de un record vuelca
+        // todos los campos entre llaves; el de una clase, el nombre del tipo.
+        public override string ToString() => Name;
+    }
 
     private void PermissionExclusionsBox_LostFocus(object sender, RoutedEventArgs e)
     {
@@ -1452,6 +1457,9 @@ public partial class SettingsView : UserControl
         private PermissionLevel _level = level;
 
         public string Title { get; } = title;
+
+        // Sin esto el Narrador leía cada fila como «Nexo.App.Views.SettingsView+PermissionRow».
+        public override string ToString() => Title;
 
         public string Detail { get; } = detail;
 

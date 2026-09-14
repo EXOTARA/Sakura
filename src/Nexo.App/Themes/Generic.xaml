@@ -33,7 +33,7 @@
                                 vive en otro ámbito de nombres y el código no podría encontrar
                                 PART_ChevronRotation para animarlo.
                             -->
-                            <ToggleButton x:Name="HeaderToggle"
+                            <controls:SectionHeaderToggle x:Name="HeaderToggle"
                                           Cursor="Hand"
                                           HorizontalContentAlignment="Stretch"
                                           IsChecked="{Binding IsOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
@@ -97,7 +97,7 @@
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Grid>
-                            </ToggleButton>
+                            </controls:SectionHeaderToggle>
 
                             <!--
                                 ClipToBounds no es decorativo: durante la animación de altura el
