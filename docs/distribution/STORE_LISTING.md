@@ -162,16 +162,12 @@ Este bloque va en **Additional Testing Information**; Submission options solo en
 
 ## Submission options — Restricted capabilities
 
-Partner Center pide justificar `runFullTrust`. Volumen y brillo cambian en cuanto se mueve el control,
-sin confirmación aparte; decir lo contrario sería falso.
+Partner Center pide justificar `runFullTrust`, **en 500 caracteres como máximo**: la primera versión
+pasaba de ese límite, se cortó a media frase y la sección se quedó como incompleta. Volumen y brillo
+cambian en cuanto se mueve el control, sin confirmación aparte; decir lo contrario sería falso.
 
 ```
-Sakura Assistant is a WPF (.NET 10) desktop application packaged as a full-trust MSIX. runFullTrust is
-required because it runs as a standard desktop process: it shows a system tray icon, registers global
-keyboard shortcuts (Alt + A, Ctrl + Shift + D, Ctrl + Shift + T), reads the active window through UI
-Automation when the user asks, changes volume and brightness when the user moves those controls, and
-changes the power plan only after an explicit confirmation, with an undo. It does not install drivers
-or services and runs without administrator rights.
+WPF (.NET 10) desktop app packaged as full-trust MSIX. runFullTrust is needed to run as a normal desktop process: tray icon, global shortcuts (Alt+A, Ctrl+Shift+D, Ctrl+Shift+T), reading the active window via UI Automation when the user asks, volume and brightness when the user moves those controls, and the power plan only after explicit confirmation, with undo. No drivers or services; no admin rights.
 ```
 
 ## Otros campos de la ficha (0.30.0-beta)
