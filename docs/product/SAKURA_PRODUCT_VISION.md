@@ -2,8 +2,8 @@
 
 > Diseño D3.2. Documento de producto, no de implementación: describe qué es Kohana y hacia dónde
 > va, no cómo está construido hoy pieza por pieza (eso vive en
-> `docs/architecture/KOHANA_CAPABILITY_ARCHITECTURE.md`) ni cuánto de esto ya existe (eso vive en
-> `docs/roadmap/KOHANA_CAPABILITY_MATRIX.md`). Ningún enunciado de este documento debe leerse como
+> `docs/architecture/SAKURA_CAPABILITY_ARCHITECTURE.md`) ni cuánto de esto ya existe (eso vive en
+> `docs/roadmap/SAKURA_CAPABILITY_MATRIX.md`). Ningún enunciado de este documento debe leerse como
 > "ya implementado" solo por estar escrito aquí.
 
 ## 1. Problema que resuelve
@@ -88,7 +88,7 @@ funciona dentro de la app hoy y está pensado para extenderse a las superficies 
 Los datos de Kohana viven en `%LocalAppData%\Kohana` salvo que el usuario configure explícitamente
 un proveedor de IA en la nube. La captura de pantalla, el micrófono y cualquier fuente de contexto
 futura (Fase 1 en adelante) requieren que el usuario los habilite y quedan sujetos al modelo de
-permisos descrito en `docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md`. Ninguna funcionalidad de
+permisos descrito en `docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md`. Ninguna funcionalidad de
 diagnóstico o validación (ver Diseño D3.2, aislamiento de perfiles) debe tocar los datos reales del
 usuario sin que el usuario lo pida.
 
@@ -138,7 +138,7 @@ Ninguno de los tres modos es obligatorio: `AiProviderKind.Disabled` es el valor 
 
 ## 14. Documentos relacionados
 
-- `docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md` — fases y sprints.
-- `docs/architecture/KOHANA_CAPABILITY_ARCHITECTURE.md` — capas técnicas.
-- `docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md` — permisos, estados visibles, autonomía.
-- `docs/roadmap/KOHANA_CAPABILITY_MATRIX.md` — inventario capacidad por capacidad.
+- `docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md` — fases y sprints.
+- `docs/architecture/SAKURA_CAPABILITY_ARCHITECTURE.md` — capas técnicas.
+- `docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md` — permisos, estados visibles, autonomía.
+- `docs/roadmap/SAKURA_CAPABILITY_MATRIX.md` — inventario capacidad por capacidad.

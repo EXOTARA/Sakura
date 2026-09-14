@@ -1,10 +1,10 @@
-# Roadmap tecnológico de Kohana
+# Roadmap tecnológico de Sakura
 
 > Diseño D3.2. Fases reales, no aspiracionales: una fase solo se marca "Implementada" si el código
 > correspondiente existe y tiene pruebas en `release/kohana-1.0-rc` hoy. Infraestructura parcial se
 > marca "Parcial", nunca "Implementada". Ver el detalle capacidad por capacidad en
-> `docs/roadmap/KOHANA_CAPABILITY_MATRIX.md` y la arquitectura de capas en
-> `docs/architecture/KOHANA_CAPABILITY_ARCHITECTURE.md`.
+> `docs/roadmap/SAKURA_CAPABILITY_MATRIX.md` y la arquitectura de capas en
+> `docs/architecture/SAKURA_CAPABILITY_ARCHITECTURE.md`.
 
 ## Fase 0 — Stable Shell and Daily Core
 
@@ -12,7 +12,7 @@
 
 - Objetivo: una base estable de escritorio — shell, navegación, voz, motores y flujo diario —
   antes de construir cualquier superficie ambiental encima.
-- Valor: Kohana es usable y confiable hoy mismo, sin depender de fases futuras.
+- Valor: Sakura es usable y confiable hoy mismo, sin depender de fases futuras.
 - Dependencias: ninguna (es la base).
 - Tecnologías: WPF (.NET 10), Whisper (voz→texto), Vosk (palabra de activación), SAPI
   (texto→voz), `IHardwareCapabilityService`, `IAdaptiveEngineRegistry`.
@@ -33,7 +33,7 @@
 integrado en `release/kohana-1.0-rc` — ver `docs/stable-release/IMPLEMENTATION_LOG.md`, sección
 "Diseño D4").
 
-- Objetivo: que Kohana pueda responder brevemente sin que el usuario tenga que abrir ni enfocar la
+- Objetivo: que Sakura pueda responder brevemente sin que el usuario tenga que abrir ni enfocar la
   ventana principal.
 - Valor: reduce la fricción de cambiar de contexto para interacciones cortas — la primera pieza
   real de la visión "ambiental".
@@ -53,14 +53,14 @@ integrado en `release/kohana-1.0-rc` — ver `docs/stable-release/IMPLEMENTATION
   ventana activa, integración inicial con Command Center.
 - Sprint sugerido: **D4 — Ambient Interaction Foundation** (alcance detallado en la Sección 14).
 
-## Fase 2 — Kohana Lens
+## Fase 2 — Sakura Lens
 
 **Estado: Implementada** (Diseño D5 — D5.1-D5.7, TFM, OCR real, UI Automation, redacción de texto e
 imagen, indicador "Mirando", los tres modos —soporte/estudio/desarrollo— y resaltado visual—,
 validado manualmente por el usuario e integrado en `release/kohana-1.0-rc` — ver
 `docs/stable-release/IMPLEMENTATION_LOG.md`, sección "Diseño D5").
 
-- Objetivo: que Kohana pueda observar y explicar lo que hay en pantalla (con autorización), no
+- Objetivo: que Sakura pueda observar y explicar lo que hay en pantalla (con autorización), no
   actuar sobre ello todavía.
 - Valor: soporte técnico, estudio y desarrollo asistido por contexto visual real, sin depender de
   que el usuario describa lo que ve.
@@ -76,7 +76,7 @@ validado manualmente por el usuario e integrado en `release/kohana-1.0-rc` — v
   activa, con resaltados y guía visual, sin ninguna acción automática sobre terceros.
 - Sprints sugeridos: al menos dos — "Lens: captura y OCR" y "Lens: guía visual y modos".
 
-## Fase 3 — Kohana Flow
+## Fase 3 — Sakura Flow
 
 **Estado: Implementada** (Diseño D6 — D6.1-D6.3: atajo global `Ctrl + Shift + D`, transcripción sin
 normalizar para dictado, puntuación hablada, muletillas, diccionario, atajos, los tres modos
@@ -89,7 +89,7 @@ e integrado en `release/kohana-1.0-rc` — ver `docs/stable-release/IMPLEMENTATI
 - Dependencias: Fase 1 (Voice Bar como superficie ambiental).
 - Tecnologías: push-to-talk global, Whisper (ya integrado), puntuación y eliminación de muletillas,
   diccionario personalizado, snippets, inserción universal de texto.
-- Permisos: acceso a micrófono global (fuera del foco de Kohana) y a la inserción de texto en la
+- Permisos: acceso a micrófono global (fuera del foco de Sakura) y a la inserción de texto en la
   aplicación activa.
 - Riesgos: inserción de texto en el lugar equivocado si el foco cambia durante el dictado.
 - No objetivos: transformación de código o edición de proyectos (eso es Fase 5).
@@ -101,17 +101,17 @@ e integrado en `release/kohana-1.0-rc` — ver `docs/stable-release/IMPLEMENTATI
 **Estado: Parcial** (Diseños D8 + D11 en `design/kohana-sprints-d7-d9`. El criterio de terminado está
 cubierto en código: los siete escenarios proponen un plan basado en el hardware real, la aplicación
 exige confirmación y snapshot previo, la reversión se **verifica releyendo** el estado, un fallo a
-mitad deshace lo ya aplicado, y todo queda en un registro de auditoría consultable. Kohana aplica
+mitad deshace lo ya aplicado, y todo queda en un registro de auditoría consultable. Sakura aplica
 dos objetivos reversibles con certeza —el plan de energía y su propio modo de rendimiento—; el resto
 del plan son consejos que ejecuta la persona. Sigue marcada **Parcial** por la regla de este
 documento: el código no está en `release/kohana-1.0-rc` todavía y falta la validación manual del
 usuario).
 
-- Objetivo: que el usuario pueda pedir "optimiza mi computadora para X" y Kohana proponga y aplique
+- Objetivo: que el usuario pueda pedir "optimiza mi computadora para X" y Sakura proponga y aplique
   (con confirmación) cambios reversibles basados en el hardware real.
 - Valor: convierte el ya existente `HardwareCapabilityProfile` y `AdaptiveEnginePolicy` —hoy usados
   solo para elegir motores propios— en una capacidad que beneficia a todo el equipo, no solo a
-  Kohana.
+  Sakura.
 - Dependencias: Fase 0 (Hardware Capability Profile, Engine Registry como base del Capability
   Router).
 - Tecnologías: perfiles de optimización, plan de cambios con simulación previa, snapshots del
@@ -142,7 +142,7 @@ sí se puede cumplir. El nivel 6 sigue cerrado y el nivel por omisión sigue sie
 integrar a release y pendiente de validación manual, que aquí pesa más que en ningún otro sprint
 porque se escriben archivos reales).
 
-- Objetivo: que Kohana trabaje junto al usuario dentro de un proyecto de código autorizado —desde
+- Objetivo: que Sakura trabaje junto al usuario dentro de un proyecto de código autorizado —desde
   guiar hasta ejecutar cambios— con el nivel de autonomía que el usuario elija.
 - Valor: acompaña tareas de desarrollo reales (archivos, terminal, Git, pruebas) sin sustituir al
   IDE.
@@ -177,7 +177,7 @@ propuesta con un sí de por medio—, se usa como contexto de las consultas y se
 Personalizar. Falta llenar la categoría `Habitos`, que necesita algo que mida conducta real y no una
 frase suelta. Sin integrar a release y pendiente de validación manual).
 
-- Objetivo: que Kohana recuerde contexto relevante entre sesiones sin convertirse en vigilancia
+- Objetivo: que Sakura recuerde contexto relevante entre sesiones sin convertirse en vigilancia
   permanente.
 - Valor: continuidad real (p. ej. retomar una tarea de ayer) sin que el usuario tenga que repetir
   contexto.
@@ -202,10 +202,10 @@ garantizar, y siempre auditada. D19 sube **UI Automation** al conjunto ejecutabl
 ambigüedad, y corrige el alcance de la regla del "más seguro disponible", que ahora se aplica entre
 métodos capaces del mismo objetivo. **Tres de los ocho métodos están implementados** —UI Automation,
 una lista de comandos de solo lectura y el portapapeles—; los cuatro primeros no se declaran
-disponibles porque Kohana no sabe ejecutarlos, y ratón/teclado no está implementado en absoluto. Sin
+disponibles porque Sakura no sabe ejecutarlos, y ratón/teclado no está implementado en absoluto. Sin
 integrar a release y pendiente de validación manual).
 
-- Objetivo: permitir que Kohana ejecute acciones reales sobre el equipo, siempre por el camino más
+- Objetivo: permitir que Sakura ejecute acciones reales sobre el equipo, siempre por el camino más
   seguro disponible primero.
 - Valor: cierra el círculo entre "observar" (Lens) y "actuar" con el menor riesgo posible en cada
   paso.
@@ -245,7 +245,7 @@ ya implementadas"*— está cumplido con margen. Sigue **Parcial** solo por la r
 el código no está en `release/kohana-1.0-rc` y falta la validación manual).
 
 - Objetivo: empaquetar combinaciones de capacidades anteriores en "packs" con propósito claro.
-- Valor: un usuario no técnico puede activar "Kohana Study" sin entender qué capacidades incluye.
+- Valor: un usuario no técnico puede activar "Sakura Study" sin entender qué capacidades incluye.
 - Dependencias: Fases 1–7 (los packs combinan capacidades ya existentes, no inventan nuevas).
 - Tecnologías: sistema de packs (Dev, Study, Support, Creator, Access, Meeting) sobre la misma
   arquitectura de capacidades.
@@ -256,13 +256,13 @@ el código no está en `release/kohana-1.0-rc` y falta la validación manual).
 - No objetivos: no es un marketplace de terceros en esta fase.
 - Criterio de terminado: al menos dos packs completos usando exclusivamente capacidades ya
   implementadas en fases anteriores.
-- Sprints sugeridos: uno por pack, empezando por "Skills: Kohana Study" y "Skills: Kohana Dev"
+- Sprints sugeridos: uno por pack, empezando por "Skills: Sakura Study" y "Skills: Sakura Dev"
   (ambos hechos en D15, en un solo sprint por ser listas de ajustes y no lógica propia).
 
 ## Fase 9 — Productization
 
-**Estado: Parcial** (Diseños D20 + D21 en `design/kohana-sprints-d7-d9`. `KohanaDataInventory`
-describe todo lo que Kohana guarda y de él cuelgan las tres piezas: copia **verificada** de los datos
+**Estado: Parcial** (Diseños D20 + D21 en `design/kohana-sprints-d7-d9`. `SakuraDataInventory`
+describe todo lo que Sakura guarda y de él cuelgan las tres piezas: copia **verificada** de los datos
 antes de actualizar, con vuelta atrás y con la regla de que un archivo no verificado impide declarar
 segura la actualización; plan de desinstalación que separa la app de tus datos y enseña las dos
 listas; y paquete de soporte exportable, redactado con las dos herramientas y que enumera lo que
@@ -271,7 +271,7 @@ dejó fuera, más un informe de privacidad que dice qué se guarda, dónde, cifr
 verdad siguen siendo del instalador, y el criterio de terminado pide las tres verificadas de punta a
 punta en una máquina limpia. Sin integrar a release y pendiente de validación manual).
 
-- Objetivo: llevar Kohana de "build interno validado por el usuario" a producto distribuible.
+- Objetivo: llevar Sakura de "build interno validado por el usuario" a producto distribuible.
 - Valor: onboarding, actualización y soporte reales para usuarios que no son parte del desarrollo.
 - Dependencias: todas las anteriores en la medida en que definan qué se onboardea/actualiza.
 - Tecnologías: onboarding (ya existe una versión inicial — `OnboardingWindow`), comprobación de

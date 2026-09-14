@@ -2,7 +2,7 @@ namespace Nexo.Core.Permissions;
 
 /// <summary>
 /// Los seis niveles de autonomía del modelo de confianza
-/// (docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md), completos y numerados como allí.
+/// (docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md), completos y numerados como allí.
 ///
 /// Nació en el Diseño D12 como <c>WorkspaceAutonomyLevel</c>, dentro del acompañante de proyecto.
 /// **Diseño D17 lo mueve aquí**, junto a los permisos, porque Computer Use necesitaba la misma

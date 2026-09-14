@@ -115,8 +115,8 @@ El trabajo va en ramas cortas contra `main`, con CI en verde antes de fusionar.
 |---|---|
 | Ver qué hace cada capacidad y cómo activarla | [Guía de capacidades](docs/product/SAKURA_CAPABILITIES_GUIDE.md) |
 | Entender por qué cada cosa está hecha así | [Registro de implementación](docs/stable-release/IMPLEMENTATION_LOG.md) |
-| Ver el estado real por fase | [Roadmap técnico](docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md) |
-| Permisos, autonomía y confirmaciones | [Modelo de confianza](docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md) |
+| Ver el estado real por fase | [Roadmap técnico](docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md) |
+| Permisos, autonomía y confirmaciones | [Modelo de confianza](docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md) |
 | Lo que se sabe que falla o falta | [Limitaciones conocidas](docs/stable-release/KNOWN_LIMITATIONS.md) |
 | Qué sale de tu equipo y qué no | [Política de privacidad](docs/PRIVACY.md) |
 | Quién firma los binarios y con qué | [Política de firma de código](docs/CODE_SIGNING_POLICY.md) |

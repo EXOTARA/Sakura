@@ -2124,10 +2124,10 @@ visual cambiado — los tres cambios verificados dentro del perfil aislado. Snap
 12 archivos de `%LocalAppData%\Kohana` idéntico antes y después: 0 diferencias, aislamiento
 confirmado con evidencia real, no fabricada.
 
-**Documentación de producto:** `docs/product/KOHANA_PRODUCT_VISION.md`,
-`docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md` (fases 0–9, solo la Fase 0 marcada implementada),
-`docs/architecture/KOHANA_CAPABILITY_ARCHITECTURE.md` (12 capas con diagrama Mermaid),
-`docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md`, `docs/roadmap/KOHANA_CAPABILITY_MATRIX.md`.
+**Documentación de producto:** `docs/product/SAKURA_PRODUCT_VISION.md`,
+`docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md` (fases 0–9, solo la Fase 0 marcada implementada),
+`docs/architecture/SAKURA_CAPABILITY_ARCHITECTURE.md` (12 capas con diagrama Mermaid),
+`docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md`, `docs/roadmap/SAKURA_CAPABILITY_MATRIX.md`.
 Próximo sprint grande recomendado: **D4 — Ambient Interaction Foundation**.
 
 **Publicación:** `artifacts\Kohana-0.9.8-beta-d3-approved-checkpoint-win-x64\`, comprimido en
@@ -2147,7 +2147,7 @@ se hizo merge a `main`.
 
 **Rama:** `design/ambient-interaction-v1`, creada desde `release/kohana-1.0-rc` (`5885249`, ya con
 D3.2 integrado). Implementa el comienzo de la Fase 1 del roadmap tecnológico
-(`docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md`), sprint sugerido D4 en esa misma sección.
+(`docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md`), sprint sugerido D4 en esa misma sección.
 
 **Alcance de esta sesión:** dos pasos compilables y probados por separado, siguiendo la misma
 disciplina de la Fase 1 de `STABLE_RELEASE_PLAN.md` (paso pequeño → compila → pruebas → commit).
@@ -2229,7 +2229,7 @@ Automation en cada intento, sin crash del proceso.
 **Pendiente, no bloqueante:**
 - Auditoría: las entradas de historial (`AmbientRequestHistoryEntry`, con `CanUndo`/`Undone`) ya
   registran qué pasó y cuándo, cumpliendo un "audit básico" honesto para esta fase — el Audit Log
-  completo orientado al usuario (capa 11 de `KOHANA_CAPABILITY_ARCHITECTURE.md`) sigue siendo
+  completo orientado al usuario (capa 11 de `SAKURA_CAPABILITY_ARCHITECTURE.md`) sigue siendo
   trabajo de la Fase 7, no se adelanta aquí.
 
 ### D4.4 — Historial de solicitudes visible
@@ -2296,7 +2296,7 @@ un cambio independiente de D4, ya integrado antes de este merge.)
 
 **Rama:** `design/kohana-lens-v1`, creada desde `release/kohana-1.0-rc` (`f279e18`, D4 ya integrado).
 Implementa el comienzo de la Fase 2 del roadmap tecnológico
-(`docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md`), siguiendo el orden sugerido por ese mismo documento:
+(`docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md`), siguiendo el orden sugerido por ese mismo documento:
 "Lens: captura y OCR" primero, "Lens: guía visual y modos" después (todavía no iniciado).
 
 ### D5.1 — Migración de TFM a `net10.0-windows10.0.26100.0`
@@ -2400,7 +2400,7 @@ el mismo Sakura Pill Host de D4** (`AmbientRequestManager`) — Lens es, en esen
 solicitudes ambientales, no una superficie nueva que construir.
 
 **Indicador "Mirando":** el modelo de confianza exige que este estado tenga su propio indicador
-visible (`docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md`) — antes de este sprint no existía nada
+visible (`docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md`) — antes de este sprint no existía nada
 persistente, solo un aviso transitorio. Se agregó `LensIndicator` en el encabezado del shell (junto
 al indicador existente de palabra de activación), visible mientras dura la captura y el análisis,
 oculto el resto del tiempo.

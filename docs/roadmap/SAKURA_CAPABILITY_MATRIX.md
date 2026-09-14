@@ -1,10 +1,10 @@
-# Matriz de capacidades de Kohana
+# Matriz de capacidades de Sakura
 
 > Diseño D3.2. Inventario capacidad por capacidad. Estados permitidos únicamente:
 > **Implementado**, **Parcial**, **Infraestructura disponible**, **Planeado**, **Investigación**,
 > **Fuera de alcance**. Nada se marca como implementado si no existe hoy en
-> `release/kohana-1.0-rc`. Ver también `docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md` (fases) y
-> `docs/architecture/KOHANA_CAPABILITY_ARCHITECTURE.md` (capas).
+> `release/kohana-1.0-rc`. Ver también `docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md` (fases) y
+> `docs/architecture/SAKURA_CAPABILITY_ARCHITECTURE.md` (capas).
 
 | Capacidad | Descripción | Estado | Infraestructura disponible | Dependencias | Local/Híbrido/Cloud | Hardware | Permisos | Riesgo | Superficie | Fase | Sprint sugerido |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -32,14 +32,14 @@
 | Computer Use | Ejecución de acciones sobre el sistema | Investigación | `Nexo.Core.Automation` (acciones internas únicamente) | Modelo de confianza completo, Permission Broker | Local | — | El más alto del roadmap | Alto | App principal | Fase 7 | Computer Use: niveles Ver/Guiar/Proponer |
 | App Actions | Integración con Windows App Actions | Investigación | — | Computer Use | Local | Windows reciente | Según acción | Medio | App principal | Fase 7 | Computer Use: niveles Ver/Guiar/Proponer |
 | MCP | Integración con servidores MCP | Investigación | — | Computer Use | Local/Híbrido/Cloud según servidor | — | Según servidor | Medio | App principal | Fase 7 | Computer Use: ejecución y auditoría |
-| Skills | Packs de capacidades combinadas | Investigación | — | Fases 1–7 | Según pack | Según pack | Hereda de las capacidades incluidas | Medio | App principal | Fase 8 | Skills: Kohana Study |
-| Meeting Assistant | Asistencia en reuniones | Fuera de alcance | Voice Runtime | Skills | Local/Híbrido | Micrófono | Micrófono, posible captura de audio del sistema | Alto | Voice Bar | Fase 8 | Skills: Kohana Meeting |
+| Skills | Packs de capacidades combinadas | Investigación | — | Fases 1–7 | Según pack | Según pack | Hereda de las capacidades incluidas | Medio | App principal | Fase 8 | Skills: Sakura Study |
+| Meeting Assistant | Asistencia en reuniones | Fuera de alcance | Voice Runtime | Skills | Local/Híbrido | Micrófono | Micrófono, posible captura de audio del sistema | Alto | Voice Bar | Fase 8 | Skills: Sakura Meeting |
 | Support Mode | Modo de soporte técnico guiado | Investigación | Captura de pantalla | Lens | Local/Híbrido | — | Captura de pantalla | Medio | Lens Overlay | Fase 2/8 | Lens: guía visual y modos |
 | Study Mode | Modo de estudio guiado | Investigación | — | Lens | Local/Híbrido | — | Captura de pantalla (opcional) | Bajo | Lens Overlay | Fase 2/8 | Lens: guía visual y modos |
-| Creator Mode | Asistencia creativa | Fuera de alcance | — | Skills | Híbrido/Cloud | GPU recomendada | Según capacidad usada | Medio | App principal | Fase 8 | Skills: Kohana Creator |
-| Accessibility Mode | Accesibilidad ampliada | Investigación | UI Automation (uso futuro) | Lens, Computer Use | Local | — | UI Automation | Medio | App principal | Fase 8 | Skills: Kohana Access |
-| Installer | Instalador de Kohana | Investigación | `scripts/build-installer.ps1` (empaquetado manual) | — | Local | — | Instalación de sistema | Medio | — (infraestructura) | Fase 9 | Productization: instalador y actualizador |
-| Updater | Actualizador de Kohana | Investigación | — | Installer | Local | — | Instalación de sistema | Medio | — (infraestructura) | Fase 9 | Productization: instalador y actualizador |
+| Creator Mode | Asistencia creativa | Fuera de alcance | — | Skills | Híbrido/Cloud | GPU recomendada | Según capacidad usada | Medio | App principal | Fase 8 | Skills: Sakura Creator |
+| Accessibility Mode | Accesibilidad ampliada | Investigación | UI Automation (uso futuro) | Lens, Computer Use | Local | — | UI Automation | Medio | App principal | Fase 8 | Skills: Sakura Access |
+| Installer | Instalador de Sakura | Investigación | `scripts/build-installer.ps1` (empaquetado manual) | — | Local | — | Instalación de sistema | Medio | — (infraestructura) | Fase 9 | Productization: instalador y actualizador |
+| Updater | Actualizador de Sakura | Investigación | — | Installer | Local | — | Instalación de sistema | Medio | — (infraestructura) | Fase 9 | Productization: instalador y actualizador |
 
 ## Notas de lectura
 

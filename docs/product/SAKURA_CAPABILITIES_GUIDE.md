@@ -230,4 +230,4 @@ Dicho sin adornos, porque callarlo sería peor:
   calendario.
 
 Para el detalle técnico completo de cada decisión: `docs/stable-release/IMPLEMENTATION_LOG.md`.
-Para el estado fase por fase del roadmap: `docs/roadmap/KOHANA_TECHNOLOGY_ROADMAP.md`.
+Para el estado fase por fase del roadmap: `docs/roadmap/SAKURA_TECHNOLOGY_ROADMAP.md`.

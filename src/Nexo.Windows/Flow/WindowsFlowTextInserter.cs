@@ -14,7 +14,7 @@ namespace Nexo.Windows.Flow;
 /// Tres negativas deliberadas antes de escribir una sola tecla:
 /// 1. Si no se recordó una ventana destino, no se escribe a ciegas.
 /// 2. Si la ventana en primer plano cambió desde que empezó el dictado, NO se escribe — es
-///    exactamente el riesgo que `KOHANA_TECHNOLOGY_ROADMAP.md` señala para esta fase ("inserción de
+///    exactamente el riesgo que `SAKURA_TECHNOLOGY_ROADMAP.md` señala para esta fase ("inserción de
 ///    texto en el lugar equivocado si el foco cambia durante el dictado"). Dictar un mensaje
 ///    privado dentro de la ventana equivocada es un daño real e irreversible.
 /// 3. Si la ventana está marcada como sensible (gestor de contraseñas, diálogo de credenciales),

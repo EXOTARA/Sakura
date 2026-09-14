@@ -32,7 +32,7 @@ fallo, es lo que es.
 Sí lo es, entre otras cosas:
 
 - Que una acción que el modelo de permisos marca como que necesita confirmación se ejecute sin ella
-  (ver [modelo de confianza](docs/security/KOHANA_TRUST_AND_AUTONOMY_MODEL.md)).
+  (ver [modelo de confianza](docs/security/SAKURA_TRUST_AND_AUTONOMY_MODEL.md)).
 - Que texto llegado de fuera —una página, un documento, una captura— consiga que Sakura ejecute algo
   como si se lo hubiera pedido su dueño.
 - Que salgan del equipo datos que la [política de privacidad](docs/PRIVACY.md) dice que no salen.

@@ -155,7 +155,7 @@ principales preservados) sigue cubriendo estas adiciones sin cambios en esa prue
   se quitó el título duplicado de cada una; el resto de cada vista es idéntico).
 - El símbolo floral completo (`KohanaFlowerMarkStyle`) no se aplicó en ningún lugar todavía.
 - Iconografía floral por módulo (la idea de "flor abierta" para Inicio, "burbuja con pétalo" para
-  Chat, etc., descrita en `KOHANA_BRAND_FOUNDATION.md`) — los íconos de línea actuales de
+  Chat, etc., descrita en `SAKURA_BRAND_FOUNDATION.md`) — los íconos de línea actuales de
   `Brand.xaml` se conservan sin cambios.
 - Modo claro / alto contraste.
 - Arrastre de ventana (`DragMove`) — el shell sigue sin esa capacidad; no se añadió.
@@ -203,7 +203,7 @@ texto. Detalle y corrección en `docs/design/SAKURA_COMMAND_CENTER_V2.md`.
 2. Transiciones de hover suaves (100–150 ms) vía `Storyboard` en los estilos de navegación.
 3. Rediseño de contenido de al menos una vista (candidato: Inicio, que no tiene título propio que
    migrar y es la pantalla de entrada).
-4. Iconografía floral distintiva por módulo, según `KOHANA_BRAND_FOUNDATION.md` §"Sistema de
+4. Iconografía floral distintiva por módulo, según `SAKURA_BRAND_FOUNDATION.md` §"Sistema de
    iconos".
 5. Modo claro / alto contraste sobre los mismos tokens semánticos.
 6. Auditoría de accesibilidad dedicada (WCAG) sobre el resto de las vistas.
