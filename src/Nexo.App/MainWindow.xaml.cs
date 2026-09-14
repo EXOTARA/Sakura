@@ -9081,6 +9081,11 @@ public partial class MainWindow : Window
             // Diseño D56 — y el cajón, si estaba abierto cuando la pantalla completa empezó. No
             // basta con no abrirlo: se puede estar mirando el panel y lanzar el juego desde ahí.
             _dashboardWindow.HideImmediately();
+
+            // Y los controles rápidos, por lo mismo: salen al rozar el borde, y al lanzar un juego se
+            // roza. Visto en vivo (2026-09-13): el panel de volumen quedó cuatro segundos encima de
+            // League of Legends, porque esta lista ocultaba el cajón y la cápsula pero no a él.
+            _quickControlsWindow.HideImmediately();
         }
 
         UpdateResourceModeIndicator(decision);
