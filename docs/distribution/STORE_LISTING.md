@@ -87,6 +87,21 @@ asistente, voz, dictado, productividad, ia local, automatización, enfoque
 
 Mínimo una, PNG de al menos 1366 × 768. Se generan con perfil de prueba, sin datos personales.
 
+Las de 0.30.0-beta son cuatro, de 1920 × 1080, y están en `artifacts/store-screenshots/`, que no se
+sube al repositorio. Solo llevan ventanas de Sakura capturadas de una en una, sin nada más de la
+pantalla, sobre un fondo liso. Los controles de volumen y brillo de la cuarta están ampliados al 150 %
+para que se lean.
+
+| Archivo | Texto de la captura en Partner Center |
+| --- | --- |
+| `sakura-assistant-1.png` | Un asistente en la bandeja del sistema que aparece cuando lo llamas. |
+| `sakura-assistant-2.png` | Órdenes que funcionan sin IA: temporizadores, tareas y aplicaciones. |
+| `sakura-assistant-3.png` | Cada capacidad tiene su permiso: bloqueado, preguntar o permitido. |
+| `sakura-assistant-4.png` | Volumen y brillo desde el borde de la pantalla. |
+
+Para rehacerlas: publicar la versión, abrirla con un perfil de `New-SakuraValidationProfile.ps1`,
+completar la bienvenida y capturar cada ventana con `PrintWindow`, sin copiar la pantalla.
+
 ### Aviso de copyright y marcas
 
 © EXOTARA. Software libre bajo licencia MIT.
