@@ -191,6 +191,25 @@ no lo veían porque comprueban el comparador con texto ya transcrito, nunca con 
 | Actual: gramática cerrada | 5 | 9 |
 | Gramática + confirmación del reconocedor libre | 5 | 0 |
 
+**Con grabaciones reales de Adler (2026-09-13)**, capturadas con la grabación de escritorio de
+NVIDIA —una sola pista, micrófono y audio del sistema mezclados, así que la música de la segunda
+entra más limpia de lo que la oiría un micrófono—. Veces dichas contadas con Whisper y tramos de voz.
+
+| Grabación | Dichas | Actual | Híbrido | Confusores en la gramática |
+| --- | --- | --- | --- | --- |
+| Cerca, en silencio (69 s) | ~12 | 10 | 9 | 10 |
+| A dos metros con música (95 s) | ~16 | 14 | **4** | 12 |
+| Frases trampa, nunca la dice (44 s) | 0 | **8 falsos** | 0 | 2 falsos |
+
+- **El fallo se confirma con voz real:** ocho despertares falsos en 44 segundos de «voy a sacar la
+  basura», «saca la ropa», «se acabó el café».
+- **El híbrido queda descartado:** a distancia el reconocedor libre casi nunca escribe «sakura».
+- **La confianza por palabra de Vosk no discrimina:** marca 1,00 también en las frases trampa.
+- **Confusores** (la gramática ofrece además «saca», «sacar», «sabes», «se», «acabó» y palabras
+  frecuentes, para que Vosk tenga dónde escribir lo que oye) es el mejor equilibrio medido, pero la
+  lista se probó contra las mismas frases trampa de las que salió: falta una tanda de validación que
+  no se haya usado para elegirla antes de llevarlo al producto.
+
 El banco está en `scripts/voice/WakeBench`. **No se ha cambiado el producto todavía:** es una sola voz
 sintética, cerca y sin ruido. Falta repetirlo con grabaciones reales —cerca, a dos metros con ruido,
 y una tanda de frases trampa— antes de tocar `VoskWakeWordService`, porque la confirmación podría

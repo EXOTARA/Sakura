@@ -26,6 +26,7 @@ using System.Text.Json;
 using Nexo.Core.Voice;
 using Vosk;
 
+const string DefaultConfusers = "saca,sacar,sacas,saco,sacó,sacarla,sacarlo,sácalo,sabes,sabe,se,acabó,acaba,cura,oye,hoy,voy,a,la,el,ropa,basura,café,cara,casa,sacude,zapato,sábado,seca,segura,seguro,azúcar,ahora,ayuda,dura,pura,cultura,altura,que,de,no,sí,es,y,en,un,una,por,con,para,lo,me,ya,mira,eso,esto";
 var modelDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
     "Sakura", "models", "Vosk", "vosk-model-small-es-0.42");
 if (args.Length > 0 && args[0] == "--tts") { Synth(args[1], args[2]); return; }
@@ -85,6 +86,41 @@ foreach (var file in args)
         }
         Console.WriteLine($"[{"hibrido",-13}] despertares: {detections.Count}  " + string.Join(" | ", detections.Select(d => $"{d.t:0.0}s")) + $"  (cómputo {sw.ElapsedMilliseconds} ms para {pcm.Length / 32000.0:0.0} s)");
     }
+    {
+        // Confusores: la gramática ofrece también las palabras con las que «sakura» se confunde, para
+        // que Vosk tenga dónde escribir «saca» en vez de verse obligado a escribir «sakura».
+        var confusers = (Environment.GetEnvironmentVariable("CONFUSORES") ?? DefaultConfusers).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var cg = JsonSerializer.Serialize(WakeWordTextMatcher.GetGrammarPhrases(phrase, sensitivity).Concat(confusers).Append("[unk]").ToArray());
+        using var rec = new VoskRecognizer(model, 16000f, cg);
+        rec.SetWords(true); rec.SetPartialWords(true);
+        var detections = new List<(double t, string text, double conf)>(); double skipUntil = -1;
+        for (int off = 0; off < pcm.Length; off += 3200)
+        {
+            var n = Math.Min(3200, pcm.Length - off); var t = off / 32000.0;
+            if (t < skipUntil) continue;
+            var buf = pcm.AsSpan(off, n).ToArray();
+            var fin = rec.AcceptWaveform(buf, n);
+            var json = fin ? rec.Result() : rec.PartialResult();
+            var text = Read(json, fin ? "text" : "partial");
+            if (WakeWordTextMatcher.Evaluate(text, phrase, sensitivity).IsMatch)
+            { detections.Add((t, text, NameConfidence(json, fin))); rec.Reset(); skipUntil = t + 2.5; }
+        }
+        // Al final de un archivo no llega el silencio que cerraría el enunciado: se pide a mano.
+        { var json = rec.FinalResult(); var text = Read(json, "text"); if (pcm.Length / 32000.0 >= skipUntil && WakeWordTextMatcher.Evaluate(text, phrase, sensitivity).IsMatch) detections.Add((pcm.Length / 32000.0, text, NameConfidence(json, true))); }
+        Console.WriteLine($"[{"confusores",-13}] despertares: {detections.Count}  " + string.Join(" | ", detections.Select(d => $"{d.t:0.0}s" + (d.conf >= 0 ? $" c{d.conf:0.00}" : ""))));
+    }
+    {
+        // Confianza: la estrategia actual, pero se lee la confianza por palabra del resultado final.
+        using var rec = new VoskRecognizer(model, 16000f, grammar);
+        rec.SetWords(true);
+        var confs = new List<string>();
+        for (int off = 0; off < pcm.Length; off += 3200)
+        {
+            var n = Math.Min(3200, pcm.Length - off); var buf = pcm.AsSpan(off, n).ToArray();
+            if (rec.AcceptWaveform(buf, n)) { var c = NameConfidence(rec.Result(), true); if (c >= 0) confs.Add($"{off / 32000.0:0.0}s c{c:0.00}"); }
+        }
+        Console.WriteLine($"[{"confianza",-13}] finales con el nombre: {confs.Count}  " + string.Join(" | ", confs));
+    }
     // 2) Transcripción libre, para ver qué oye realmente.
     using (var free = new VoskRecognizer(model, 16000f))
     {
@@ -101,6 +137,14 @@ static bool Wakes(string text, WakeWordPhrase phrase, WakeWordSensitivity sens, 
     for (int i = 0; i < w.Length; i++) for (int len = 1; len <= 2 && i + len <= w.Length; len++)
         if (WakeWordTextMatcher.Evaluate(string.Join(' ', w[i..(i + len)]), phrase, sens).IsMatch) return true;
     return false;
+}
+static double NameConfidence(string json, bool final)
+{
+    using var d = JsonDocument.Parse(json);
+    if (!d.RootElement.TryGetProperty(final ? "result" : "partial_result", out var arr)) return -1;
+    foreach (var w in arr.EnumerateArray())
+        if (w.TryGetProperty("word", out var word) && (word.GetString() ?? "").Contains("ura") && w.TryGetProperty("conf", out var c)) return c.GetDouble();
+    return -1;
 }
 static string Read(string json, string p) { using var d = JsonDocument.Parse(json); return d.RootElement.TryGetProperty(p, out var v) ? v.GetString() ?? "" : ""; }
 
