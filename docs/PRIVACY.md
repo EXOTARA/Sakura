@@ -30,10 +30,11 @@ la otra cambia en el mismo commit.
 
 ## Lo que sale del equipo, y por qué
 
-### 1. Comprobación de actualizaciones — automática
+### 1. Comprobación de actualizaciones — automática, solo en la versión de GitHub
 
-Es el único caso que ocurre **sin que el usuario lo pida en ese momento**. Como máximo una vez cada
-24 horas, Sakura consulta la lista de versiones publicadas del repositorio:
+Ocurre **sin que el usuario lo pida en ese momento**, igual que la descarga del modelo de transcripción
+(punto 2). La versión de Microsoft Store no la hace: la actualiza la Store. Como máximo una vez cada
+24 horas, la versión de GitHub consulta la lista de versiones publicadas del repositorio:
 
 ```
 https://api.github.com/repos/EXOTARA/Sakura/releases
@@ -49,16 +50,18 @@ la [declaración de privacidad de GitHub](https://docs.github.com/site-policy/pr
 
 Quien no quiera ni eso puede desactivar la comprobación en Ajustes.
 
-### 2. Descarga de modelos de voz — cuando el usuario los instala
+### 2. Descarga de modelos de voz
 
-La primera vez que se activa la voz hay que traer los modelos, y son grandes, así que no van dentro
-del instalador:
+Son grandes, así que no van dentro del instalador:
 
+- El modelo de transcripción, de [Hugging Face](https://huggingface.co/) (Whisper `ggml` base, MIT,
+  unos 140 MB). **Se descarga solo, la primera vez que se abre Sakura** (`InitializeVoiceFeaturesAsync`
+  al arrancar), para que el dictado funcione sin conexión.
 - El modelo de palabra de activación, de [alphacephei.com](https://alphacephei.com/vosk/models)
-  (Vosk, Apache-2.0).
-- El modelo de transcripción, de [Hugging Face](https://huggingface.co/) (Whisper `ggml`, MIT).
+  (Vosk, Apache-2.0). Se descarga cuando el usuario activa o prueba «Oye Sakura».
 
-Se descargan una vez, se quedan en el disco y a partir de ahí todo el reconocimiento es local.
+Se descargan una vez, se quedan en el disco y a partir de ahí todo el reconocimiento es local. La
+petición no lleva nada del usuario: es la descarga de un archivo público.
 
 Los modelos de lenguaje de Ollama que el usuario elija descargar desde Sakura los trae el propio
 Ollama desde su registro; Sakura solo se lo pide.
@@ -128,11 +131,13 @@ ordinary files in the user's profile.
 
 Everything that leaves the machine is listed above. In short:
 
-1. **Update check (automatic, at most once every 24 h):** an unauthenticated read of
+1. **Update check (automatic, at most once every 24 h, GitHub copy only):** an unauthenticated read of
    `api.github.com/repos/EXOTARA/Sakura/releases`. No installation identifier, no device data.
-   Updates are never installed without the user accepting them. Can be disabled in Settings.
-2. **Voice model download (on user action):** Vosk models from alphacephei.com, Whisper `ggml`
-   models from Hugging Face. Downloaded once, then all recognition is local.
+   Updates are never installed without the user accepting them. Can be disabled in Settings. The
+   Microsoft Store version does not check; the Store updates it.
+2. **Voice model download:** the Whisper `ggml` base model from Hugging Face (about 140 MB) is
+   downloaded automatically on first launch; the Vosk wake word model from alphacephei.com when the
+   user turns on or tests the wake word. Downloaded once, then all recognition is local.
 3. **Cloud AI providers (opt-in only):** if the user configures one, conversation text — and, only
    when Lens or window sharing is used, a redacted screenshot, or with the screen translator the
    redacted text — is sent to that provider. Audio is never sent. API keys are stored encrypted with

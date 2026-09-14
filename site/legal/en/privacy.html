@@ -1,6 +1,6 @@
       <p class="eyebrow">Legal</p>
       <h1>Privacy policy</h1>
-      <p class="legal-updated">Last updated: 13 September 2026</p>
+      <p class="legal-updated">Last updated: 14 September 2026</p>
 
       <p class="legal-lead">This policy covers two things: this website and the Sakura application.
       The short answer is the same for both: <strong>whoever maintains Sakura receives no personal data
@@ -57,13 +57,19 @@
 
       <h3>What leaves your machine</h3>
       <ol>
-        <li><strong>Update check.</strong> The only automatic one. At most once every 24 hours, Sakura
-        reads the public release list on <code>api.github.com</code>. It sends no identifier and no
-        information about your machine beyond what any connection carries (your IP address). It can be
-        switched off in Settings. Nothing is installed unless you accept it.</li>
-        <li><strong>Downloads you ask for.</strong> The speech models (from <code>alphacephei.com</code>
-        and Hugging Face), Ollama if you let Sakura install it (from GitHub), and the language models you
-        choose to download, which Ollama fetches from its own registry.</li>
+        <li><strong>Update check.</strong> Automatic, and only in the copy downloaded from GitHub: the
+        Microsoft Store version is updated by the Store. At most once every 24 hours, Sakura reads the
+        public release list on <code>api.github.com</code>. It sends no identifier and no information
+        about your machine beyond what any connection carries (your IP address). It can be switched off
+        in Settings. Nothing is installed unless you accept it.</li>
+        <li><strong>The transcription model, the first time you open Sakura.</strong> Also automatic:
+        Sakura downloads the Whisper speech model once (about 140 MB) from Hugging Face and stores it on
+        your disk, so dictation works offline. It only requests the file; nothing of yours is sent.</li>
+        <li><strong>Downloads you ask for.</strong> The wake word model (from
+        <code>alphacephei.com</code>), when you turn on or test «Oye Sakura»; Ollama, if you let Sakura
+        install it from GitHub (the Microsoft Store version does not install it: it only links to its
+        website); and the language models you choose to download, which Ollama fetches from its own
+        registry.</li>
         <li><strong>Cloud AI providers, only if you configure one.</strong> None is active by default. If
         you choose one (Anthropic, OpenAI, Google Gemini, Groq or OpenRouter), it receives the
         conversation text and, when you use Lens or the screen translator, whatever was read from the
