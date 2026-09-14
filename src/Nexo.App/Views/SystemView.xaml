@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  Focusable="False"
                   HorizontalScrollBarVisibility="Disabled"
                   Padding="0,0,8,0">
         <StackPanel>
@@ -126,7 +127,8 @@
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
-                    <ItemsControl x:Name="AdaptiveEnginePlanItemsControl" Margin="-4,10,-4,0">
+                    <ItemsControl x:Name="AdaptiveEnginePlanItemsControl" Margin="-4,10,-4,0"
+                                  AutomationProperties.Name="Plan de rendimiento por categoría">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="4" Padding="14" Background="{DynamicResource BrushSurfaceRaised}" CornerRadius="{DynamicResource RadiusMedium}">
@@ -235,7 +237,8 @@
                                 Click="AuditRefreshButton_Click" />
                     </Grid>
 
-                    <ItemsControl x:Name="AuditItemsControl" Margin="-4,10,-4,0">
+                    <ItemsControl x:Name="AuditItemsControl" Margin="-4,10,-4,0"
+                                  AutomationProperties.Name="Registro de acciones">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="4" Padding="14" Background="{DynamicResource BrushSurfaceRaised}" CornerRadius="{DynamicResource RadiusMedium}">

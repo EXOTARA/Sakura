@@ -13,7 +13,7 @@
         Todos los nombres de elementos y los manejadores se conservan intactos: este rediseño cambia
         cómo se agrupa y se revela el contenido, no qué hace ningún control.
     -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
         <StackPanel Margin="0,0,6,0">
             <TextBlock Margin="0,0,0,14"
                        Text="Abre el apartado que necesites. Los cambios se aplican al momento y se guardan en este equipo."
@@ -614,7 +614,8 @@
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
-                    <ItemsControl x:Name="PermissionsItemsControl" Margin="0,12,0,0">
+                    <ItemsControl x:Name="PermissionsItemsControl" Margin="0,12,0,0"
+                                  AutomationProperties.Name="Permisos por capacidad">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="0,0,0,9">
@@ -836,7 +837,8 @@
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
-                    <ItemsControl x:Name="SkillPackItemsControl" Margin="0,12,0,0">
+                    <ItemsControl x:Name="SkillPackItemsControl" Margin="0,12,0,0"
+                                  AutomationProperties.Name="Packs disponibles">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="0,0,0,9" Padding="14"

@@ -312,7 +312,9 @@ public static class WakeWordTextMatcher
             : WakeWordMatchResult.Rejected(
                 recognizedText,
                 normalized,
-                "La sensibilidad Precisa requiere la forma exacta escrita como Kohana.");
+                phrase.IsSakura()
+                    ? "La sensibilidad Precisa requiere la forma exacta escrita como Sakura."
+                    : "La sensibilidad Precisa requiere la forma exacta escrita como Kohana.");
     }
 
     private static bool TryMatchKnownPhrase(
@@ -440,7 +442,7 @@ public static class WakeWordTextMatcher
         if (normalized.Contains("nexo", StringComparison.Ordinal) ||
             normalized.Contains("neso", StringComparison.Ordinal))
         {
-            return "Se escuchó Nexo, pero el modo Kohana ya no acepta el nombre heredado.";
+            return $"Se escuchó Nexo, pero el modo {(phrase.IsSakura() ? "Sakura" : "Kohana")} ya no acepta el nombre heredado.";
         }
 
         return phrase.IsSakura()

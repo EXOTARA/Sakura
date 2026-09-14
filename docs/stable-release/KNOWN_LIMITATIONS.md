@@ -30,10 +30,24 @@ verificado por prueba. El resto del God Object (25 campos restantes con `new`, n
 tareas/enfoque/rutinas, IA y Vision fusionados con la vista) sigue intacto.
 **Para estable:** completar los pasos 1.3–1.7 de la Fase 1 (ADR 0001).
 
-### L3 — Accesibilidad ausente
-**Qué:** 0 `AutomationProperties` en los 22 archivos XAML. Sin soporte de lector de pantalla.
-**Aislamiento:** Ninguno.
-**Para estable:** Fase 9 — es criterio de salida explícito.
+### L3 — Accesibilidad sin comprobar con el Narrador de verdad ⚠️ (reducido el 2026-09-13)
+**Qué había:** la nota original decía «0 `AutomationProperties` en los 22 archivos XAML». Ya no es
+cierto: los controles se nombraron a lo largo de los sprints de interfaz.
+**Qué se midió (2026-09-13):** un recorrido por Automatización de la interfaz de usuario —lo mismo
+que lee el Narrador: tipo y nombre de cada control— sobre la 0.29.1 instalada, con perfil aislado:
+el asistente de configuración (4 pasos), la ventana principal, Sistema, la paleta de comandos y las
+once secciones de Personalizar abiertas una a una. Todo lo que alcanza la tecla Tab tiene nombre,
+salvo lo que se arregló en ese mismo cambio:
+- Las filas de **Permisos** se anunciaban como `Nexo.App.Views.SettingsView+PermissionRow`, y las de
+  Packs, Registro de acciones y Plan de rendimiento habrían volcado todos los campos de su `record`.
+- Las cabeceras de sección se anunciaban como botón de alternancia «desactivado» en vez de
+  «contraído». Ahora exponen expandir/contraer (`SectionHeaderToggle`).
+- Cuatro listas sin nombre y el `ScrollViewer` de Personalizar y de Sistema, que era una parada de
+  Tab vacía.
+**Qué NO se ha hecho:** oír al Narrador. El recorrido no comprueba el orden de lectura, el foco al
+abrir ventanas emergentes, el contraste, ni las ventanas que solo aparecen por gesto (panel
+superior, controles rápidos, píldora, halo de voz).
+**Para estable:** Fase 9 — una pasada con el Narrador encendido y el teclado solo.
 
 ### ~~L12 — La versión que Windows muestra se queda vieja tras cada actualización~~ ✅ (2026-08-23)
 **Qué era:** el registro de "Aplicaciones instaladas" seguía diciendo la versión que puso el
