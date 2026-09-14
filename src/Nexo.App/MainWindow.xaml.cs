@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
+using Nexo.App.Updates;
 using Nexo.App.Ambient;
 using Nexo.Core.Documents;
 using Nexo.Core.Updates;
@@ -368,8 +369,7 @@ public partial class MainWindow : Window
     /// </summary>
     private readonly IAiApiKeyStore _apiKeyStore = new DpapiAiApiKeyStore();
     private readonly WindowsDocumentDropService _documentDropService = new();
-    private readonly WindowsUpdateService _updateService = new();
-    private UpdateManifest? _offeredUpdate;
+    private UpdateFlowCoordinator? _updateFlow;
 
     /// <summary>Diseño D27 — el borde de la pantalla como forma de llamar a Sakura.</summary>
     private readonly WindowsEdgeRevealWatcher _edgeRevealWatcher = new();
@@ -1251,9 +1251,9 @@ public partial class MainWindow : Window
 
         _settingsView.ApiKeyPageRequested += OpenExternalPage;
 
-        _settingsView.UpdateCheckRequested += () => _ = CheckForUpdateAsync();
-        _settingsView.UpdateInstallRequested += () => _ = InstallOfferedUpdateAsync();
-        _settingsView.UpdateSkipRequested += SkipOfferedUpdate;
+        _settingsView.UpdateCheckRequested += () => _ = UpdateFlow.CheckNowAsync(_lifetimeCancellation.Token);
+        _settingsView.UpdateInstallRequested += () => _ = UpdateFlow.InstallOfferedAsync(_lifetimeCancellation.Token);
+        _settingsView.UpdateSkipRequested += UpdateFlow.SkipOffered;
         _settingsView.SetCurrentVersion(CurrentVersionText);
 
         _settingsView.AiModelChanged += model =>
@@ -4418,15 +4418,7 @@ public partial class MainWindow : Window
         await RefreshMetricsAsync();
         _ = InitializeVoiceFeaturesAsync();
 
-        // Diseño D89 — la copia de Microsoft Store no busca ni instala versiones: eso lo hace la Store.
-        if (DistributionPolicy.UsesOwnUpdater(WindowsDistributionChannel.Current))
-        {
-            _ = CheckForUpdateInBackgroundAsync();
-        }
-        else
-        {
-            _settingsView.ShowStoreManagedUpdates();
-        }
+        _ = UpdateFlow.CheckInBackgroundAsync(_lifetimeCancellation.Token);
 
         // Diseño D87 (L12) — la lista de «Aplicaciones instaladas» de Windows se queda con la
         // versión que puso el instalador, porque las actualizaciones sustituyen archivos sin pasar
@@ -4453,76 +4445,6 @@ public partial class MainWindow : Window
                 // lista de Windows no puede tumbar el arranque.
             }
         });
-    }
-
-    /// <summary>
-    /// Diseño D68 — mira si hay versión nueva sin que nadie lo pida, y como mucho una vez al día.
-    ///
-    /// **Mira, pero no instala.** Descargar cien megas y sustituir la aplicación son decisiones de la
-    /// persona; lo único que se hace solo es enterarse, que no cuesta nada y evita que haya que
-    /// acordarse de comprobar.
-    ///
-    /// Se espera un poco antes de empezar. Al arrancar, Sakura está levantando la voz, las métricas
-    /// y el runtime de IA; meter ahí una petición de red solo hace el arranque más lento a cambio de
-    /// una respuesta que no corre ninguna prisa.
-    /// </summary>
-    private async Task CheckForUpdateInBackgroundAsync()
-    {
-        if (!UpdateCheckPolicy.ShouldCheck(
-                _preferences.LastUpdateCheckAt,
-                DateTimeOffset.UtcNow,
-                _preferences.AutomaticUpdateCheckEnabled))
-        {
-            return;
-        }
-
-        try
-        {
-            await Task.Delay(TimeSpan.FromSeconds(45), _lifetimeCancellation.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (_isClosed)
-        {
-            return;
-        }
-
-        SakuraVersion? skipped =
-            SakuraVersion.TryParse(_preferences.SkippedUpdateVersion, out var parsed)
-                ? parsed
-                : null;
-
-        var lookup = await _updateService.LookForUpdateAsync(
-            CurrentVersion, skipped, _lifetimeCancellation.Token);
-
-        // La fecha se apunta haya salido lo que haya salido. Si no, un equipo sin conexión
-        // reintentaría en cada arranque, que es justo lo que este límite viene a evitar.
-        _preferences.LastUpdateCheckAt = DateTimeOffset.UtcNow;
-        SavePreferences();
-
-        if (!lookup.Found || _isClosed)
-        {
-            return;
-        }
-
-        _offeredUpdate = lookup.Manifest;
-        _settingsView.SetUpdateStatus("Hay una versión más nueva disponible.", busy: false);
-        _settingsView.ShowUpdateOffer(
-            lookup.Manifest!.Version.ToString(),
-            lookup.Manifest.Notes,
-            Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory));
-
-        // El aviso no se enseña encima de un juego ni de una presentación: una versión nueva no es
-        // urgente, y la tarjeta ya queda esperando en Personalizar de todas formas. La cápsula lo
-        // respeta sola, pero decirlo aquí evita que mañana alguien la haga «forzada» sin pensar.
-        _capsuleWindow.ShowMessage(
-            CapsuleKind.Information,
-            $"Sakura {lookup.Manifest.Version} disponible",
-            "Puedes instalarla desde Personalizar › Actualizaciones.",
-            _preferences.Position);
     }
 
     private void OnSystemUserPreferenceChanged(
@@ -5330,104 +5252,27 @@ public partial class MainWindow : Window
     private string UpdateWorkFolder =>
         Path.Combine(NexoDataPaths.RootDirectory, "actualizaciones");
 
-    private async Task CheckForUpdateAsync()
-    {
-        if (!DistributionPolicy.UsesOwnUpdater(WindowsDistributionChannel.Current))
-        {
-            _settingsView.ShowStoreManagedUpdates();
-            return;
-        }
-
-        _settingsView.SetUpdateStatus("Comprobando…", busy: true);
-        _settingsView.ShowUpdateOffer(null, null);
-        _offeredUpdate = null;
-
-        SakuraVersion? skipped =
-            SakuraVersion.TryParse(_preferences.SkippedUpdateVersion, out var parsed)
-                ? parsed
-                : null;
-
-        var lookup = await _updateService.LookForUpdateAsync(
-            CurrentVersion, skipped, _lifetimeCancellation.Token);
-
-        _preferences.LastUpdateCheckAt = DateTimeOffset.UtcNow;
-        SavePreferences();
-
-        if (!lookup.Found)
-        {
-            _settingsView.SetUpdateStatus(lookup.Message, busy: false);
-            return;
-        }
-
-        _offeredUpdate = lookup.Manifest;
-        _settingsView.SetUpdateStatus(
-            "Hay una versión más nueva disponible.", busy: false);
-        _settingsView.ShowUpdateOffer(
-            lookup.Manifest!.Version.ToString(), lookup.Manifest.Notes);
-    }
-
     /// <summary>
-    /// Descarga, prepara y entrega el relevo al ayudante.
-    ///
-    /// Sakura se cierra **después** de lanzarlo, no antes: el guión espera a que este proceso
-    /// termine, así que si se cerrara primero no habría nadie para lanzarlo.
+    /// L2 — el flujo de actualizaciones vive en <see cref="UpdateFlowCoordinator"/>, con pruebas. La
+    /// ventana solo le da dónde enseñar las cosas, las preferencias y la puerta de salida.
     /// </summary>
-    private async Task InstallOfferedUpdateAsync()
-    {
-        if (_offeredUpdate is not { } manifest)
-        {
-            return;
-        }
-
-        var install = AppContext.BaseDirectory;
-
-        _settingsView.SetUpdateStatus("Descargando…", busy: true);
-
-        var progress = new Progress<double>(_settingsView.SetUpdateProgress);
-        var prepared = await _updateService.PrepareAsync(
-            manifest, install, UpdateWorkFolder, progress, _lifetimeCancellation.Token);
-
-        if (!prepared.Ready)
-        {
-            _settingsView.SetUpdateStatus(prepared.Problem, busy: false);
-            _settingsView.ShowUpdateOffer(
-                manifest.Version.ToString(), manifest.Notes);
-            return;
-        }
-
-        if (!WindowsUpdateService.LaunchHelper(prepared.HelperPath))
-        {
-            _settingsView.SetUpdateStatus(
-                "No se pudo iniciar el instalador de la actualización.", busy: false);
-            return;
-        }
-
-        _settingsView.SetUpdateStatus(
-            "Sakura se va a cerrar para terminar de instalarse…", busy: true);
-
-        // Se sale por la puerta de siempre y no llamando a Shutdown a pelo, y esto lo enseñó la
-        // primera prueba real: RequestExit para antes el runtime de IA administrado, y saltarse ese
-        // paso deja un proceso hijo vivo y a Sakura sin morir del todo. El ayudante esperaba, no la
-        // veía morir, y se retiraba sin tocar nada — desde fuera, Sakura se cerraba y no volvía.
-        RequestExit();
-    }
-
-    private void SkipOfferedUpdate()
-    {
-        if (_offeredUpdate is not { } manifest)
-        {
-            return;
-        }
-
-        // Se guarda la versión concreta, no un «no molestar»: la siguiente sí se ofrece.
-        _preferences.SkippedUpdateVersion = manifest.Version.ToString();
-        SavePreferences();
-
-        _offeredUpdate = null;
-        _settingsView.ShowUpdateOffer(null, null);
-        _settingsView.SetUpdateStatus(
-            $"Se dejó pasar la {manifest.Version}. Se avisará cuando salga otra.", busy: false);
-    }
+    private UpdateFlowCoordinator UpdateFlow => _updateFlow ??= new UpdateFlowCoordinator(
+        new WindowsUpdateSource(new WindowsUpdateService()),
+        new SettingsUpdatePresenter(
+            _settingsView,
+            version => _capsuleWindow.ShowMessage(
+                // El aviso no sale encima de un juego ni de una presentación: la cápsula lo respeta sola.
+                CapsuleKind.Information,
+                $"Sakura {version} disponible",
+                "Puedes instalarla desde Personalizar › Actualizaciones.",
+                _preferences.Position)),
+        new ShellUpdatePreferences(() => _preferences, SavePreferences),
+        WindowsDistributionChannel.Current,
+        CurrentVersion,
+        AppContext.BaseDirectory,
+        UpdateWorkFolder,
+        RequestExit,
+        isClosed: () => _isClosed);
 
     private void HideShellButton_Click(object sender, RoutedEventArgs e) => HideAnimated();
 
