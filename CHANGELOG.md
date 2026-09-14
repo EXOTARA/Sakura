@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.30.1-beta]
+
+### Cambiado
+
+- **La voz se descarga cuando la usas, no al abrir Sakura.** El modelo de transcripción (unos 140 MB) ya no se baja la primera vez que abres la app: espera a que pulses el micrófono, Alt + V, digas «Oye Sakura» o dictes. Quien solo escribe no gasta esos datos.
+- **Las respuestas se leen con su formato.** Las negritas, las listas, los pasos numerados y el código se ven como tales, sin asteriscos ni barras. Las tablas se muestran como una tarjeta por fila, que en un panel estrecho se leen mucho mejor.
+- **Sakura responde más ordenada**: párrafos cortos y listas en lugar de tablas, y avisa cuando algo que pregunta puede haber cambiado, como quién ocupa un cargo o un precio.
+- **Los volúmenes de la pestaña Audio usan el mismo control líquido** que el volumen y el brillo del borde de la pantalla.
+- **La pestaña Voz del panel enseña qué decir**: ejemplos para abrir, volumen, enfoque y tu equipo, todos funcionan sin IA.
+
+### Corregido
+
+- **Al hablarle de corrido, «oy Sakura» o «oy esa Sakura» se colaban en la pregunta** que se mandaba a la IA.
+
 ## [0.30.0-beta]
 
 ### Agregado
