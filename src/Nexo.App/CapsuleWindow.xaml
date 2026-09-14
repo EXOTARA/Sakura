@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:a11y="clr-namespace:Nexo.App.Views.Controls"
         AutomationProperties.Name="Aviso de Sakura"
-        Width="370"
-        Height="88"
+        Width="418"
+        Height="136"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -13,7 +13,13 @@
         ShowActivated="False"
         Focusable="True"
         Topmost="True">
+    <!--
+        2026-09-14 — el margen es el sitio de la sombra y del temblor de la burbuja (BubbleMotion).
+        Antes el borde medía lo mismo que la ventana y la sombra se cortaba en recto; D40 ya lo había
+        resuelto así en los controles rápidos.
+    -->
     <Border x:Name="CapsuleBorder"
+            Margin="24"
             Padding="14,12"
             CornerRadius="22"
             Background="{DynamicResource BrushSurfaceRaised}"
@@ -27,10 +33,6 @@
                               Opacity="0.38"
                               Color="#000000" />
         </Border.Effect>
-        <Border.RenderTransform>
-            <TranslateTransform x:Name="CapsuleTranslate" Y="-12" />
-        </Border.RenderTransform>
-
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="42" />

@@ -59,6 +59,8 @@
     <CornerRadius x:Key="RadiusXLarge">28</CornerRadius>
     <CornerRadius x:Key="RadiusPill">22</CornerRadius>
     <CornerRadius x:Key="RadiusShell">28</CornerRadius>
+    <!-- El borde exterior del shell, igual que las esquinas del panel superior (DashboardWindow). -->
+    <CornerRadius x:Key="RadiusShellWindow">34</CornerRadius>
 
     <!--
         Diseño D64 — aquí vivía RadiusFull, con valor 999 y un comentario que aseguraba que WPF

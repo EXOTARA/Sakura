@@ -104,6 +104,28 @@ public static class WindowsDwmChrome
         return TryExtendFrame(windowHandle);
     }
 
+    /// <summary>
+    /// Ventana de cristal transparente: sin fondo del sistema, sin esquinas ni borde de DWM, y con el
+    /// marco extendido a toda la ventana para que los píxeles transparentes de WPF dejen ver lo que hay
+    /// detrás. Así la propia superficie puede tener el radio que quiera y seguir pintándose en la GPU,
+    /// sin <c>AllowsTransparency</c>. Lo que se pierde es el desenfoque del acrílico.
+    /// Devuelve falso si no se pudo extender el marco; entonces quien llama debe volver al camino normal.
+    /// </summary>
+    public static bool TryApplyClearGlass(IntPtr windowHandle)
+    {
+        if (windowHandle == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        TrySetAttribute(windowHandle, DwmwaUseImmersiveDarkMode, 1);
+        TrySetAttribute(windowHandle, DwmwaWindowCornerPreference, DwmwcpDoNotRound);
+        TrySetAttribute(windowHandle, DwmwaBorderColor, unchecked((int)DwmColorNone));
+        TrySetAttribute(windowHandle, DwmwaSystemBackdropType, DwmsbtNone);
+
+        return TryExtendFrame(windowHandle);
+    }
+
     private static bool TryExtendFrame(IntPtr windowHandle)
     {
         var margins = new Margins

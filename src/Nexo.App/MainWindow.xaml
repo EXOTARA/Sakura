@@ -87,10 +87,11 @@
         volvía a desenfocar la ventana completa.
 
         DWM hace las tres cosas —desenfoque, esquinas y sombra— fuera de nuestro proceso y en la
-        GPU. Lo que queda aquí es una superficie plana que llega hasta el borde de la ventana. Las
-        esquinas ya no son las nuestras de 28: son las del sistema, unos 8, porque DWM no admite
-        radio a medida. Se pierde redondez y se gana que la ventana se pinte como cualquier otra
-        aplicación de Windows 11.
+        GPU. Lo que queda aquí es una superficie que llega hasta el borde de la ventana.
+
+        2026-09-14 — las esquinas vuelven a ser nuestras, de 34 como el panel superior: la ventana es
+        cristal transparente (SakuraWindowChrome.ApplyRounded) y ShellSurface dibuja el radio. Sigue
+        en la GPU; lo que se dejó es el desenfoque del acrílico, elegido así por Adler.
 
         El margen desaparece, así que el ancho guardado en preferencias vale ahora lo que se ve;
         la separación con el borde de la pantalla la pone PositionWindow.
@@ -108,8 +109,8 @@
         <!--
             El fondo lo pone ApplyShellOpacity: opaco cuando no hay fondo del sistema detrás,
             y con la transparencia elegida por el usuario cuando sí lo hay, que es lo que deja
-            ver el acrílico. Sin trazo ni radio propios: el borde y las esquinas son de DWM y
-            un borde nuestro se cortaría en el arco de cada esquina.
+            ver lo que hay detrás. El radio también lo pone el código, con la ventana ya en modo
+            cristal; si ese modo no está disponible, las esquinas vuelven a ser las de Windows.
         -->
         <Border x:Name="ShellSurface"
                 SnapsToDevicePixels="True">
@@ -384,8 +385,12 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                        <StackPanel>
+                        <StackPanel VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock x:Name="WorkspaceTitleText"
                                            Text="Inicio"
@@ -480,12 +485,29 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+                        </StackPanel>
+
+                        <!--
+                            2026-09-14 — el temporizador va en la línea del subtítulo y no junto a los
+                            botones. Al lado de los botones le quitaba el ancho al título, y con un
+                            temporizador en marcha se leía «Asiste…», «Sister…», «Perso…». Visto al
+                            preparar las capturas de la Store.
+                        -->
+                        <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
                             <TextBlock x:Name="WorkspaceSubtitleText"
-                                       Margin="0,5,0,0"
+                                       VerticalAlignment="Center"
                                        Text="Tu espacio de acciones y contexto"
                                        TextTrimming="CharacterEllipsis"
                                        Style="{StaticResource SakuraPageSubtitleStyle}" />
-                        </StackPanel>
+                            <views:FocusMiniTimer x:Name="FocusMiniTimerControl"
+                                                   Grid.Column="1"
+                                                   Margin="10,0,0,0"
+                                                   VerticalAlignment="Center" />
+                        </Grid>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                             <Border Width="9"
@@ -495,9 +517,6 @@
                                     CornerRadius="5"
                                     ToolTip="Sakura está activa"
                                     AutomationProperties.Name="Sakura está activa" />
-                            <views:FocusMiniTimer x:Name="FocusMiniTimerControl"
-                                                   Margin="0,0,10,0"
-                                                   VerticalAlignment="Center" />
                             <Button x:Name="CommandCenterButton"
                                     Width="42"
                                     Height="42"

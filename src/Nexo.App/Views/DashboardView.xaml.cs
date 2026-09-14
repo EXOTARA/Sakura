@@ -161,7 +161,7 @@ public partial class DashboardView : UserControl
             PanelUserImage.Source = image;
         }
 
-        PanelUserImage.Visibility = image is null ? Visibility.Collapsed : Visibility.Visible;
+        PanelUserImageFrame.Visibility = image is null ? Visibility.Collapsed : Visibility.Visible;
         PanelImageEmptyHint.Visibility = image is null ? Visibility.Visible : Visibility.Collapsed;
 
         PanelImageButton.ToolTip = image is null

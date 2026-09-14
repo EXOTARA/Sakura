@@ -7,7 +7,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Nexo.App.Motion;
 using Nexo.Core.Assistant;
+using Nexo.Core.Shell;
 
 namespace Nexo.App.Views;
 
@@ -18,7 +20,7 @@ public partial class AssistantView : UserControl
     private Border? _streamingBubble;
     private TextBlock? _streamingTextBlock;
     private bool _streamingHasContent;
-    private string _aiProviderStatus = "IA desactivada · los comandos locales siguen disponibles";
+    private string _aiProviderStatus = "Sin IA · las órdenes locales funcionan";
     private bool _saveHistory;
     private int _recentMessageLimit = 8;
 
@@ -59,6 +61,55 @@ public partial class AssistantView : UserControl
 
     public IReadOnlyList<ConversationMessage> GetConversationSnapshot() => _messages.ToArray();
 
+    /// <summary>
+    /// La entrada escalonada de la primera apertura (ver <see cref="EntranceChoreography"/>): los
+    /// bloques crecen vacíos, luego entra lo que llevan, el saludo palabra a palabra y las sugerencias
+    /// una detrás de otra. Quien la llama decide si toca; aquí solo se reproduce.
+    /// </summary>
+    public void PlayEntrance()
+    {
+        if (!SakuraMotion.AnimationsEnabled)
+        {
+            return;
+        }
+
+        var welcome = EmptyStatePanel.Visibility == Visibility.Visible;
+        var words = welcome ? EmptyStateTitle.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length : 0;
+        var chips = welcome ? QuickPromptsPanel.Children.OfType<FrameworkElement>().ToList() : [];
+
+        // De una conversación larga solo entran escalonados los últimos mensajes, los que se ven; los
+        // de más arriba ya aparecen puestos.
+        var messages = welcome
+            ? []
+            : ConversationPanel.Children.OfType<FrameworkElement>().TakeLast(6).ToList();
+
+        var plan = EntranceChoreography.Plan(words, chips.Count, messages.Count);
+
+        EntranceMotion.Rise(HeaderRow, plan.Header, offset: 6);
+        EntranceMotion.GrowBlock(ComposerBorder, plan.ComposerBlock);
+        EntranceMotion.Rise(ComposerContent, plan.ComposerContent, offset: 6);
+
+        if (welcome)
+        {
+            EntranceMotion.GrowBlock(EmptyStatePanel, plan.CardBlock);
+            EntranceMotion.Pop(EmptyStateMark, plan.Mark, from: 0.6);
+            EntranceMotion.RevealWords(EmptyStateTitle, plan.Words);
+            EntranceMotion.Rise(EmptyStateDescription, plan.Description, offset: 8);
+
+            for (var i = 0; i < chips.Count; i++)
+            {
+                EntranceMotion.Pop(chips[i], plan.Chips[i]);
+            }
+
+            return;
+        }
+
+        for (var i = 0; i < messages.Count; i++)
+        {
+            EntranceMotion.Rise(messages[i], plan.Messages[i], offset: 14);
+        }
+    }
+
     public void FocusPrompt()
     {
         Dispatcher.BeginInvoke(() =>
@@ -88,7 +139,7 @@ public partial class AssistantView : UserControl
             VisionButton.IsEnabled = available;
             VisionButton.ToolTip = available
                 ? "Mirar la ventana activa · Ctrl + Shift + Espacio"
-                : "Sakura Vision está desactivado en Personalización";
+                : "Lens está desactivado en Personalizar";
         }
     }
 

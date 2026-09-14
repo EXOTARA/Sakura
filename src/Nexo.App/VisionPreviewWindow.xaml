@@ -1,7 +1,7 @@
 <Window x:Class="Nexo.App.VisionPreviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Vista previa de Sakura Vision"
+        Title="Vista previa de Lens"
         Width="760"
         Height="600"
         MinWidth="520"

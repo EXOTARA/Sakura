@@ -2,8 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         AutomationProperties.Name="Volumen y brillo"
-        Width="144"
-        SizeToContent="Height"
+        SizeToContent="WidthAndHeight"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -11,29 +10,13 @@
         ShowInTaskbar="False"
         ShowActivated="False"
         Topmost="True">
-    <Window.Resources>
-        <!--
-            Diseño D35 — el mando es una barra vertical con el icono dentro del propio pulgar, como
-            en el boceto. No es un Slider de WPF con otro aspecto: un Slider vertical arrastra desde
-            donde se agarra, y aquí lo que se quiere es que pulsar a media altura ponga ese valor,
-            igual que en el volumen de un teléfono.
-        -->
-        <!--
-            Diseño D39 — sin borde. La línea de un píxel se leía como un delineado gris suelto
-            alrededor de cada carril, sobre todo con el relleno claro encima: dos contornos
-            compitiendo por describir la misma forma. El carril ya se distingue por su fondo, que es
-            más oscuro que el del panel, y esa diferencia basta para ver dónde acaba sin dibujar una
-            raya que no aporta nada.
-        -->
-        <Style x:Key="ControlTrackStyle" TargetType="Border">
-            <Setter Property="Width" Value="52" />
-            <Setter Property="Height" Value="164" />
-            <Setter Property="CornerRadius" Value="26" />
-            <Setter Property="Background" Value="{DynamicResource BrushInput}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="SnapsToDevicePixels" Value="True" />
-        </Style>
-    </Window.Resources>
+    <!--
+        Diseño D35 — pulsar a media altura pone ese valor, igual que en el volumen de un teléfono; no
+        es un Slider de WPF, que arrastra desde donde se agarra.
+
+        2026-09-14 — las píldoras de relleno dieron paso al mando líquido (LiquidLevelGauge): una regla,
+        una línea que se abomba alrededor del pomo y el valor en grande al lado, uno junto al otro.
+    -->
 
     <!--
         Diseño D40 — la ventana es más ancha que el panel a propósito, y este margen es el hueco.
@@ -58,12 +41,12 @@
             </Border.Effect>
         </Border>
 
-        <Border Padding="16"
+        <Border Padding="12,14,8,10"
                 CornerRadius="30"
                 Background="{DynamicResource BrushSidebarSurface}"
                 BorderBrush="{DynamicResource BrushAccentBorder}"
                 BorderThickness="1">
-            <StackPanel x:Name="ControlsPanel" />
+            <StackPanel x:Name="ControlsPanel" Orientation="Horizontal" />
         </Border>
     </Grid>
 </Window>

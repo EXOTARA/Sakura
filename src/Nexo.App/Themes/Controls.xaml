@@ -299,6 +299,7 @@
     <Style x:Key="PrimaryButtonStyle" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource BrushBackground}" />
         <Setter Property="Background" Value="{DynamicResource BrushAccent}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="17,11" />
         <Setter Property="Cursor" Value="Hand" />
@@ -308,12 +309,19 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
+                    <!--
+                        El relleno va en el ContentPresenter. Sin él —así estuvo hasta el 2026-09-14— el
+                        Padding de 17,11 no llegaba a ninguna parte: la píldora medía lo mismo que su
+                        texto y en la bienvenida «Siguiente» y «Terminar» se veían recortados, pegados
+                        al borde. Afectaba a todos los botones principales y secundarios.
+                    -->
                     <Border x:Name="PrimaryBorder"
                             Background="{TemplateBinding Background}"
-                            BorderBrush="Transparent"
+                            BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="1"
                             controls:PillCorner.IsPill="True">
-                        <ContentPresenter HorizontalAlignment="Center"
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center"
                                           VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -378,6 +386,11 @@
            BasedOn="{StaticResource PrimaryButtonStyle}">
         <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}" />
         <Setter Property="Background" Value="{DynamicResource BrushSurfaceRaised}" />
+        <!--
+            Con borde: el secundario tiene el mismo fondo que las tarjetas donde suele ir, y sin él los
+            accesos rápidos del asistente se leían como texto suelto, no como botones.
+        -->
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
         <Setter Property="FontWeight" Value="Normal" />
     </Style>
 

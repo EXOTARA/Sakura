@@ -674,6 +674,11 @@ public partial class MainWindow : Window
         _dashboardWindow.View.SetPanelImage(_preferences.PanelImagePath);
 
         _dashboardWindow.Dismissed += (_, _) => _topRevealWatcher.SuppressBriefly();
+        _dashboardWindow.CoverageChanged += (_, coverage) =>
+        {
+            _drawerCoverage = coverage;
+            ApplyDrawerClearance(animate: true);
+        };
 
         _topRevealWatcher.Configure(_preferences.EdgeRevealEnabled);
         _assistantView.ConfigureHistory(
@@ -4844,7 +4849,28 @@ public partial class MainWindow : Window
             ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
 
         StaggerNavigationEntrance();
+        PlayFirstOpenEntrance();
         FocusCurrentView();
+    }
+
+    private bool _firstOpenEntrancePlayed;
+
+    /// <summary>
+    /// La primera vez que se abre el shell en la sesión, el asistente se organiza solo: bloques que
+    /// crecen, el saludo palabra a palabra y las sugerencias una a una (vídeo 2 de referencia de
+    /// Adler). Las siguientes aperturas conservan la entrada corta; ver <see cref="EntranceChoreography"/>.
+    /// </summary>
+    private void PlayFirstOpenEntrance()
+    {
+        if (!EntranceChoreography.PlaysFull(!_firstOpenEntrancePlayed, ShellAnimationsAllowed) ||
+            _currentDestination != "Assistant")
+        {
+            return;
+        }
+
+        _firstOpenEntrancePlayed = true;
+        UpdateLayout();
+        _assistantView.PlayEntrance();
     }
 
     /// <summary>
@@ -4942,6 +4968,51 @@ public partial class MainWindow : Window
         Left = _preferences.Position == SidebarPosition.Right
             ? workArea.Right - Width - ShellScreenInset
             : workArea.Left + ShellScreenInset;
+
+        ApplyDrawerClearance(animate: false);
+    }
+
+    private ScreenBounds? _drawerCoverage;
+    private double _drawerClearance;
+
+    /// <summary>
+    /// Con el panel superior abierto encima, el shell se encoge hacia abajo hasta quedar debajo de
+    /// él, y vuelve a su alto cuando el panel se recoge (Adler, 2026-09-14).
+    ///
+    /// Se mueve el borde de arriba de la superficie, no la ventana: la ventana es cristal
+    /// transparente, así que el hueco que queda deja ver el escritorio, y no hay que tocar
+    /// posiciones que otras piezas —el vigilante del borde, los controles rápidos— dan por fijas.
+    /// </summary>
+    private void ApplyDrawerClearance(bool animate)
+    {
+        var target = _drawerCoverage is { } drawer
+            ? DrawerClearancePolicy.TopInset(new ScreenBounds(Left, Top, ActualWidth, ActualHeight), drawer)
+            : 0;
+
+        if (Math.Abs(target - _drawerClearance) < 0.5)
+        {
+            return;
+        }
+
+        _drawerClearance = target;
+        var margin = new Thickness(0, target, 0, 0);
+
+        if (!animate || !SakuraMotion.AnimationsEnabled)
+        {
+            ShellBorder.BeginAnimation(MarginProperty, null);
+            ShellBorder.Margin = margin;
+            return;
+        }
+
+        // Bajar acompaña a un panel que cae, así que frena como él; volver a subir va a la par de
+        // uno que se va, sin rebote.
+        var entering = target > 0;
+        var animation = new ThicknessAnimation(margin, entering ? SakuraMotion.Emphasized : SakuraMotion.Exit)
+        {
+            EasingFunction = entering ? SakuraMotion.DecelerateCurve : SakuraMotion.EmphasizedCurve
+        };
+        animation.Freeze();
+        ShellBorder.BeginAnimation(MarginProperty, animation, HandoffBehavior.SnapshotAndReplace);
     }
 
     /// <summary>
@@ -5491,15 +5562,15 @@ public partial class MainWindow : Window
         if (!configuration.IsEnabled)
         {
             const string unavailableMessage =
-                "La consulta es abierta, pero la IA está desactivada. Puedes elegir OpenAI, Ollama, LM Studio o un servidor compatible en Personalización.";
+                "La consulta es abierta, pero la IA está desactivada. Puedes elegir OpenAI, Ollama, LM Studio o un servidor compatible en Personalizar.";
             _assistantView.AddSakuraMessage(unavailableMessage);
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Information,
                 "IA desactivada",
-                "Elige un proveedor desde Personalización.",
+                "Elige un proveedor desde Personalizar.",
                 _preferences.Position);
             SpeakVoiceResult("La inteligencia artificial está desactivada.");
-            _pillFailure = "La IA está desactivada. Elígela en Personalización.";
+            _pillFailure = "La IA está desactivada. Elígela en Personalizar.";
             return;
         }
 
@@ -5630,15 +5701,21 @@ public partial class MainWindow : Window
                     : "Pensando…");
             streamingStarted = true;
 
-            _capsuleWindow.ShowMessage(
-                CapsuleKind.Processing,
-                requestMode == AiRequestMode.VisionTechnicalDiagnostic
-                    ? "Diagnosticando captura"
-                    : $"Consultando {configuration.DisplayName}",
-                string.IsNullOrWhiteSpace(configuration.Model)
-                    ? "Preparando la solicitud…"
-                    : configuration.Model,
-                _preferences.Position);
+            // La misma regla que el aviso de «Respuesta lista», más abajo: con la respuesta en la
+            // píldora, la píldora ya dice que está pensando. Adler lo vio en pantalla (2026-09-14):
+            // dos avisos a la vez, uno arriba en el centro y otro en la esquina, contando lo mismo.
+            if (!_answerInPill)
+            {
+                _capsuleWindow.ShowMessage(
+                    CapsuleKind.Processing,
+                    requestMode == AiRequestMode.VisionTechnicalDiagnostic
+                        ? "Diagnosticando captura"
+                        : $"Consultando {configuration.DisplayName}",
+                    string.IsNullOrWhiteSpace(configuration.Model)
+                        ? "Preparando la solicitud…"
+                        : configuration.Model,
+                    _preferences.Position);
+            }
 
             var request = new AiChatRequest(
                 _assistantView.GetConversationSnapshot(),
@@ -5795,8 +5872,8 @@ public partial class MainWindow : Window
             {
                 _capsuleWindow.ShowMessage(
                     CapsuleKind.Warning,
-                    "Sakura Vision desactivado",
-                    "Actívalo desde Personalización.",
+                    "Lens está desactivado",
+                    "Actívalo desde Personalizar.",
                     _preferences.Position,
                     force: true);
             }
@@ -5930,11 +6007,11 @@ public partial class MainWindow : Window
         if (!_preferences.VisionEnabled)
         {
             _assistantView.AddSakuraMessage(
-                "Sakura Vision está desactivado. Puedes activarlo en Personalización → Inteligencia artificial.");
+                "Lens está desactivado. Puedes activarlo en Personalizar → Inteligencia artificial.");
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Warning,
-                "Sakura Vision desactivado",
-                "Actívalo desde Personalización.",
+                "Lens está desactivado",
+                "Actívalo desde Personalizar.",
                 _preferences.Position);
             return;
         }
@@ -6121,7 +6198,7 @@ public partial class MainWindow : Window
             _runtimeAiStatus = "Desactivada";
             _runtimeAiHealthy = false;
             _assistantView.SetAiProviderStatus(
-                "IA desactivada · los comandos locales siguen disponibles");
+                "Sin IA · las órdenes locales funcionan");
             RefreshRuntimeDashboard();
             return;
         }
@@ -6538,7 +6615,7 @@ public partial class MainWindow : Window
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Information,
                 "Voz desactivada",
-                "Activa una frase desde Personalización → Voz.",
+                "Activa una frase desde Personalizar → Voz.",
                 _preferences.Position);
             return;
         }
@@ -7950,11 +8027,11 @@ public partial class MainWindow : Window
             case LocalCommandType.ShowPeek:
                 if (!_preferences.PeekEnabled)
                 {
-                    _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalización.");
+                    _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalizar.");
                     _capsuleWindow.ShowMessage(
                         CapsuleKind.Warning,
                         "Peek está desactivado",
-                        "Puedes activarlo desde Personalización.",
+                        "Puedes activarlo desde Personalizar.",
                         _preferences.Position);
                     break;
                 }
@@ -8670,9 +8747,12 @@ public partial class MainWindow : Window
         // ellas: el modo eco tiene que valer para todas o para ninguna.
         SakuraWindowChrome.PerformanceMode = _preferences.HardwarePerformanceMode;
 
-        _backdropDecision = SakuraWindowChrome.Apply(
+        // Radio grande como el panel superior (Adler, 2026-09-14): cristal transparente con esquinas
+        // propias en vez de acrílico con las 8 px de Windows.
+        _backdropDecision = SakuraWindowChrome.ApplyRounded(
             this,
             ShellSurface,
+            (CornerRadius)FindResource("RadiusShellWindow"),
             "BrushBackground",
             _preferences.Opacity);
     }
@@ -9253,7 +9333,7 @@ public partial class MainWindow : Window
     {
         if (!_preferences.PeekEnabled)
         {
-            _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalización.");
+            _assistantView.AddSakuraMessage("La vista Peek está desactivada en Personalizar.");
             return;
         }
 

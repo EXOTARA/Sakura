@@ -735,11 +735,21 @@
                             </ControlTemplate>
                         </Button.Template>
                         <Grid>
-                            <Image x:Name="PanelUserImage"
-                                   Stretch="Uniform"
-                                   MaxHeight="132"
-                                   Visibility="Collapsed"
-                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                            <!--
+                                El marco invisible: la imagen llena el hueco y se recorta con las mismas
+                                esquinas que la tarjeta de música (DashboardCardStyle, 20). Con Uniform
+                                quedaba un rectángulo de esquinas en pico flotando en medio del hueco.
+                            -->
+                            <a11y:RoundedClipBorder x:Name="PanelUserImageFrame"
+                                                    Height="132"
+                                                    CornerRadius="20"
+                                                    Visibility="Collapsed">
+                                <Image x:Name="PanelUserImage"
+                                       Stretch="UniformToFill"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                            </a11y:RoundedClipBorder>
                             <Border x:Name="PanelImageEmptyHint"
                                     MinHeight="104"
                                     CornerRadius="20"

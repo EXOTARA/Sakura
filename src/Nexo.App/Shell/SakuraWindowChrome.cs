@@ -35,15 +35,15 @@ public static class SakuraWindowChrome
     public static HardwarePerformanceMode PerformanceMode { get; set; } = HardwarePerformanceMode.Automatic;
 
     /// <summary>
-    /// Diseño D62 — Sakura pide esquinas rectas.
+    /// Diseño D62 pedía esquinas rectas: las redondeadas de Windows traían encima el borde de DWM, y
+    /// en el arco se leía como una mancha oscura. Después se quitó ese borde
+    /// (<c>DWMWA_BORDER_COLOR</c> = <c>DWMWA_COLOR_NONE</c> en <see cref="WindowsDwmChrome"/>), pero la
+    /// esquina se quedó recta sin que nadie volviera a mirarla.
     ///
-    /// Las redondeadas de Windows miden unos 8px y, en el arco, el borde que DWM dibuja encima se
-    /// lee como una mancha oscura: el mismo filo que Adler llevaba tres versiones señalando, ahora
-    /// dibujado por el sistema en vez de por nosotros. Se puede quitar el borde, pero él pidió
-    /// dejarlo plano antes que seguir persiguiéndolo, y un canto recto no tiene arco donde nada
-    /// pueda asomar.
+    /// 2026-09-14: Adler preguntó por qué el panel de arriba es redondo y el shell no. Sin borde ya no
+    /// hay mancha que evitar, así que se piden redondeadas.
     /// </summary>
-    public const WindowCorner Corner = WindowCorner.Square;
+    public const WindowCorner Corner = WindowCorner.Round;
 
     public static WindowBackdropDecision Apply(
         Window window,
@@ -71,6 +71,53 @@ public static class SakuraWindowChrome
 
         PaintSurface(window, surface, surfaceBrushKey, opacity, effective);
         return effective;
+    }
+
+    /// <summary>
+    /// 2026-09-14 — el shell con el radio grande del panel superior, a petición de Adler.
+    ///
+    /// DWM no admite un radio a medida: sus esquinas miden unos 8 px. Para tener las de 34 del panel
+    /// de arriba sin volver a <c>AllowsTransparency</c> —que obligaba a componer por software— la
+    /// ventana pasa a ser cristal transparente (<see cref="WindowsDwmChrome.TryApplyClearGlass"/>) y la
+    /// superficie dibuja sus propias esquinas. Sigue pintándose en la GPU. El precio, que Adler eligió
+    /// sabiéndolo: no hay desenfoque detrás, la transparencia es un color translúcido.
+    ///
+    /// Si el marco no se puede extender, o con contraste alto, se vuelve a <see cref="Apply"/>.
+    /// </summary>
+    public static WindowBackdropDecision ApplyRounded(
+        Window window,
+        Border surface,
+        CornerRadius radius,
+        string surfaceBrushKey = "BrushSurface",
+        double opacity = PanelOpacity)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        ArgumentNullException.ThrowIfNull(surface);
+
+        var handle = new WindowInteropHelper(window).Handle;
+        var probe = WindowsDwmChrome.ReadProbe(PerformanceMode);
+
+        if (probe.HighContrast || !WindowsDwmChrome.TryApplyClearGlass(handle))
+        {
+            return Apply(window, surface, surfaceBrushKey, opacity);
+        }
+
+        if (HwndSource.FromHwnd(handle)?.CompositionTarget is { } target)
+        {
+            target.BackgroundColor = Colors.Transparent;
+        }
+
+        surface.CornerRadius = radius;
+
+        // Sin fondo del sistema pero con composición transparente: PaintSurface pinta el alfa pedido.
+        var decision = new WindowBackdropDecision(
+            WindowBackdrop.None,
+            WindowCorner.Square,
+            PaintOwnBackground: false,
+            "Cristal transparente con esquinas propias.");
+
+        PaintSurface(window, surface, surfaceBrushKey, opacity, decision);
+        return decision;
     }
 
     /// <summary>

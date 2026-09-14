@@ -59,7 +59,7 @@ public sealed class NexoDiagnosticService : IDisposable
         await AddAiStatusAsync(items, preferences, cancellationToken);
 
         items.Add(new DiagnosticItem(
-            "Sakura Vision",
+            "Lens",
             preferences.VisionEnabled ? DiagnosticStatus.Ready : DiagnosticStatus.Information,
             preferences.VisionEnabled
                 ? "Capturas bajo demanda habilitadas."

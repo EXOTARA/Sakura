@@ -4,6 +4,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using Nexo.App.Motion;
 using Nexo.Core.Settings;
 
 namespace Nexo.App;
@@ -93,28 +94,15 @@ public partial class CapsuleWindow : Window
 
         PositionWindow(sidebarPosition);
 
-        CapsuleBorder.BeginAnimation(OpacityProperty, null);
-        CapsuleTranslate.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, null);
-
         if (!IsVisible)
         {
             Show();
         }
 
         Topmost = true;
-        CapsuleBorder.Opacity = 0;
-        CapsuleTranslate.Y = -12;
 
-        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var animationDuration = TimeSpan.FromMilliseconds(155);
-
-        CapsuleBorder.BeginAnimation(
-            OpacityProperty,
-            new DoubleAnimation(1, animationDuration) { EasingFunction = easing });
-
-        CapsuleTranslate.BeginAnimation(
-            System.Windows.Media.TranslateTransform.YProperty,
-            new DoubleAnimation(0, animationDuration) { EasingFunction = easing });
+        // Nace como burbuja arriba en el centro y se estira hasta el aviso (Adler, 2026-09-14).
+        BubbleMotion.Inflate(CapsuleBorder, HorizontalAlignment.Center);
 
         _dismissTimer.Interval = duration ?? GetDefaultDuration(kind);
         _dismissTimer.Start();
@@ -147,6 +135,7 @@ public partial class CapsuleWindow : Window
         // ventana ya escondida y su Completed llegaba después, pisando el estado del mensaje
         // siguiente si entraba dentro de esos ciento treinta y cinco milisegundos.
         CapsuleBorder.BeginAnimation(OpacityProperty, null);
+        CapsuleBorder.Opacity = 0;
         Hide();
     }
 
@@ -169,24 +158,13 @@ public partial class CapsuleWindow : Window
         // lo explique.
         IsHitTestVisible = false;
 
-        var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
-        var duration = TimeSpan.FromMilliseconds(135);
-
-        var opacityAnimation = new DoubleAnimation(0, duration)
-        {
-            EasingFunction = easing
-        };
-
-        opacityAnimation.Completed += (_, _) =>
+        // Se recoge en burbuja y desaparece. Si antes de acabar llega otro aviso, ShowMessage lo
+        // vuelve a inflar y esta salida se cancela: su final ya no llega a ocultar la ventana.
+        BubbleMotion.Deflate(CapsuleBorder, HorizontalAlignment.Center, () =>
         {
             Hide();
             _isClosingAnimation = false;
-        };
-
-        CapsuleBorder.BeginAnimation(OpacityProperty, opacityAnimation);
-        CapsuleTranslate.BeginAnimation(
-            System.Windows.Media.TranslateTransform.YProperty,
-            new DoubleAnimation(-8, duration) { EasingFunction = easing });
+        });
     }
 
     private void PositionWindow(SidebarPosition sidebarPosition)
@@ -194,7 +172,9 @@ public partial class CapsuleWindow : Window
         _ = sidebarPosition;
 
         var workArea = SystemParameters.WorkArea;
-        Top = workArea.Top + 24;
+
+        // Se descuenta el margen de la sombra: lo que queda a 24 del borde es el aviso, no la ventana.
+        Top = workArea.Top + 24 - CapsuleBorder.Margin.Top;
         Left = workArea.Left + Math.Max(0, (workArea.Width - Width) / 2);
     }
 

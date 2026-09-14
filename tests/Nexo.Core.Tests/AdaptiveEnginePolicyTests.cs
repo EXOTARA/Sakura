@@ -146,6 +146,24 @@ public sealed class AdaptiveEnginePolicyTests
     }
 
     [Fact]
+    public void Warnings_AreShortAndDoNotRepeatTheEngineName()
+    {
+        // 2026-09-14 — la tarjeta ya nombra el motor; las frases que empezaban por su nombre lo
+        // repetían cuatro veces seguidas. Y si falta descargarlo, no se dice además que no está.
+        var profile = CreateProfile(HardwareCapabilityTier.Standard, HardwareDataConfidence.Known);
+        var descriptor = CreateDescriptor("stt.motor-largo", EngineCategory.SpeechToText, requiresRestart: true, requiresDownload: true);
+        var state = new EngineRuntimeState(descriptor.Id, IsAvailable: false, IsConfigured: null, IsActive: null, Detail: null);
+
+        var plan = AdaptiveEnginePolicy.Evaluate(
+            profile, HardwarePerformanceMode.Automatic, new[] { descriptor }, new[] { state }, FixedTimestamp);
+
+        var recommendation = plan.Recommendations.Single(r => r.Category == EngineCategory.SpeechToText);
+        Assert.Equal(["Falta descargarlo.", "Se aplica al reiniciar Sakura."], recommendation.Warnings);
+        Assert.All(recommendation.Reasons.Concat(recommendation.Warnings), text => Assert.DoesNotContain("stt.motor-largo", text));
+        Assert.DoesNotContain("Automático", plan.Summary);
+    }
+
+    [Fact]
     public void AvailableButIncompatibleEngine_AppearsInIncompatibleListNotRecommended()
     {
         var profile = CreateProfile(HardwareCapabilityTier.Basic, HardwareDataConfidence.Known);

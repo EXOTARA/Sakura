@@ -1,12 +1,14 @@
 <UserControl x:Class="Nexo.App.Views.SystemView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Nexo.App.Views.Controls">
     <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  controls:ScrollEdgeFade.IsEnabled="True"
                   Focusable="False"
                   HorizontalScrollBarVisibility="Disabled"
                   Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Text="Estado del equipo y de los servicios que Sakura mantiene en segundo plano. Las medidas en vivo viven en el panel de arriba: lleva el ratón al centro del borde superior de la pantalla."
+            <TextBlock Text="Estado del equipo y de los servicios de Sakura. Las medidas en vivo están en el panel de arriba: lleva el ratón al centro del borde superior."
                        Margin="0,0,0,14"
                        TextWrapping="Wrap"
                        Style="{StaticResource MutedTextStyle}" />
@@ -45,7 +47,7 @@
                         <Border Margin="4" Padding="14" Background="{DynamicResource BrushSurfaceRaised}" CornerRadius="{DynamicResource RadiusMedium}">
                             <StackPanel>
                                 <TextBlock Text="CPU" Style="{StaticResource MutedTextStyle}" />
-                                <TextBlock x:Name="HardwareCapabilityCpuText" Margin="0,4,0,0" Text="—" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="HardwareCapabilityCpuText" Margin="0,4,0,0" Text="—" FontWeight="SemiBold" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                         <Border Margin="4" Padding="14" Background="{DynamicResource BrushSurfaceRaised}" CornerRadius="{DynamicResource RadiusMedium}">
@@ -69,7 +71,7 @@
                         <Border Margin="4" Padding="14" Background="{DynamicResource BrushSurfaceRaised}" CornerRadius="{DynamicResource RadiusMedium}">
                             <StackPanel>
                                 <TextBlock Text="GPU PREFERIDA" Style="{StaticResource MutedTextStyle}" />
-                                <TextBlock x:Name="HardwareCapabilityGpuText" Margin="0,4,0,0" Text="—" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="HardwareCapabilityGpuText" Margin="0,4,0,0" Text="—" FontWeight="SemiBold" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                         <Border Margin="4" Padding="14" Background="{DynamicResource BrushSurfaceRaised}" CornerRadius="{DynamicResource RadiusMedium}">
@@ -86,16 +88,14 @@
                         </Border>
                     </UniformGrid>
 
-                    <TextBlock x:Name="HardwareCapabilityCompletenessText"
-                               Margin="4,10,4,0"
-                               TextWrapping="Wrap"
-                               Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="HardwareCapabilityReasonsText"
-                               Margin="4,6,4,0"
-                               TextWrapping="Wrap"
-                               Style="{StaticResource MutedTextStyle}" />
+                    <!--
+                        2026-09-14 — solo cuando falta algo. Las «razones» repetían, en una frase, los
+                        mismos datos que la cuadrícula de arriba ya enseña, y «la información es
+                        completa» aparecía siempre sin decir nada.
+                    -->
                     <TextBlock x:Name="HardwareCapabilityMissingDataText"
-                               Margin="4,4,4,0"
+                               Margin="4,10,4,0"
+                               Visibility="Collapsed"
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
                 </StackPanel>
@@ -124,6 +124,7 @@
 
                     <TextBlock x:Name="AdaptiveEnginePlanConfidenceText"
                                Margin="0,8,0,0"
+                               Visibility="Collapsed"
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
@@ -145,14 +146,14 @@
                                                        Foreground="{DynamicResource BrushWarning}"
                                                        Visibility="{Binding RecommendationOnlyVisibility}" />
                                         </Grid>
-                                        <TextBlock Margin="0,4,0,0" Text="{Binding ConfiguredLine}" Style="{StaticResource MutedTextStyle}" />
-                                        <TextBlock Margin="0,2,0,0" Text="{Binding ActiveLine}" Style="{StaticResource MutedTextStyle}" />
-                                        <TextBlock Margin="0,2,0,0" Text="{Binding RecommendedLine}" FontWeight="SemiBold" />
+                                        <!--
+                                            2026-09-14 — tres líneas en vez de cinco: qué se recomienda,
+                                            cómo está ahora y qué falta. Antes cada línea repetía el nombre
+                                            del motor y la tarjeta se leía como un informe.
+                                        -->
+                                        <TextBlock Margin="0,4,0,0" Text="{Binding RecommendedLine}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                                        <TextBlock Margin="0,2,0,0" Text="{Binding StateLine}" TextWrapping="Wrap" Style="{StaticResource MutedTextStyle}" />
                                         <TextBlock Margin="0,4,0,0"
-                                                   Text="{Binding ReasonText}"
-                                                   TextWrapping="Wrap"
-                                                   Style="{StaticResource MutedTextStyle}" />
-                                        <TextBlock Margin="0,2,0,0"
                                                    Text="{Binding WarningText}"
                                                    TextWrapping="Wrap"
                                                    Visibility="{Binding WarningVisibility}"
@@ -170,7 +171,7 @@
                 <StackPanel>
                     <TextBlock Text="Optimización del equipo" FontSize="{DynamicResource FontSizeTitle3}" FontWeight="SemiBold" />
                     <TextBlock Margin="0,3,0,0"
-                               Text="Sakura revisa tu hardware real y propone solo lo que ese hardware justifica. Nada se aplica sin que lo confirmes, y siempre se puede deshacer."
+                               Text="Propone ajustes según tu hardware. Nada se aplica sin tu confirmación y todo se puede deshacer."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
@@ -209,7 +210,7 @@
 
                     <TextBlock x:Name="OptimizationStatusText"
                                Margin="0,9,0,0"
-                               Text="Elige para qué quieres optimizar y Sakura te enseñará el plan antes de tocar nada."
+                               Text="Elige un uso y verás el plan antes de aplicar nada."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
                 </StackPanel>
@@ -310,27 +311,24 @@
 
             <Border Style="{StaticResource SubtleCardStyle}" Margin="0,0,0,12">
                 <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="Sakura Runtime" FontSize="{DynamicResource FontSizeTitle3}" FontWeight="SemiBold" />
-                            <TextBlock Margin="0,3,0,0"
-                                       Text="Servicios locales, privacidad y rendimiento en una sola vista."
-                                       Style="{StaticResource MutedTextStyle}" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Button Content="Reiniciar voz"
-                                    Margin="0,0,8,0"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Click="RestartVoiceButton_Click" />
-                            <Button Content="Diagnóstico"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Click="DiagnosticsButton_Click" />
-                        </StackPanel>
-                    </Grid>
+                    <!--
+                        2026-09-14 — los botones van debajo del título y no a su lado: a su lado le
+                        quitaban el ancho a la descripción, que salía cortada en «Servicios locales, pri».
+                    -->
+                    <TextBlock Text="Sakura Runtime" FontSize="{DynamicResource FontSizeTitle3}" FontWeight="SemiBold" />
+                    <TextBlock Margin="0,3,0,0"
+                               Text="Los servicios locales de Sakura y cómo están ahora."
+                               TextWrapping="Wrap"
+                               Style="{StaticResource MutedTextStyle}" />
+                    <WrapPanel Margin="0,10,0,0">
+                        <Button Content="Reiniciar voz"
+                                Margin="0,0,8,0"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="RestartVoiceButton_Click" />
+                        <Button Content="Diagnóstico"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="DiagnosticsButton_Click" />
+                    </WrapPanel>
 
                     <UniformGrid Columns="2" Margin="-4,12,-4,0">
                         <Border Margin="4" Padding="14" Background="{DynamicResource BrushSurfaceRaised}" CornerRadius="{DynamicResource RadiusMedium}">

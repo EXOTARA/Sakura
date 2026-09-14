@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Nexo.App.Ambient;
+using Nexo.App.Motion;
 using Nexo.Core.Ambient;
 
 namespace Nexo.App;
@@ -76,7 +77,7 @@ public partial class SakuraPillWindow : Window
             _autoDismissTimer.Stop();
             _autoDismissForRequestId = null;
             _autoDismissForStatus = null;
-            Hide();
+            PlayDisappearAnimation();
             return;
         }
 
@@ -152,33 +153,58 @@ public partial class SakuraPillWindow : Window
             _autoDismissTimer.Start();
         }
 
-        if (!IsVisible)
+        if (!IsVisible || _disappearing)
         {
+            _disappearing = false;
             PositionWindow();
             Show();
             PlayAppearAnimation();
         }
     }
 
+    private bool _disappearing;
+
     /// <summary>
-    /// Diseño D7 — aparición suave. Deliberadamente corta (160 ms) y solo al mostrarse por primera
-    /// vez: una animación en cada refresco parpadearía sin parar mientras la respuesta se escribe.
+    /// Diseño D7 — solo al mostrarse por primera vez: una animación en cada refresco parpadearía sin
+    /// parar mientras la respuesta se escribe.
+    ///
+    /// 2026-09-14 — nace como burbuja (BubbleMotion). El alto de la ventana lo decide el contenido,
+    /// y mientras la burbuja crece ese contenido es un círculo pequeño: se fija el alto final durante
+    /// la entrada para que la ventana no se encoja y vuelva a crecer en cada fotograma.
     /// </summary>
     private void PlayAppearAnimation()
     {
-        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var duration = TimeSpan.FromMilliseconds(160);
+        UpdateLayout();
+        var restoreSizing = SizeToContent;
+        if (ActualHeight > 0)
+        {
+            SizeToContent = SizeToContent.Manual;
+            Height = ActualHeight;
+        }
 
-        PillBorder.BeginAnimation(OpacityProperty, null);
-        PillTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+        BubbleMotion.Inflate(PillBorder, HorizontalAlignment.Center, () => SizeToContent = restoreSizing);
+    }
 
-        PillBorder.Opacity = 0;
-        PillTranslate.Y = -10;
+    private void PlayDisappearAnimation()
+    {
+        if (!IsVisible || _disappearing)
+        {
+            return;
+        }
 
-        PillBorder.BeginAnimation(
-            OpacityProperty, new DoubleAnimation(1, duration) { EasingFunction = easing });
-        PillTranslate.BeginAnimation(
-            TranslateTransform.YProperty, new DoubleAnimation(0, duration) { EasingFunction = easing });
+        _disappearing = true;
+        SizeToContent = SizeToContent.Manual;
+        BubbleMotion.Deflate(PillBorder, HorizontalAlignment.Center, () =>
+        {
+            if (!_disappearing)
+            {
+                return;
+            }
+
+            _disappearing = false;
+            Hide();
+            SizeToContent = SizeToContent.Height;
+        });
     }
 
     private void ApplyQuickActions(IReadOnlyList<Core.Ambient.AmbientQuickAction> actions)
@@ -210,7 +236,7 @@ public partial class SakuraPillWindow : Window
     private void PositionWindow()
     {
         var workArea = SystemParameters.WorkArea;
-        Top = workArea.Top + 24;
+        Top = workArea.Top + 24 - PillBorder.Margin.Top;
         Left = workArea.Left + Math.Max(0, (workArea.Width - Width) / 2);
     }
 
