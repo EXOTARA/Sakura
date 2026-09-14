@@ -5630,15 +5630,21 @@ public partial class MainWindow : Window
                     : "Pensando…");
             streamingStarted = true;
 
-            _capsuleWindow.ShowMessage(
-                CapsuleKind.Processing,
-                requestMode == AiRequestMode.VisionTechnicalDiagnostic
-                    ? "Diagnosticando captura"
-                    : $"Consultando {configuration.DisplayName}",
-                string.IsNullOrWhiteSpace(configuration.Model)
-                    ? "Preparando la solicitud…"
-                    : configuration.Model,
-                _preferences.Position);
+            // La misma regla que el aviso de «Respuesta lista», más abajo: con la respuesta en la
+            // píldora, la píldora ya dice que está pensando. Adler lo vio en pantalla (2026-09-14):
+            // dos avisos a la vez, uno arriba en el centro y otro en la esquina, contando lo mismo.
+            if (!_answerInPill)
+            {
+                _capsuleWindow.ShowMessage(
+                    CapsuleKind.Processing,
+                    requestMode == AiRequestMode.VisionTechnicalDiagnostic
+                        ? "Diagnosticando captura"
+                        : $"Consultando {configuration.DisplayName}",
+                    string.IsNullOrWhiteSpace(configuration.Model)
+                        ? "Preparando la solicitud…"
+                        : configuration.Model,
+                    _preferences.Position);
+            }
 
             var request = new AiChatRequest(
                 _assistantView.GetConversationSnapshot(),
