@@ -183,7 +183,6 @@ public partial class DashboardWindow : Window
         IsHitTestVisible = true;
         Show();
         Activate();
-        MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
 
         // Hay que medir antes de animar: la altura la decide el contenido (SizeToContent) y sin
         // este paso la primera apertura arrancaría desde cero y el cajón aparecería de golpe en su
@@ -343,7 +342,10 @@ public partial class DashboardWindow : Window
             return;
         }
 
-        if (IsKeyboardFocusWithin || IsPointerInside())
+        // No se tiene en cuenta el foco del teclado. El cajón se activa al abrirse, así que el foco
+        // queda dentro siempre y, con esa condición, apartar el ratón dejaba de cerrarlo: solo se iba
+        // con Escape. Quien llega por teclado sigue teniendo Escape para salir.
+        if (IsPointerInside())
         {
             _outsideSince = null;
             return;
