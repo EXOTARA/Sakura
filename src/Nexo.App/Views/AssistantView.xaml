@@ -38,7 +38,7 @@
                              VerticalAlignment="Center"
                              Fill="{DynamicResource BrushSuccess}" />
                     <TextBlock x:Name="AiProviderStatusText"
-                               Text="IA desactivada · los comandos locales siguen disponibles"
+                               Text="Sin IA · las órdenes locales funcionan"
                                TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource BrushTextSecondary}"
                                FontSize="{DynamicResource FontSizeCaption}" />

@@ -18,7 +18,7 @@ public partial class AssistantView : UserControl
     private Border? _streamingBubble;
     private TextBlock? _streamingTextBlock;
     private bool _streamingHasContent;
-    private string _aiProviderStatus = "IA desactivada · los comandos locales siguen disponibles";
+    private string _aiProviderStatus = "Sin IA · las órdenes locales funcionan";
     private bool _saveHistory;
     private int _recentMessageLimit = 8;
 

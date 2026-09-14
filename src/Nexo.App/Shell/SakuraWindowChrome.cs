@@ -74,6 +74,53 @@ public static class SakuraWindowChrome
     }
 
     /// <summary>
+    /// 2026-09-14 — el shell con el radio grande del panel superior, a petición de Adler.
+    ///
+    /// DWM no admite un radio a medida: sus esquinas miden unos 8 px. Para tener las de 34 del panel
+    /// de arriba sin volver a <c>AllowsTransparency</c> —que obligaba a componer por software— la
+    /// ventana pasa a ser cristal transparente (<see cref="WindowsDwmChrome.TryApplyClearGlass"/>) y la
+    /// superficie dibuja sus propias esquinas. Sigue pintándose en la GPU. El precio, que Adler eligió
+    /// sabiéndolo: no hay desenfoque detrás, la transparencia es un color translúcido.
+    ///
+    /// Si el marco no se puede extender, o con contraste alto, se vuelve a <see cref="Apply"/>.
+    /// </summary>
+    public static WindowBackdropDecision ApplyRounded(
+        Window window,
+        Border surface,
+        CornerRadius radius,
+        string surfaceBrushKey = "BrushSurface",
+        double opacity = PanelOpacity)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        ArgumentNullException.ThrowIfNull(surface);
+
+        var handle = new WindowInteropHelper(window).Handle;
+        var probe = WindowsDwmChrome.ReadProbe(PerformanceMode);
+
+        if (probe.HighContrast || !WindowsDwmChrome.TryApplyClearGlass(handle))
+        {
+            return Apply(window, surface, surfaceBrushKey, opacity);
+        }
+
+        if (HwndSource.FromHwnd(handle)?.CompositionTarget is { } target)
+        {
+            target.BackgroundColor = Colors.Transparent;
+        }
+
+        surface.CornerRadius = radius;
+
+        // Sin fondo del sistema pero con composición transparente: PaintSurface pinta el alfa pedido.
+        var decision = new WindowBackdropDecision(
+            WindowBackdrop.None,
+            WindowCorner.Square,
+            PaintOwnBackground: false,
+            "Cristal transparente con esquinas propias.");
+
+        PaintSurface(window, surface, surfaceBrushKey, opacity, decision);
+        return decision;
+    }
+
+    /// <summary>
     /// Solo el fondo del sistema, para ventanas que pintan su superficie con una brocha propia
     /// —un degradado, por ejemplo— y no con un color del tema.
     /// </summary>

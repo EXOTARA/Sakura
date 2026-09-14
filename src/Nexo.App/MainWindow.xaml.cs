@@ -6127,7 +6127,7 @@ public partial class MainWindow : Window
             _runtimeAiStatus = "Desactivada";
             _runtimeAiHealthy = false;
             _assistantView.SetAiProviderStatus(
-                "IA desactivada · los comandos locales siguen disponibles");
+                "Sin IA · las órdenes locales funcionan");
             RefreshRuntimeDashboard();
             return;
         }
@@ -8676,9 +8676,12 @@ public partial class MainWindow : Window
         // ellas: el modo eco tiene que valer para todas o para ninguna.
         SakuraWindowChrome.PerformanceMode = _preferences.HardwarePerformanceMode;
 
-        _backdropDecision = SakuraWindowChrome.Apply(
+        // Radio grande como el panel superior (Adler, 2026-09-14): cristal transparente con esquinas
+        // propias en vez de acrílico con las 8 px de Windows.
+        _backdropDecision = SakuraWindowChrome.ApplyRounded(
             this,
             ShellSurface,
+            (CornerRadius)FindResource("RadiusShellWindow"),
             "BrushBackground",
             _preferences.Opacity);
     }
