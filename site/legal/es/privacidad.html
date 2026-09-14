@@ -64,10 +64,11 @@
         Sakura lee la lista pública de versiones en <code>api.github.com</code>. No envía ningún
         identificador ni datos de tu equipo más allá de lo que lleva cualquier conexión (tu dirección
         IP). Se desactiva en Ajustes. Nada se instala sin que lo aceptes.</li>
-        <li><strong>El modelo de transcripción, la primera vez que abres Sakura.</strong> También es
-        automático: Sakura descarga una sola vez el modelo de voz Whisper (unos 140 MB) desde Hugging Face
-        y lo guarda en tu disco, para que el dictado funcione sin conexión. Solo lo pide; no envía nada
-        tuyo.</li>
+        <li><strong>El modelo de transcripción, la primera vez que usas la voz.</strong> Sakura descarga
+        una sola vez el modelo Whisper (unos 140 MB) desde Hugging Face y lo guarda en tu disco, para que
+        el dictado funcione sin conexión. Solo lo pide; no envía nada tuyo. En la versión 0.30.0 esta
+        descarga ocurría al abrir Sakura por primera vez, aunque no usaras la voz; desde la 0.30.1 espera
+        a que la uses.</li>
         <li><strong>Descargas que pides tú.</strong> El modelo de la palabra de activación (de
         <code>alphacephei.com</code>), cuando activas o pruebas «Oye Sakura»; Ollama, si dejas que Sakura
         lo instale desde GitHub (la versión de Microsoft Store no lo instala: solo enlaza a su web); y los

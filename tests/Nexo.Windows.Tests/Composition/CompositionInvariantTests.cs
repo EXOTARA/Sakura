@@ -236,7 +236,7 @@ public sealed class CompositionInvariantTests
         // `.GetInputDevices()` se llama encadenado en varias líneas; se comprueba por
         // separado para no depender del formato exacto del encadenamiento.
         Assert.Contains(".GetInputDevices()", body, StringComparison.Ordinal);
-        Assert.Contains("_voiceCoordinator.IsVoiceInputReady", body, StringComparison.Ordinal);
+        Assert.Contains("VoiceButtonAvailable", body, StringComparison.Ordinal); // el micrófono se ofrece mientras no se prepara el modelo
         Assert.DoesNotContain("_voiceInputService", body, StringComparison.Ordinal);
         Assert.DoesNotContain("_wakeWordService", body, StringComparison.Ordinal);
     }
@@ -378,7 +378,7 @@ public sealed class CompositionInvariantTests
         Assert.Contains("await wakeWordScope.StartListeningAsync(", body, StringComparison.Ordinal);
         Assert.Contains("_voiceCoordinator.WakeWordSensitivity", body, StringComparison.Ordinal);
         Assert.Contains("_voiceCoordinator.WakeWordCustomAliases", body, StringComparison.Ordinal);
-        Assert.Contains("_voiceCoordinator.IsVoiceInputReady", body, StringComparison.Ordinal);
+        Assert.Contains("VoiceButtonAvailable", body, StringComparison.Ordinal); // el micrófono se ofrece mientras no se prepara el modelo
         Assert.Contains("_voiceCoordinator.IsVoiceInputListening", body, StringComparison.Ordinal);
         Assert.Contains("_voiceCoordinator.IsWakeWordReady", body, StringComparison.Ordinal);
 

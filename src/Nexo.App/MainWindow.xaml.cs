@@ -6288,7 +6288,7 @@ public partial class MainWindow : Window
                 ?.Name ?? "micrófono seleccionado";
 
             _assistantView.SetVoiceAvailability(
-                _voiceCoordinator.IsVoiceInputReady,
+                VoiceButtonAvailable,
                 $"Micrófono activo: {selectedName}");
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Success,
@@ -6353,9 +6353,22 @@ public partial class MainWindow : Window
     private static bool IsVoiceCancellation(string text) =>
         text is "no" or "cancela" or "cancelar" or "olvidalo";
 
+    /// <summary>
+    /// El micrófono se ofrece siempre, salvo mientras se prepara el modelo. Antes solo se ofrecía con
+    /// el modelo ya descargado, y por eso había que descargarlo al arrancar: sin él, el botón nacía
+    /// apagado y no había forma de pedir la voz para que se preparase.
+    /// </summary>
+    private bool VoiceButtonAvailable => !_voicePreparing;
+
+    private bool _voicePreparing;
+
+    private const string VoiceDownloadsOnFirstUse =
+        "La voz se prepara la primera vez que la uses: descarga un modelo de unos 140 MB.";
+
     private async Task PrepareVoiceAsync()
     {
         var requiresDownload = !_voiceCoordinator.IsVoiceInputReady;
+        _voicePreparing = true;
         _assistantView.SetVoiceAvailability(
             available: false,
             "Preparando Whisper local…");
@@ -6382,7 +6395,9 @@ public partial class MainWindow : Window
                 progress,
                 _lifetimeCancellation.Token);
 
-            _assistantView.SetVoiceAvailability(result.IsReady, result.Detail);
+            // Aunque falle, el botón vuelve a estar disponible: es la única forma de reintentarlo.
+            _voicePreparing = false;
+            _assistantView.SetVoiceAvailability(true, result.Detail);
             if (result.IsReady && requiresDownload && !_isClosed)
             {
                 _capsuleWindow.ShowMessage(
@@ -6404,11 +6419,30 @@ public partial class MainWindow : Window
         {
             // Nexo se está cerrando.
         }
+        finally
+        {
+            _voicePreparing = false;
+        }
     }
 
+    /// <summary>
+    /// 2026-09-14 — el modelo de transcripción ya no se descarga al arrancar (Adler).
+    ///
+    /// Se bajaban unos 140 MB la primera vez que se abría Sakura, se usara la voz o no; para quien
+    /// solo escribe era gastar datos por nada. Ahora al arrancar solo se carga si ya está en el disco,
+    /// y la descarga la dispara el primer uso: el micrófono, Alt + V, «Oye Sakura» o el dictado.
+    /// </summary>
     private async Task InitializeVoiceFeaturesAsync()
     {
-        await PrepareVoiceAsync();
+        if (_voiceCoordinator.IsVoiceInputReady)
+        {
+            await PrepareVoiceAsync();
+        }
+        else
+        {
+            _assistantView.SetVoiceAvailability(true, VoiceDownloadsOnFirstUse);
+        }
+
         if (_preferences.WakeWordEnabled && !_isClosed)
         {
             await ApplyWakeWordPreferenceAsync(showCapsule: false);
@@ -6992,7 +7026,7 @@ public partial class MainWindow : Window
             {
                 SetWakeWordIndicator(active: false);
                 _assistantView.SetVoiceAvailability(
-                    _voiceCoordinator.IsVoiceInputReady,
+                    VoiceButtonAvailable,
                     "Activación por voz pausada por Modo Juego.");
                 return;
             }
@@ -7003,7 +7037,7 @@ public partial class MainWindow : Window
                 WakeWordIndicatorText.Text = "Preparando voz";
                 WakeWordIndicator.Visibility = Visibility.Visible;
                 _assistantView.SetVoiceAvailability(
-                    _voiceCoordinator.IsVoiceInputReady,
+                    VoiceButtonAvailable,
                     update.Detail);
             });
 
@@ -7015,7 +7049,7 @@ public partial class MainWindow : Window
             {
                 SetWakeWordIndicator(active: false);
                 _assistantView.SetVoiceAvailability(
-                    _voiceCoordinator.IsVoiceInputReady,
+                    VoiceButtonAvailable,
                     preparation.Detail);
                 if (showCapsule && !_isClosed)
                 {
@@ -7044,7 +7078,7 @@ public partial class MainWindow : Window
             {
                 SetWakeWordIndicator(active: false);
                 _assistantView.SetVoiceAvailability(
-                    _voiceCoordinator.IsVoiceInputReady,
+                    VoiceButtonAvailable,
                     start.Detail);
                 if (showCapsule && !_isClosed)
                 {
@@ -7060,7 +7094,7 @@ public partial class MainWindow : Window
             SetWakeWordIndicator(active: true);
             RefreshRuntimeDashboard();
             _assistantView.SetVoiceAvailability(
-                _voiceCoordinator.IsVoiceInputReady,
+                VoiceButtonAvailable,
                 $"Di “{_preferences.WakeWordPhrase.ToSpokenText()}” y la orden de corrido, o espera “Te escucho”.");
 
             if (showCapsule && !_isClosed)
@@ -7667,6 +7701,16 @@ public partial class MainWindow : Window
             await using var voiceScope = await _voiceCoordinator.AcquireVoiceInputScopeAsync();
             await PauseWakeWordAsync();
             _voiceCoordinator.StopSpeaking();
+
+            // El primer dictado es también el que prepara la voz, si aún no se había usado.
+            if (!_voiceCoordinator.IsVoiceInputReady)
+            {
+                await PrepareVoiceAsync();
+                if (!_voiceCoordinator.IsVoiceInputReady)
+                {
+                    return;
+                }
+            }
 
             try
             {

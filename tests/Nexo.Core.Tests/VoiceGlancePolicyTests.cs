@@ -36,7 +36,6 @@ public sealed class VoiceGlancePolicyTests
 
     [Theory]
     [InlineData(false, true, "Micrófono (Realtek)", "Escucha")]
-    [InlineData(true, false, "Micrófono (Realtek)", "Modelos de voz")]
     [InlineData(true, true, null, "Micrófono")]
     public void EachReasonSakuraCannotHearYou_IsMarked(
         bool wakeWordEnabled,
@@ -51,6 +50,17 @@ public sealed class VoiceGlancePolicyTests
 
         Assert.Single(flagged);
         Assert.Equal(expectedLabel, flagged[0].Label);
+    }
+
+    [Fact]
+    public void ModelsNotDownloadedYet_AreNotAProblem_TheyComeOnFirstUse()
+    {
+        var rows = VoiceGlancePolicy.Describe(
+            wakeWordEnabled: true, "Oye Sakura", modelsReady: false, "Micrófono (Realtek)", dictationEnabled: true);
+
+        var models = rows.Single(row => row.Label == "Modelos de voz");
+        Assert.False(models.NeedsAttention);
+        Assert.Equal("Se descargan al usar la voz", models.Value);
     }
 
     [Fact]

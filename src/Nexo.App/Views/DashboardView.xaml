@@ -1027,6 +1027,10 @@
                 <Grid.RenderTransform>
                     <TranslateTransform x:Name="VoicePaneTranslate" />
                 </Grid.RenderTransform>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
                 <Border Style="{StaticResource DashboardCardStyle}" Margin="-6,0,-6,0" Padding="4,2">
                     <ItemsControl AutomationProperties.Name="Estado de la voz" x:Name="VoiceRowItems">
@@ -1067,6 +1071,58 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </Border>
+
+                <!--
+                    2026-09-14 — qué decirle, junto a cómo está la voz (Adler). Son ejemplos que se
+                    resuelven sin IA; VoiceCommandExamplesTests lo comprueba frase a frase.
+                -->
+                <Border Grid.Row="1"
+                        Style="{StaticResource DashboardCardStyle}"
+                        Margin="-6,10,-6,0"
+                        Padding="18,14,18,8">
+                    <StackPanel>
+                        <TextBlock Text="Prueba a decir, después de la frase de activación o Alt + V:"
+                                   FontSize="{DynamicResource FontSizeFootnote}"
+                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                        <ItemsControl x:Name="VoiceExampleItems"
+                                      Margin="0,8,0,0"
+                                      AutomationProperties.Name="Ejemplos de órdenes por voz">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,4,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" MinWidth="136" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Title}"
+                                                   Margin="0,6,0,0"
+                                                   FontSize="{DynamicResource FontSizeFootnote}"
+                                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Phrases}" Focusable="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,0,6,6"
+                                                            Padding="10,4"
+                                                            CornerRadius="10"
+                                                            Background="{DynamicResource BrushAccentSoft}">
+                                                        <TextBlock Text="{Binding StringFormat=«{0}»}"
+                                                                   FontSize="{DynamicResource FontSizeFootnote}"
+                                                                   Foreground="{DynamicResource BrushTextPrimary}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </Border>
             </Grid>
 

@@ -68,6 +68,9 @@ public partial class DashboardView : UserControl
     {
         InitializeComponent();
         CalendarDayItems.ItemsSource = _calendarCells;
+        VoiceExampleItems.ItemsSource = VoiceCommandExamples.Groups
+            .Select(group => new VoiceExampleRow(group.Title, group.Phrases))
+            .ToArray();
 
         DashboardTabs.SetTabs(
         [
@@ -402,6 +405,12 @@ public partial class DashboardView : UserControl
     public sealed record AccessibleVoiceRow(string Label, string Value, Brush Foreground, Visibility MarkVisibility)
     {
         public override string ToString() => $"{Label}: {Value}";
+    }
+
+    /// <summary>Un grupo de ejemplos de la pestaña Voz; el lector de pantalla lo anuncia entero.</summary>
+    public sealed record VoiceExampleRow(string Title, IReadOnlyList<string> Phrases)
+    {
+        public override string ToString() => $"{Title}: {string.Join(", ", Phrases)}";
     }
 
     public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows)

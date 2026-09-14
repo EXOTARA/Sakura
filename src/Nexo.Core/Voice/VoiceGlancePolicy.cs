@@ -13,9 +13,10 @@ public readonly record struct VoiceGlanceRow(string Label, string Value, bool Ne
 /// Es un vistazo, no un panel de ajustes: enseña el estado y los atajos, y no cambia nada. Lo que
 /// se toca sigue estando en Personalizar, donde hay sitio para explicarlo.
 ///
-/// **Lo que está mal se marca.** Sin micrófono, sin modelos o con la escucha apagada, la línea pide
-/// atención — porque son exactamente las tres causas de que Sakura no conteste, y una lista donde
-/// todo se ve igual obliga a leerla entera para descubrir cuál falla.
+/// **Lo que está mal se marca.** Sin micrófono o con la escucha apagada, la línea pide atención —
+/// porque son las causas de que Sakura no conteste, y una lista donde todo se ve igual obliga a
+/// leerla entera para descubrir cuál falla. Los modelos sin descargar ya no cuentan: desde
+/// 2026-09-14 se descargan solos la primera vez que se usa la voz.
 /// </summary>
 public static class VoiceGlancePolicy
 {
@@ -44,10 +45,11 @@ public static class VoiceGlancePolicy
                     : inputDeviceName.Trim(),
                 NeedsAttention: string.IsNullOrWhiteSpace(inputDeviceName)),
 
+            // Sin modelos no es un fallo: se descargan solos la primera vez que se usa la voz.
             new VoiceGlanceRow(
                 "Modelos de voz",
-                modelsReady ? "Listos, en este equipo" : "Sin preparar",
-                NeedsAttention: !modelsReady),
+                modelsReady ? "Listos, en este equipo" : "Se descargan al usar la voz",
+                NeedsAttention: false),
 
             // Los dos atajos no son estado: son lo que hay que saber para usar la voz, y este es el
             // único sitio donde alguien va a ir a buscarlos cuando no se acuerde.
