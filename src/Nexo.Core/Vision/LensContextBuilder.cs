@@ -43,7 +43,7 @@ public static class LensContextBuilder
         "título en negrita: **Qué es** (qué aplicación o página es y para qué sirve lo que se ve), " +
         "**Qué está pasando** (lo importante: un error, un aviso, algo a medias o lo que se está haciendo), " +
         "**Cómo resolverlo** (si hay algo que resolver; si no, qué se puede hacer aquí) y **Pasos** " +
-        "(numerados y concretos, con los nombres de botones y menús tal como aparecen en la ventana). " +
+        "(numerados y concretos, con los nombres de botones y menús en negrita y tal como aparecen en la ventana). " +
         "Sé breve. Si no hay ningún problema, dilo claramente y no inventes uno.";
 
     private static string BuildPrompt(LensMode mode) => mode switch

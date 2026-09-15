@@ -128,4 +128,68 @@ public sealed class LensHighlightMatcherTests
 
         Assert.Empty(regions);
     }
+
+    [Fact]
+    public void Explaining_OnlyMarksControlsNamedInTheSteps_AtMostThree()
+    {
+        const string answer = """
+            **Qué es**
+            Ventana de Google con el logo y el botón Buscar.
+            **Cómo resolverlo**
+            Abre **Herramientas** y elige **Configuración**.
+            **Pasos**
+            1. Pulsa **Herramientas**.
+            2. Pulsa «Configuración».
+            3. Activa "Modo oscuro" y pulsa **Guardar**. No toques el botón Cerrar.
+            """;
+        UiAutomationElement[] elements =
+        [
+            new("Google", "ControlType.Image", 10, 10, 100, 40),
+            new("Buscar", "ControlType.Button", 10, 60, 60, 20),
+            new("Herramientas", "ControlType.MenuItem", 100, 60, 90, 20),
+            new("Configuración", "ControlType.Hyperlink", 200, 60, 90, 20),
+            new("Modo oscuro", "ControlType.CheckBox", 300, 60, 90, 20),
+            new("Guardar", "ControlType.Button", 400, 60, 60, 20),
+            new("Abre Herramientas y elige Configuración.", "ControlType.Text", 0, 100, 300, 20)
+        ];
+
+        var regions = LensHighlightMatcher.FindActionTargets(answer, elements);
+
+        Assert.Equal(3, regions.Count);
+        Assert.Equal(100, regions[0].Left);
+        Assert.DoesNotContain(regions, region => region.Left == 10);
+        Assert.DoesNotContain(regions, region => region.Left == 0);
+    }
+
+    [Fact]
+    public void Explaining_WithNothingToDo_MarksNothing()
+    {
+        const string answer = """
+            **Qué es**
+            Google.
+            **Qué está pasando**
+            Nada raro.
+            """;
+        Assert.Empty(LensHighlightMatcher.FindActionTargets(answer, [new("Google", "ControlType.Button", 1, 1, 10, 10)]));
+    }
+
+    [Fact]
+    public void Explaining_IgnoresUnquotedMentionsAndCaptionButtons()
+    {
+        // Lo que pasó en la primera prueba: «configuración del sistema» marcaba el engranaje del Bloc de notas.
+        const string answer = """
+            **Cómo resolverlo**
+            Abre Windows Update en la configuración del sistema y pulsa **Cerrar** al terminar.
+            **Pasos**
+            1. Ve a **Resolver problemas**.
+            """;
+        UiAutomationElement[] elements =
+        [
+            new("Configuración", "ControlType.Button", 1400, 40, 30, 30),
+            new("Cerrar", "ControlType.Button", 1420, 0, 40, 30),
+            new("Minimizar", "ControlType.Button", 1300, 0, 40, 30)
+        ];
+
+        Assert.Empty(LensHighlightMatcher.FindActionTargets(answer, elements));
+    }
 }

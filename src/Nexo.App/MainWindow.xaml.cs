@@ -5305,7 +5305,8 @@ public partial class MainWindow : Window
         }
 
         var target = DocumentDestination.Resolve(DocumentFolder.Desktop, title, ".docx");
-        var result = _documentDropService.Save(target, WordDocumentBuilder.Build(title, sections));
+        // 2026-09-15 — con el formato de la respuesta (títulos, listas, negritas, enlaces, tablas).
+        var result = _documentDropService.Save(target, WordDocumentBuilder.BuildFromMarkdown(title, e.Answer));
 
         if (!result.Saved)
         {

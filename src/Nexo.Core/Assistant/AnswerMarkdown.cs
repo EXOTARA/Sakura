@@ -23,7 +23,8 @@ public abstract record AnswerBlock;
 /// <summary>Un párrafo. Conserva los saltos de línea que el modelo puso dentro.</summary>
 public sealed record AnswerParagraph(IReadOnlyList<AnswerSpan> Spans) : AnswerBlock;
 
-public sealed record AnswerHeading(IReadOnlyList<AnswerSpan> Spans) : AnswerBlock;
+/// <summary>Un título. <see cref="Level"/> es el número de almohadillas (1 a 6).</summary>
+public sealed record AnswerHeading(IReadOnlyList<AnswerSpan> Spans, int Level = 2) : AnswerBlock;
 
 /// <summary>Un punto de lista. <see cref="Number"/> es nulo en las listas con viñetas.</summary>
 public sealed record AnswerListItem(IReadOnlyList<AnswerSpan> Spans, int? Number, int Depth) : AnswerBlock;
@@ -34,6 +35,9 @@ public sealed record AnswerTable(
     IReadOnlyList<IReadOnlyList<IReadOnlyList<AnswerSpan>>> Rows) : AnswerBlock;
 
 public sealed record AnswerCode(string Text) : AnswerBlock;
+
+/// <summary>Una cita o un aviso destacado («> …»).</summary>
+public sealed record AnswerQuote(IReadOnlyList<AnswerSpan> Spans) : AnswerBlock;
 
 /// <summary>
 /// Lee el Markdown con el que escriben los modelos para que el chat lo dibuje y no lo enseñe crudo
@@ -119,11 +123,27 @@ public static partial class AnswerMarkdown
                 continue;
             }
 
+            // 2026-09-15 — una cita («> Consejo: …») se dibuja como cita, sin el signo.
+            if (trimmed.StartsWith('>'))
+            {
+                FlushParagraph();
+                var quote = new StringBuilder(trimmed.TrimStart('>').Trim());
+                while (i + 1 < lines.Length && lines[i + 1].Trim().StartsWith('>'))
+                {
+                    i++;
+                    quote.Append('\n').Append(lines[i].Trim().TrimStart('>').Trim());
+                }
+
+                blocks.Add(new AnswerQuote(ParseInline(quote.ToString())));
+                continue;
+            }
+
             var heading = Heading().Match(trimmed);
             if (heading.Success)
             {
                 FlushParagraph();
-                blocks.Add(new AnswerHeading(ParseInline(heading.Groups["text"].Value.Trim())));
+                blocks.Add(new AnswerHeading(
+                    ParseInline(heading.Groups["text"].Value.Trim()), heading.Groups["hashes"].Value.Length));
                 continue;
             }
 
@@ -462,7 +482,7 @@ public static partial class AnswerMarkdown
         return inner.Split('|').Select(cell => cell.Trim()).ToList();
     }
 
-    [GeneratedRegex(@"^#{1,6}\s+(?<text>.+)$")]
+    [GeneratedRegex(@"^(?<hashes>#{1,6})\s+(?<text>.+)$")]
     private static partial Regex Heading();
 
     [GeneratedRegex(@"^[-*+•]\s+(?<text>.+)$")]
