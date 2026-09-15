@@ -41,6 +41,7 @@ public static class AnswerRenderer
                 AnswerListItem item => ListItem(item),
                 AnswerTable table => Table(table),
                 AnswerCode code => Code(code),
+                AnswerQuote quote => Quote(quote),
                 AnswerParagraph paragraph => Paragraph(paragraph.Spans),
                 _ => null
             };
@@ -155,6 +156,20 @@ public static class AnswerRenderer
         }
 
         return cards;
+    }
+
+    /// <summary>Una cita: una barra del acento a la izquierda y el texto en el tono secundario.</summary>
+    private static FrameworkElement Quote(AnswerQuote quote)
+    {
+        var text = Paragraph(quote.Spans);
+        text.Foreground = Resource<Brush>("BrushTextSecondary");
+        return new Border
+        {
+            Padding = new Thickness(11, 2, 0, 2),
+            BorderBrush = Resource<Brush>("BrushAccent"),
+            BorderThickness = new Thickness(2, 0, 0, 0),
+            Child = text
+        };
     }
 
     private static FrameworkElement Code(AnswerCode code) =>

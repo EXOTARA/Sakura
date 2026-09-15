@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Nexo.Core.Ai;
 
@@ -7,6 +8,9 @@ public sealed class AiChatRouterService : IAiChatService, IDisposable
 {
     private readonly OpenAiCompatibleChatService _compatibleService;
     private readonly OllamaNativeChatService _ollamaService;
+
+    /// <summary>La lista de modelos de cada proveedor, pedida una vez por sesión y solo si hace falta.</summary>
+    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _modelsByEndpoint = new(StringComparer.OrdinalIgnoreCase);
 
     public AiChatRouterService(HttpClient? compatibleClient = null, HttpClient? ollamaClient = null)
     {
@@ -19,24 +23,136 @@ public sealed class AiChatRouterService : IAiChatService, IDisposable
         CancellationToken cancellationToken = default) =>
         Resolve(configuration).TestConnectionAsync(configuration, cancellationToken);
 
-    public Task<AiChatResult> SendAsync(
+    public async Task<AiChatResult> SendAsync(
         AiProviderConfiguration configuration,
         AiChatRequest request,
-        CancellationToken cancellationToken = default) =>
-        Resolve(configuration).SendAsync(configuration, request, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        if (!HasImages(request))
+        {
+            return await Resolve(configuration).SendAsync(configuration, request, cancellationToken);
+        }
 
+        if (AiVisionModelPolicy.IsKnownTextOnly(configuration.Model) &&
+            await VisionConfigurationAsync(configuration, cancellationToken) is { } borrowed)
+        {
+            return await Resolve(borrowed).SendAsync(borrowed, request, cancellationToken);
+        }
+
+        // Este camino no lanza: devuelve el fallo. Con imagen y fallo, se repite con el modelo de visión.
+        var result = await Resolve(configuration).SendAsync(configuration, request, cancellationToken);
+        if (result.IsSuccess || await VisionConfigurationAsync(configuration, cancellationToken) is not { } fallback)
+        {
+            return result;
+        }
+
+        return await Resolve(fallback).SendAsync(fallback, request, cancellationToken);
+    }
+
+    /// <summary>
+    /// 2026-09-15 — una petición con imagen para un modelo que no las lee se hace con un modelo del
+    /// mismo proveedor que sí (ver <see cref="AiVisionModelPolicy"/>). Si el modelo se sabe de solo
+    /// texto se va directo al otro; si no se sabe, se intenta con el elegido y solo si lo rechaza antes
+    /// de escribir nada se repite con el de visión. Una respuesta ya empezada nunca se repite.
+    /// </summary>
     public async IAsyncEnumerable<string> StreamAsync(
         AiProviderConfiguration configuration,
         AiChatRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        await foreach (var chunk in Resolve(configuration).StreamAsync(
-                           configuration,
-                           request,
-                           cancellationToken))
+        var effective = configuration;
+        if (HasImages(request) &&
+            AiVisionModelPolicy.IsKnownTextOnly(configuration.Model) &&
+            await VisionConfigurationAsync(configuration, cancellationToken) is { } direct)
         {
-            yield return chunk;
+            effective = direct;
         }
+
+        var enumerator = Resolve(effective).StreamAsync(effective, request, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var produced = false;
+        AiProviderConfiguration? retry = null;
+        try
+        {
+            while (true)
+            {
+                string chunk;
+                try
+                {
+                    if (!await enumerator.MoveNextAsync())
+                    {
+                        break;
+                    }
+
+                    chunk = enumerator.Current;
+                }
+                catch (Exception exception) when (
+                    exception is not OperationCanceledException &&
+                    !produced &&
+                    HasImages(request) &&
+                    ReferenceEquals(effective, configuration))
+                {
+                    retry = await VisionConfigurationAsync(configuration, cancellationToken);
+                    if (retry is null)
+                    {
+                        throw;
+                    }
+
+                    break;
+                }
+
+                produced = true;
+                yield return chunk;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync();
+        }
+
+        if (retry is not null)
+        {
+            await foreach (var chunk in Resolve(retry).StreamAsync(retry, request, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+    }
+
+    /// <summary>Nombre del último modelo prestado para leer una imagen, para poder decirlo.</summary>
+    public string? LastVisionModel { get; private set; }
+
+    private static bool HasImages(AiChatRequest request) => request.Images is { Count: > 0 };
+
+    private async Task<AiProviderConfiguration?> VisionConfigurationAsync(
+        AiProviderConfiguration configuration,
+        CancellationToken cancellationToken)
+    {
+        if (AiVisionModelPolicy.CandidatesFor(configuration.Provider).Count == 0)
+        {
+            return null;
+        }
+
+        var endpoint = configuration.Provider + "|" + configuration.BaseUrl;
+        if (!_modelsByEndpoint.TryGetValue(endpoint, out var models))
+        {
+            var connection = await Resolve(configuration).TestConnectionAsync(configuration, cancellationToken);
+            if (!connection.IsSuccess)
+            {
+                return null;
+            }
+
+            models = connection.Models;
+            _modelsByEndpoint[endpoint] = models;
+        }
+
+        var chosen = AiVisionModelPolicy.Choose(configuration.Provider, configuration.Model, models.ToArray());
+        if (chosen is null)
+        {
+            return null;
+        }
+
+        LastVisionModel = chosen;
+        return configuration with { Model = chosen };
     }
 
     public void Dispose()

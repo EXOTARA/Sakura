@@ -134,7 +134,7 @@
                 de que el texto seguía era justamente la que no se veía.
             -->
             <Button x:Name="OpenInSakuraText"
-                       Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Left"
+                       Style="{StaticResource LinkButtonStyle}"
                        AutomationProperties.Name="Ver la conversación en Sakura"
                        Grid.Row="2"
                        Margin="0,10,0,0"

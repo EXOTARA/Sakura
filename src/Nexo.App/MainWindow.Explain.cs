@@ -131,7 +131,12 @@ public partial class MainWindow
             _silentVisualContext = true;
             RestartVisualContextExpiry();
 
-            ShowLensHighlights(answer, redactedOcr, redactedElements, uia);
+            if (uia.IsSuccess && uia.WindowWidth > 0 && uia.WindowHeight > 0)
+            {
+                _lensHighlightOverlay.ShowHighlights(
+                    uia.WindowLeft, uia.WindowTop, uia.WindowWidth, uia.WindowHeight,
+                    LensHighlightMatcher.FindActionTargets(answer, redactedElements));
+            }
         }
         catch (OperationCanceledException) when (!_lifetimeCancellation.IsCancellationRequested)
         {

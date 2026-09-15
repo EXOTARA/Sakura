@@ -418,8 +418,11 @@ public partial class AnswerPillWindow : Window
         FollowUpPanel.Visibility = Visibility.Visible;
         EntranceMotion.Rise(FollowUpPanel, TimeSpan.Zero, offset: 6);
 
+        // El alto se sigue ajustando mientras la píldora esté a la vista, no se para aquí: los botones
+        // de seguir se colocan en su panel un instante después de hacerse visibles, y medir solo una
+        // vez dejaba el cuadro de escribir cortado por abajo (Adler, con una captura).
+        UpdateLayout();
         ReconcileHeight();
-        _growthTimer.Stop();
 
         _dismissTimer.Interval = AnswerPillPolicy.ReadingTimeFor(answer);
         _dismissTimer.Start();
