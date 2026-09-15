@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.30.8-beta]
+
+### Cambiado
+
+- **Las imágenes funcionan aunque tu modelo solo lea texto.** Si una pregunta lleva una captura y el modelo elegido no admite imágenes, Sakura usa para esa pregunta un modelo con visión del mismo proveedor (con Groq, qwen3.8-27b). Tu modelo normal no cambia.
+- **Los documentos de Word salen con formato**: títulos, listas numeradas y con viñetas, negritas, cursivas, enlaces, tablas, código y citas, sin asteriscos ni guiones sueltos.
+- **Sakura ya no explica cómo copiar a Word**: sabe que puede guardar la respuesta como documento y escribe directamente el contenido.
+- **Ctrl + Shift + Espacio marca solo lo que hay que pulsar**: los botones o menús que los pasos nombran, como mucho tres y nunca los de la barra de la ventana.
+- **Las citas** («> …») se ven como citas en el chat y en Word.
+
+### Corregido
+
+- **El menú del clic derecho** sobre una respuesta salía blanco y casi no se leía.
+- **En la píldora**, el enlace «Ver la conversación en Sakura» se ponía blanco al pasar el ratón, y el cuadro para seguir preguntando quedaba cortado por abajo.
+
 ## [0.30.7-beta]
 
 ### Nuevo
