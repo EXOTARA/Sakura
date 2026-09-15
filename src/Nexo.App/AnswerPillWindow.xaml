@@ -59,6 +59,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Grid x:Name="HeaderRow" Grid.Row="0">
@@ -91,25 +92,41 @@
                            Text="Esc" />
             </Grid>
 
-            <TextBlock x:Name="AnswerText"
-                       Grid.Row="1"
-                       Margin="0,10,0,0"
-                       FontSize="{DynamicResource FontSizeCallout}"
-                       LineHeight="20"
-                       TextWrapping="Wrap"
-                       Foreground="{DynamicResource BrushTextPrimary}" />
+            <!--
+                2026-09-15 — mientras Sakura piensa, el cargador de pétalos en vez de la palabra sola
+                (Adler, con un vídeo de cargadores). Desaparece en cuanto llega la primera palabra.
+            -->
+            <StackPanel x:Name="ThinkingPanel"
+                        Grid.Row="1"
+                        Margin="0,12,0,2"
+                        Orientation="Horizontal">
+                <pill:SakuraLoader VerticalAlignment="Center" />
+                <TextBlock x:Name="ThinkingText"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="Pensando…"
+                           FontSize="{DynamicResource FontSizeFootnote}"
+                           Foreground="{DynamicResource BrushTextSecondary}" />
+            </StackPanel>
 
             <!--
-                2026-09-14 — la respuesta ya terminada, con su formato (AnswerRenderer), igual que en el
-                chat. Mientras llega se sigue viendo como texto en AnswerText: formatear a trozos
-                partiría una negrita o una lista por donde el modelo aún no ha terminado.
+                2026-09-15 — la respuesta se dibuja con formato desde la primera palabra y va saliendo
+                a ritmo parejo (StreamingTextPacer), en vez de enseñar el texto crudo a trozos y
+                cambiarlo por el formateado al final: ese cambio y las ráfagas del modelo eran los
+                «tirones» que vio Adler. Si no cabe, se desplaza con la rueda.
             -->
-            <ContentControl x:Name="AnswerRich"
-                            Grid.Row="1"
-                            Margin="0,10,0,0"
-                            Focusable="False"
-                            IsTabStop="False"
-                            Visibility="Collapsed" />
+            <ScrollViewer x:Name="AnswerScroll"
+                          Grid.Row="1"
+                          Margin="0,10,0,0"
+                          Focusable="False"
+                          Visibility="Collapsed"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto"
+                          pill:ScrollEdgeFade.IsEnabled="True">
+                <ContentControl x:Name="AnswerRich"
+                                Focusable="False"
+                                IsTabStop="False" />
+            </ScrollViewer>
 
             <!--
                 En su propia fila y no debajo del texto dentro de una pila: cuando la respuesta
@@ -118,13 +135,91 @@
             -->
             <Button x:Name="OpenInSakuraText"
                        Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Left"
-                       AutomationProperties.Name="Pulsa aquí para verla completa en Sakura"
+                       AutomationProperties.Name="Ver la conversación en Sakura"
                        Grid.Row="2"
                        Margin="0,10,0,0"
                        FontSize="{DynamicResource FontSizeCaption}"
                        Visibility="Collapsed"
                        Foreground="{DynamicResource BrushAccent}"
-                       Content="Pulsa aquí para verla completa en Sakura" />
+                       Content="Ver la conversación en Sakura" />
+
+            <!--
+                2026-09-15 — seguir la conversación aquí mismo (Adler: «poder decirle a ver, pásame los
+                links, y que te los dé en esa misma píldora»). Botones para lo más habitual y un cuadro
+                para escribir. Aparecen cuando la respuesta ya terminó de salir.
+            -->
+            <StackPanel x:Name="FollowUpPanel"
+                        Grid.Row="3"
+                        Margin="0,12,0,0"
+                        Visibility="Collapsed">
+                <ItemsControl x:Name="FollowUpChips" Focusable="False" AutomationProperties.Name="Seguir con la respuesta">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Margin="0,0,6,6"
+                                    Content="{Binding Label}"
+                                    ToolTip="{Binding Prompt}"
+                                    AutomationProperties.Name="{Binding Label}"
+                                    Style="{StaticResource SoftChipButtonStyle}"
+                                    Click="FollowUpChip_Click" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Margin="0,2,0,0"
+                        Padding="12,2,4,2"
+                        CornerRadius="18"
+                        Background="#14FFFFFF"
+                        BorderBrush="#26FFFFFF"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="FollowUpHint"
+                                   Margin="2,0,0,0"
+                                   VerticalAlignment="Center"
+                                   IsHitTestVisible="False"
+                                   Text="Sigue preguntando…"
+                                   FontSize="{DynamicResource FontSizeFootnote}"
+                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                        <TextBox x:Name="FollowUpBox"
+                                 MinHeight="32"
+                                 Padding="0"
+                                 VerticalContentAlignment="Center"
+                                 TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Disabled"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 FontSize="{DynamicResource FontSizeFootnote}"
+                                 AutomationProperties.Name="Sigue preguntando a Sakura" />
+                        <Button x:Name="FollowUpSendButton"
+                                Grid.Column="1"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                AutomationProperties.Name="Enviar"
+                                ToolTip="Enviar"
+                                Click="FollowUpSendButton_Click">
+                            <Path Width="14"
+                                  Height="14"
+                                  Stretch="Uniform"
+                                  Stroke="White"
+                                  StrokeThickness="1.8"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Data="{StaticResource IconSakuraSend}" />
+                        </Button>
+                    </Grid>
+                </Border>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>

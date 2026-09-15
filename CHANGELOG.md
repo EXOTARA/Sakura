@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.30.6-beta]
+
+### Cambiado
+
+- **Puedes seguir la conversación desde la píldora de Ctrl + Espacio.** Debajo de la respuesta hay botones (Más corto, Más fácil, ¿Primer paso?, Con ejemplos, Ponlo a prueba) y un cuadro para seguir preguntando; la nueva respuesta llega a la misma píldora y Sakura recuerda de qué hablabais.
+- **Los enlaces de las respuestas se pueden pulsar**, en la píldora y en el chat. Se ven acortados y la dirección completa aparece al pasar el ratón. Solo abren páginas web.
+- **Las respuestas salen parejas, sin tirones**, y con su formato desde la primera palabra.
+- **Mientras Sakura piensa** se ven cuatro pétalos que giran, se juntan y se abren.
+- **El chat también tiene los botones para seguir** debajo de la última respuesta.
+
+### Corregido
+
+- **En el panel superior quedaba un hueco** debajo del reloj, el calendario y los anillos; ahora llegan hasta abajo, a la altura del GIF.
+
 ## [0.30.5-beta]
 
 ### Cambiado

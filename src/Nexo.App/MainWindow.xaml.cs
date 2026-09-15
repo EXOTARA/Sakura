@@ -634,6 +634,21 @@ public partial class MainWindow : Window
             ShowAnimated();
             NavigateTo("Assistant", animate: true);
         };
+
+        // 2026-09-15 — seguir la conversación desde la píldora: se trata igual que una pregunta hecha
+        // con Ctrl + Espacio, así la respuesta vuelve a la píldora y la anterior va en el contexto.
+        _answerPillWindow.FollowUpSubmitted += async (_, prompt) =>
+        {
+            _promptFromCommandPalette = true;
+            try
+            {
+                await ProcessPromptAsync(prompt, fromVoice: false);
+            }
+            finally
+            {
+                _promptFromCommandPalette = false;
+            }
+        };
         _homeView.CommandRequested += HomeView_CommandRequested;
         _homeView.TasksRequested += HomeView_TasksRequested;
         _homeView.FocusRequested += HomeView_FocusRequested;

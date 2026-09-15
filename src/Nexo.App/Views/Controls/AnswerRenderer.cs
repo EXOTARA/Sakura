@@ -202,6 +202,12 @@ public static class AnswerRenderer
                 }
 
                 var run = new Run(parts[i]);
+                if (span.Url is { } url)
+                {
+                    textBlock.Inlines.Add(Link(run, url));
+                    continue;
+                }
+
                 if (span.Style.HasFlag(AnswerSpanStyle.Bold))
                 {
                     run.FontWeight = FontWeights.SemiBold;
@@ -220,6 +226,48 @@ public static class AnswerRenderer
 
                 textBlock.Inlines.Add(run);
             }
+        }
+    }
+
+    /// <summary>
+    /// 2026-09-15 — un enlace que se puede pulsar. Se abre en el navegador de Windows solo con un clic
+    /// explícito; la dirección entera queda en la ayuda emergente para ver adónde lleva antes de ir.
+    /// Solo llegan aquí direcciones http y https (AnswerMarkdown.SafeWebUrl).
+    /// </summary>
+    private static Hyperlink Link(Run run, string url)
+    {
+        var link = new Hyperlink(run)
+        {
+            Foreground = Resource<Brush>("BrushAccent"),
+            TextDecorations = null,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            ToolTip = url
+        };
+        System.Windows.Automation.AutomationProperties.SetName(link, $"Enlace: {run.Text}");
+        link.MouseEnter += (_, _) => link.TextDecorations = TextDecorations.Underline;
+        link.MouseLeave += (_, _) => link.TextDecorations = null;
+        link.Click += (_, e) =>
+        {
+            e.Handled = true;
+            OpenInBrowser(url);
+        };
+        return link;
+    }
+
+    private static void OpenInBrowser(string url)
+    {
+        if (AnswerMarkdown.SafeWebUrl(url) is not { } safe)
+        {
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(safe) { UseShellExecute = true });
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // Sin navegador predeterminado no hay nada que abrir; el enlace sigue en la ayuda emergente.
         }
     }
 

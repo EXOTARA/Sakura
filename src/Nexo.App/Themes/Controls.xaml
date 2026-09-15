@@ -837,6 +837,45 @@
         </Setter>
     </Style>
 
+    <!--
+        2026-09-15 — botón pequeño y redondo para atajos: los nombres de modelos recomendados y los
+        botones para seguir una respuesta («Más corto», «¿Primer paso?»…).
+    -->
+    <Style x:Key="SoftChipButtonStyle" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="ChipSurface"
+                            Padding="10,4,10,5"
+                            CornerRadius="12"
+                            Background="#14FFFFFF"
+                            BorderBrush="#26FFFFFF"
+                            BorderThickness="1">
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ChipSurface" Property="Background" Value="#22FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="ChipSurface" Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ChipSurface" Property="Opacity" Value="0.7" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ChipSurface" Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="LiquidSliderStyle" TargetType="Slider">
         <Setter Property="IsMoveToPointEnabled" Value="True" />
         <Setter Property="SmallChange" Value="1" />
