@@ -1,6 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
+using Nexo.App.Motion;
+using Nexo.Core.Shell;
 
 namespace Nexo.App;
 
@@ -23,6 +26,7 @@ public partial class RegionPickerWindow : Window
     public RegionPickerWindow()
     {
         InitializeComponent();
+        HintKeys.ItemsSource = HintKeyItems;
 
         MouseLeftButtonDown += OnPressed;
         MouseMove += OnMoved;
@@ -33,6 +37,16 @@ public partial class RegionPickerWindow : Window
         // puesto porque alguien hizo Alt+Tab es la peor manera de descubrir que existe.
         Deactivated += (_, _) => Finish(null);
     }
+
+    // Las teclas que atiende OnKeyDown.
+    private static readonly CheatItem[] HintKeyItems =
+    [
+        new("Flechas", "mover"),
+        new("Mayús + Flechas", "tamaño"),
+        new("Ctrl", "precisión"),
+        new("Enter", "confirmar"),
+        new("Esc", "cancelar"),
+    ];
 
     /// <summary>El área más pequeña que se acepta, en píxeles de pantalla.</summary>
     private const int MinimumSide = 12;
@@ -63,7 +77,25 @@ public partial class RegionPickerWindow : Window
         Activate();
         Focus();
 
+        PlaceHint();
+        if (SakuraMotion.AnimationsEnabled)
+        {
+            // El velo cae suave y el aviso llega como burbuja un instante después.
+            Root.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)) { EasingFunction = SakuraMotion.DecelerateCurve });
+            EntranceMotion.Pop(Hint, TimeSpan.FromMilliseconds(90));
+        }
+
         return _result.Task;
+    }
+
+    /// <summary>Arriba en el centro de la pantalla principal, que es donde se está mirando.</summary>
+    private void PlaceHint()
+    {
+        Hint.UpdateLayout();
+        var primaryLeft = -SystemParameters.VirtualScreenLeft;
+        var primaryTop = -SystemParameters.VirtualScreenTop;
+        Canvas.SetLeft(Hint, primaryLeft + Math.Max(0, (SystemParameters.PrimaryScreenWidth - Hint.ActualWidth) / 2));
+        Canvas.SetTop(Hint, primaryTop + 32);
     }
 
     private void OnPressed(object sender, MouseButtonEventArgs e)

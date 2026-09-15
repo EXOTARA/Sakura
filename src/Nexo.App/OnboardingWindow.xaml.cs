@@ -67,17 +67,8 @@ public partial class OnboardingWindow : Window
     }
 
     /// <summary>La barra de título del color de la ventana, no del acento de Windows (ver WindowsDwmChrome).</summary>
-    private void Window_SourceInitialized(object? sender, EventArgs e)
-    {
-        if (TryFindResource("BrushBackground") is SolidColorBrush background &&
-            TryFindResource("BrushTextSecondary") is SolidColorBrush text)
-        {
-            WindowsDwmChrome.TrySetCaptionColors(
-                new System.Windows.Interop.WindowInteropHelper(this).Handle,
-                background.Color.R, background.Color.G, background.Color.B,
-                text.Color.R, text.Color.G, text.Color.B);
-        }
-    }
+    private void Window_SourceInitialized(object? sender, EventArgs e) =>
+        Shell.SakuraWindowChrome.MatchCaptionToTheme(this);
 
     private void BuildStepDots()
     {

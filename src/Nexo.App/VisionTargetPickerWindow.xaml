@@ -11,7 +11,8 @@
         Background="{StaticResource BrushBackground}"
         Foreground="{StaticResource BrushTextPrimary}"
         ResizeMode="CanResizeWithGrip"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        SourceInitialized="Window_SourceInitialized">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -19,10 +20,19 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel>
-            <TextBlock Text="¿Qué quieres mostrarle a Sakura?"
-                       FontSize="{DynamicResource FontSizeTitle2}"
-                       FontWeight="SemiBold" />
+        <StackPanel x:Name="HeaderPanel">
+            <StackPanel Orientation="Horizontal">
+                <a11y:DecorativeMark Focusable="False"
+                                     Width="22"
+                                     Height="22"
+                                     Margin="0,0,10,0"
+                                     VerticalAlignment="Center"
+                                     Style="{StaticResource SakuraFlowerMarkStyle}" />
+                <TextBlock Text="¿Qué quieres mostrarle a Sakura?"
+                           VerticalAlignment="Center"
+                           FontSize="{DynamicResource FontSizeTitle2}"
+                           FontWeight="SemiBold" />
+            </StackPanel>
             <TextBlock Margin="0,6,0,14"
                        Text="La captura se muestra antes de enviarse y no se guarda en el historial."
                        TextWrapping="Wrap"
@@ -31,31 +41,76 @@
 
         <Border Grid.Row="1"
                 Padding="8"
-                CornerRadius="14"
+                CornerRadius="20"
                 BorderBrush="{StaticResource BrushBorder}"
                 BorderThickness="1"
                 Background="{StaticResource BrushSurface}">
             <ListBox AutomationProperties.Name="Ventanas y monitores disponibles" x:Name="TargetsList"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      BorderThickness="0"
                      Background="Transparent"
                      Foreground="{StaticResource BrushTextPrimary}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                      MouseDoubleClick="TargetsList_MouseDoubleClick">
+                <!-- 2026-09-15 — la selección con el acento y esquinas redondas, no la franja azul de Windows. -->
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Margin" Value="0,2" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="ItemSurface"
+                                            Padding="8,4"
+                                            Background="Transparent"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="1"
+                                            CornerRadius="14">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource BrushSurfaceHover}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource BrushAccentSoft}" />
+                                            <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}" />
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="4,7">
+                        <Grid Margin="0,5">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="36" />
+                                <ColumnDefinition Width="40" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Border Width="28"
-                                    Height="28"
-                                    CornerRadius="8"
-                                    Background="{StaticResource BrushAccentSoft}">
-                                <a11y:DecorativeText HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Text="◫"
-                                           FontSize="{DynamicResource FontSizeBody}" />
+                            <Border Width="32"
+                                    Height="32"
+                                    CornerRadius="10"
+                                    Background="#66222938"
+                                    BorderBrush="#20FFFFFF"
+                                    BorderThickness="1">
+                                <Path x:Name="KindIcon"
+                                      Width="16"
+                                      Height="16"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Stretch="Uniform"
+                                      Data="{StaticResource IconSidebarPanel}"
+                                      Stroke="{DynamicResource BrushAccent}"
+                                      StrokeThickness="1.7"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round" />
                             </Border>
                             <StackPanel Grid.Column="1" Margin="8,0,0,0">
                                 <TextBlock Text="{Binding Title}"
@@ -68,6 +123,11 @@
                                            FontSize="{DynamicResource FontSizeFootnote}" />
                             </StackPanel>
                         </Grid>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Kind}" Value="Monitor">
+                                <Setter TargetName="KindIcon" Property="Data" Value="{StaticResource IconSakuraSystem}" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

@@ -470,14 +470,21 @@
                                         Background="{DynamicResource BrushAccentSoft}"
                                         CornerRadius="9"
                                         Visibility="Collapsed"
+                                        IsVisibleChanged="LensIndicator_IsVisibleChanged"
                                         ToolTip="Sakura Lens está observando la ventana activa, con tu autorización."
                                         AutomationProperties.Name="Sakura Lens está observando la ventana activa">
                                     <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="7"
+                                        <Ellipse x:Name="LensIndicatorDot"
+                                                 Width="7"
                                                  Height="7"
                                                  Margin="0,0,6,0"
                                                  VerticalAlignment="Center"
-                                                 Fill="{DynamicResource BrushAccent}" />
+                                                 RenderTransformOrigin="0.5,0.5"
+                                                 Fill="{DynamicResource BrushAccent}">
+                                            <Ellipse.RenderTransform>
+                                                <ScaleTransform x:Name="LensIndicatorDotScale" />
+                                            </Ellipse.RenderTransform>
+                                        </Ellipse>
                                         <TextBlock Text="Mirando"
                                                    Foreground="{DynamicResource BrushTextSecondary}"
                                                    FontSize="{DynamicResource FontSizeCaption}"

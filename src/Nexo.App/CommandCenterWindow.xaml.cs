@@ -1,9 +1,13 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Nexo.Core.Commands.CommandCenter;
+using Nexo.Core.Shell;
 
+using Nexo.App.Motion;
 using Nexo.App.Shell;
 
 namespace Nexo.App;
@@ -34,7 +38,16 @@ public partial class CommandCenterWindow : Window
         ArgumentNullException.ThrowIfNull(registry);
         _registry = registry;
         InitializeComponent();
+        KeyHintItems.ItemsSource = KeyHints;
     }
+
+    // Las teclas que atiende Window_PreviewKeyDown.
+    private static readonly CheatItem[] KeyHints =
+    [
+        new("↑ + ↓", "elegir"),
+        new("Enter", "ejecutar"),
+        new("Esc", "cerrar"),
+    ];
 
     /// <summary>
     /// Diseño D3 — reemplaza el registro antes de mostrar la ventana. Algunos comandos son
@@ -64,12 +77,18 @@ public partial class CommandCenterWindow : Window
         HideStatus();
         Refresh();
 
-        if (!IsVisible)
+        var opening = !IsVisible;
+        if (opening)
         {
             Show();
         }
 
         Activate();
+
+        if (opening)
+        {
+            PlayEntrance();
+        }
 
         // El foco debe entrar en la búsqueda al abrir. Se hace en prioridad Input para que el
         // enfoque ocurra después de que la ventana esté realmente presentada.
@@ -80,6 +99,42 @@ public partial class CommandCenterWindow : Window
                 Keyboard.Focus(SearchBox);
             },
             DispatcherPriority.Input);
+    }
+
+    /// <summary>
+    /// 2026-09-15 — entra como la paleta: baja un poco inflándose desde arriba, el icono da un giro
+    /// corto y las primeras filas llegan una detrás de otra. Solo al abrir; al escribir la lista se
+    /// rehace a cada tecla y animarla sería un parpadeo.
+    /// </summary>
+    private void PlayEntrance()
+    {
+        Surface.BeginAnimation(OpacityProperty, null);
+        SurfaceScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        SurfaceScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        SurfaceTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+
+        if (!SakuraMotion.AnimationsEnabled)
+        {
+            Surface.Opacity = 1;
+            return;
+        }
+
+        var reveal = TimeSpan.FromMilliseconds(170);
+        var settle = TimeSpan.FromMilliseconds(280);
+        Surface.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, reveal) { EasingFunction = SakuraMotion.DecelerateCurve });
+        SurfaceTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-8, 0, reveal) { EasingFunction = SakuraMotion.DecelerateCurve });
+        SurfaceScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, settle) { EasingFunction = SakuraMotion.SubtleSpringCurve });
+        SurfaceScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.96, 1, settle) { EasingFunction = SakuraMotion.SubtleSpringCurve });
+        SearchIconRotation.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(-90, 0, settle) { EasingFunction = SakuraMotion.DecelerateCurve });
+
+        ResultsList.UpdateLayout();
+        for (var i = 0; i < Math.Min(6, ResultsList.Items.Count); i++)
+        {
+            if (ResultsList.ItemContainerGenerator.ContainerFromIndex(i) is FrameworkElement item)
+            {
+                EntranceMotion.Rise(item, TimeSpan.FromMilliseconds(40 + 28 * i), offset: 6);
+            }
+        }
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -286,6 +341,28 @@ public partial class CommandCenterWindow : Window
 
         public string? Shortcut => Command.Shortcut;
 
+        public IReadOnlyList<string> ShortcutParts =>
+            Command.Shortcut?.Split(" + ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+
+        /// <summary>
+        /// El icono propio del comando si lo trae (ir a una sección lleva el de esa sección en la
+        /// barra lateral) y, si no, el de su categoría.
+        /// </summary>
+        public Geometry? IconData =>
+            (Command.IconKey is { } key ? Application.Current?.TryFindResource(key) as Geometry : null) ?? CategoryIcon;
+
+        private Geometry? CategoryIcon => Application.Current?.TryFindResource(Command.Category switch
+        {
+            SakuraCommandCategory.Navigation => "IconSakuraHome",
+            SakuraCommandCategory.Focus => "IconSakuraFocus",
+            SakuraCommandCategory.Tasks => "IconSakuraTasks",
+            SakuraCommandCategory.Audio => "IconSakuraAudio",
+            SakuraCommandCategory.Capture => "IconSakuraCapture",
+            SakuraCommandCategory.System => "IconSakuraSystem",
+            SakuraCommandCategory.Ambient => "IconSakuraLook",
+            _ => "IconSakuraSettings"
+        }) as Geometry;
+
         public Visibility ShortcutVisibility =>
             string.IsNullOrWhiteSpace(Command.Shortcut) ? Visibility.Collapsed : Visibility.Visible;
 
@@ -302,9 +379,19 @@ public partial class CommandCenterWindow : Window
         };
     }
 
-    /// <summary>Diseño D62 — el marco lo compone Windows. Ver <see cref="SakuraWindowChrome"/>.</summary>
-    private void Window_SourceInitialized(object? sender, EventArgs e) =>
+    /// <summary>
+    /// 2026-09-15 — cristal transparente con esquinas propias, como la paleta. Sin cristal disponible
+    /// (contraste alto, Windows antiguo) se vuelve al marco de DWM de siempre.
+    /// </summary>
+    private void Window_SourceInitialized(object? sender, EventArgs e)
+    {
+        if (SakuraWindowChrome.TryApplyRoundedGlass(this, Surface, 26))
+        {
+            return;
+        }
+
         SakuraWindowChrome.Apply(this, Surface);
+    }
 }
 
 public sealed class CommandCenterFailureEventArgs(
