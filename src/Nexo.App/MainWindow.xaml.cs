@@ -5304,9 +5304,15 @@ public partial class MainWindow : Window
             title = "Respuesta de Sakura";
         }
 
-        var target = DocumentDestination.Resolve(DocumentFolder.Desktop, title, ".docx");
-        // 2026-09-15 — con el formato de la respuesta (títulos, listas, negritas, enlaces, tablas).
-        var result = _documentDropService.Save(target, WordDocumentBuilder.BuildFromMarkdown(title, e.Answer));
+        // 2026-09-15 — con el formato de la respuesta, en Word, Excel o PowerPoint.
+        var (extension, bytes) = e.Format switch
+        {
+            DocumentSaveFormat.Excel => (".xlsx", SpreadsheetDocumentBuilder.BuildFromMarkdown(title, e.Answer)),
+            DocumentSaveFormat.PowerPoint => (".pptx", PresentationDocumentBuilder.BuildFromMarkdown(title, e.Answer)),
+            _ => (".docx", WordDocumentBuilder.BuildFromMarkdown(title, e.Answer))
+        };
+        var target = DocumentDestination.Resolve(DocumentFolder.Desktop, title, extension);
+        var result = _documentDropService.Save(target, bytes);
 
         if (!result.Saved)
         {

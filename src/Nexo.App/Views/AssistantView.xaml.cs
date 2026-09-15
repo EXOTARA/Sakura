@@ -434,6 +434,13 @@ public partial class AssistantView : UserControl
     /// «¿Primer paso?», «Ponlo a prueba»… Cada uno se envía como un mensaje más, así que la respuesta
     /// anterior va en el contexto. Solo debajo de la última: debajo de todas serían ruido.
     /// </summary>
+    private static readonly (DocumentSaveFormat Format, string Label)[] SaveFormats =
+    [
+        (DocumentSaveFormat.Word, "Word"),
+        (DocumentSaveFormat.Excel, "Excel"),
+        (DocumentSaveFormat.PowerPoint, "PowerPoint")
+    ];
+
     private FrameworkElement CreateFollowUpChips()
     {
         var panel = new WrapPanel { Margin = new Thickness(0, 9, 0, 2), MaxWidth = 440, HorizontalAlignment = HorizontalAlignment.Left };
@@ -454,7 +461,34 @@ public partial class AssistantView : UserControl
             panel.Children.Add(button);
         }
 
-        return panel;
+        // 2026-09-15 — guardar la última respuesta sin tener que descubrir el clic derecho.
+        var saveRow = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
+        saveRow.Children.Add(new TextBlock
+        {
+            Text = "Guardar como",
+            Margin = new Thickness(0, 0, 8, 6),
+            VerticalAlignment = VerticalAlignment.Center,
+            FontSize = 12,
+            Foreground = (Brush)FindResource("BrushTextTertiary")
+        });
+
+        var answer = _messages[^1].Text;
+        foreach (var (format, label) in SaveFormats)
+        {
+            var button = new Button
+            {
+                Content = label,
+                ToolTip = $"Guardar esta respuesta en el escritorio como {label}",
+                Margin = new Thickness(0, 0, 6, 6),
+                Style = (Style)FindResource("SoftChipButtonStyle")
+            };
+            System.Windows.Automation.AutomationProperties.SetName(button, $"Guardar como {label}");
+            var chosen = format;
+            button.Click += (_, _) => DocumentSaveRequested?.Invoke(this, new DocumentSaveEventArgs(answer, chosen));
+            saveRow.Children.Add(button);
+        }
+
+        return new StackPanel { Children = { panel, saveRow } };
     }
 
     private void ShowConversationSurface()
@@ -875,17 +909,21 @@ public partial class AssistantView : UserControl
         // escribir no es una necesidad, y el menú se lee mejor con una opción que con dos.
         if (!isUser)
         {
-            var save = new MenuItem { Header = "Guardar en el escritorio como Word" };
-            save.Click += (_, _) =>
+            // 2026-09-15 — también como Excel y como PowerPoint, además de Word.
+            foreach (var (format, label) in SaveFormats)
             {
-                var text = content();
-                if (!string.IsNullOrWhiteSpace(text))
+                var save = new MenuItem { Header = "Guardar en el escritorio como " + label };
+                save.Click += (_, _) =>
                 {
-                    DocumentSaveRequested?.Invoke(this, new DocumentSaveEventArgs(text));
-                }
-            };
+                    var text = content();
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        DocumentSaveRequested?.Invoke(this, new DocumentSaveEventArgs(text, format));
+                    }
+                };
 
-            menu.Items.Add(save);
+                menu.Items.Add(save);
+            }
 
             // Diseño D89 — política 11.16 de Microsoft Store: cómo reportar una respuesta de IA
             // inapropiada. El texto se copia al portapapeles, en este equipo, y la persona decide si lo
@@ -987,7 +1025,17 @@ public sealed class PastedImageEventArgs(string title, byte[] pngBytes) : EventA
 }
 
 /// <summary>Una respuesta que alguien quiere conservar como documento.</summary>
-public sealed class DocumentSaveEventArgs(string answer) : EventArgs
+public sealed class DocumentSaveEventArgs(string answer, DocumentSaveFormat format = DocumentSaveFormat.Word) : EventArgs
 {
     public string Answer { get; } = answer;
+
+    public DocumentSaveFormat Format { get; } = format;
+}
+
+/// <summary>Los formatos en que se puede guardar una respuesta.</summary>
+public enum DocumentSaveFormat
+{
+    Word,
+    Excel,
+    PowerPoint
 }
