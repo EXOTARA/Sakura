@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.30.10-beta]
+
+### Nuevo
+
+- **Gráficas de verdad en PowerPoint y Excel.** Una tabla de cifras (etiquetas en la primera columna y números o porcentajes en las demás) se dibuja como gráfica nativa: líneas si son años o meses, pastel si son partes de un todo, barras o columnas en lo demás, o el tipo que diga el título («evolución», «distribución», «barras»). En PowerPoint se editan con «Editar datos»; en Excel la gráfica va al lado de su tabla. Las tablas con texto o con cifras de distinta clase se quedan como tabla.
+- **Presentaciones con más diseño**: portada con panel de color, índice numerado cuando hay de cuatro a ocho apartados, fila con los pasos en las listas de pasos, separadores numerados cuando la respuesta tiene partes, citas en grande, dos columnas para muchos puntos cortos y la conclusión sobre fondo oscuro. Cada diapositiva lleva abajo el título y su número.
+- **Notas del orador**: un párrafo que empieza por «Notas:» va a las notas de esa diapositiva y no se ve al presentar.
+
+### Cambiado
+
+- **Sakura escribe las presentaciones pensando en ellas**: de tres a cinco puntos por diapositiva, las cifras en tablas, notas del orador y un apartado final de conclusión, sin inventar cifras ni fuentes.
+- **Las tablas largas** siguen en otra diapositiva con la cabecera repetida en vez de perder filas, y sus columnas tienen el ancho de su contenido.
+- **La portada** ya no toma como subtítulo frases del chat como «Claro, aquí tienes…».
+
 ## [0.30.9-beta]
 
 ### Nuevo

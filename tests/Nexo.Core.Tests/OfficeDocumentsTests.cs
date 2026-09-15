@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Xml.Linq;
+using Nexo.Core.Assistant;
 using Nexo.Core.Documents;
 
 namespace Nexo.Core.Tests;
@@ -45,18 +46,23 @@ public sealed class OfficeDocumentsTests
     }
 
     [Fact]
-    public void Plan_CoverThenOneSlidePerStep_ThenTheTable()
+    public void Plan_CoverThenTheStepsInARow_ThenOneSlidePerStep_ThenTheTable()
     {
         var slides = PresentationPlan.From("Plan de contenido", Steps);
 
         Assert.True(slides[0].IsCover);
         Assert.Equal("Plan de contenido", slides[0].Title);
         Assert.Equal("Un plan sencillo para publicar con frecuencia.", slides[0].Subtitle);
-        Assert.Equal("1. Define objetivos y audiencia", slides[1].Title);
-        Assert.Equal(2, slides[1].Lines.Count);
-        Assert.All(slides[1].Lines, line => Assert.Equal(0, line.Depth));
-        Assert.Equal("3. Mide cada viernes", slides[3].Title);
-        Assert.NotNull(slides[4].Table);
+        Assert.Equal(SlideLayout.Process, slides[1].Layout);
+        Assert.Equal(["Define objetivos y audiencia", "Crea un calendario editorial", "Mide cada viernes"],
+            slides[1].Lines.Select(line => AnswerMarkdown.ToPlainText(line.Spans)));
+        Assert.Equal("1. Define objetivos y audiencia", slides[2].Title);
+        Assert.Equal(2, slides[2].Lines.Count);
+        Assert.All(slides[2].Lines, line => Assert.Equal(0, line.Depth));
+        Assert.Equal("3. Mide cada viernes", slides[4].Title);
+        // Metas en porcentaje y resultados en cantidades: no es una gráfica, es una tabla.
+        Assert.Equal(SlideLayout.Table, slides[5].Layout);
+        Assert.Equal("Plan de contenido", slides[5].Title);
     }
 
     [Fact]
@@ -70,7 +76,7 @@ public sealed class OfficeDocumentsTests
     [Fact]
     public void Plan_TooMuchText_SplitsIntoContinuation()
     {
-        var bullets = string.Join('\n', Enumerable.Range(1, 12).Select(i => $"- Punto número {i}"));
+        var bullets = string.Join('\n', Enumerable.Range(1, 12).Select(i => $"- Punto número {i}, que explica con bastante detalle algo que no cabe en media columna"));
         var slides = PresentationPlan.From("Lista", "## Muchos puntos\n" + bullets);
 
         Assert.Equal(["Lista", "Muchos puntos", "Muchos puntos (cont.)"], slides.Select(slide => slide.Title));
@@ -85,8 +91,135 @@ public sealed class OfficeDocumentsTests
         AllPartsWellFormed(document);
         Assert.Contains("<p:sldId id=\"256\"", Part(document, "ppt/presentation.xml"));
         Assert.Contains("Define objetivos y audiencia", Part(document, "ppt/slides/slide2.xml"));
-        Assert.Contains("<a:tbl>", Part(document, "ppt/slides/slide5.xml"));
-        Assert.Contains("TargetMode=\"External\"", Part(document, "ppt/slides/_rels/slide3.xml.rels"));
+        Assert.Contains("<a:tbl>", Part(document, "ppt/slides/slide6.xml"));
+        Assert.Contains("TargetMode=\"External\"", Part(document, "ppt/slides/_rels/slide4.xml.rels"));
+    }
+
+    private const string Deck = """
+        # Energías renovables
+
+        Claro, aquí tienes la presentación:
+
+        ## ¿Por qué importan?
+        - Menos emisiones
+        - Precios más bajos
+
+        Notas: Empezar con una pregunta al público.
+
+        ## Evolución de la capacidad solar
+        La capacidad se ha multiplicado.
+
+        | Año | GW |
+        |---|---|
+        | 2019 | 4,4 |
+        | 2020 | 6 |
+        | 2021 | 7 |
+
+        ## Idea clave
+        > La energía más barata es la que no se consume.
+
+        ## Retos
+        - Red saturada
+        - Permisos lentos
+        - Almacenamiento caro
+        - Poca inversión
+        - Falta de técnicos
+        - Tarifas subsidiadas
+
+        ## Conclusión
+        - Invertir en transmisión
+        - Agilizar permisos
+        """;
+
+    [Fact]
+    public void Plan_ChoosesALayoutForEachKindOfSection()
+    {
+        var slides = PresentationPlan.From("Energías renovables", Deck);
+
+        Assert.Equal(
+            [SlideLayout.Cover, SlideLayout.Agenda, SlideLayout.Content, SlideLayout.Chart, SlideLayout.Quote, SlideLayout.TwoColumns, SlideLayout.Closing],
+            slides.Select(slide => slide.Layout));
+        // La frase del chat no es un subtítulo.
+        Assert.Null(slides[0].Subtitle);
+        Assert.Equal(["¿Por qué importan?", "Evolución de la capacidad solar", "Idea clave", "Retos", "Conclusión"],
+            slides[1].Lines.Select(line => AnswerMarkdown.ToPlainText(line.Spans)));
+        // Las notas van a las notas del orador, no a la diapositiva.
+        Assert.Equal("Empezar con una pregunta al público.", slides[2].Notes);
+        Assert.Equal(2, slides[2].Lines.Count);
+        // La gráfica lleva al lado la frase que la explica.
+        Assert.Equal(ChartKind.Line, slides[3].Chart!.Kind);
+        Assert.Equal("La capacidad se ha multiplicado.", AnswerMarkdown.ToPlainText(Assert.Single(slides[3].Lines).Spans));
+    }
+
+    [Fact]
+    public void Plan_WithParts_EachPartOpensWithANumberedDivider()
+    {
+        var slides = PresentationPlan.From("Transición", """
+            # Parte 1: Contexto
+            ## Historia
+            - Primer parque en 1994
+            # Parte 2: Futuro
+            ## Metas
+            - Más solar
+            ## Riesgos
+            - Red saturada
+            """);
+
+        Assert.Equal(
+            [SlideLayout.Cover, SlideLayout.Agenda, SlideLayout.Section, SlideLayout.Content, SlideLayout.Section, SlideLayout.Content, SlideLayout.Content],
+            slides.Select(slide => slide.Layout));
+        Assert.Equal(("Contexto", 1), (slides[2].Title, slides[2].SectionNumber!.Value));
+        Assert.Equal(("Futuro", 2), (slides[4].Title, slides[4].SectionNumber!.Value));
+        Assert.Equal(["Contexto", "Historia", "Futuro", "Metas · Riesgos"], slides[1].Lines.Select(line => AnswerMarkdown.ToPlainText(line.Spans)));
+    }
+
+    [Fact]
+    public void Plan_LongTable_ContinuesWithoutLosingRows()
+    {
+        var rows = string.Join('\n', Enumerable.Range(1, 11).Select(i => $"| Tarea {i} | Pendiente |"));
+        var slides = PresentationPlan.From("Tareas", "## Lista\n| Tarea | Estado |\n|---|---|\n" + rows);
+
+        Assert.Equal(["Tareas", "Lista", "Lista (cont.)"], slides.Select(slide => slide.Title));
+        Assert.Equal(11, slides.Skip(1).Sum(slide => slide.Table!.Rows.Count));
+    }
+
+    [Fact]
+    public void Presentation_WithChartAndNotes_IsACompleteWellFormedPackage()
+    {
+        var document = PresentationDocumentBuilder.BuildFromMarkdown("Energías renovables", Deck);
+        AllPartsWellFormed(document);
+
+        var chart = Part(document, "ppt/charts/chart1.xml");
+        Assert.Contains("<c:lineChart>", chart);
+        Assert.Contains("<c:f>'Hoja1'!$B$2:$B$4</c:f>", chart);
+        Assert.Contains("<c:formatCode>#,##0.0</c:formatCode>", chart);
+        Assert.Contains("r:id=\"chart1\"", Part(document, "ppt/slides/slide4.xml"));
+        Assert.Contains("../embeddings/Microsoft_Excel_Worksheet1.xlsx", Part(document, "ppt/charts/_rels/chart1.xml.rels"));
+        Assert.Contains("notesSlide3.xml", Part(document, "ppt/slides/_rels/slide3.xml.rels"));
+        Assert.Contains("Empezar con una pregunta al público.", Part(document, "ppt/notesSlides/notesSlide3.xml"));
+        Assert.Contains("<p:notesMasterIdLst>", Part(document, "ppt/presentation.xml"));
+
+        using var archive = new ZipArchive(new MemoryStream(document), ZipArchiveMode.Read);
+        using var embedded = new MemoryStream();
+        using (var stream = archive.GetEntry("ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx")!.Open())
+        {
+            stream.CopyTo(embedded);
+        }
+
+        var workbook = embedded.ToArray();
+        AllPartsWellFormed(workbook);
+        Assert.Contains("name=\"Hoja1\"", Part(workbook, "xl/workbook.xml"));
+    }
+
+    [Fact]
+    public void Spreadsheet_ANumericTable_GetsItsChartNextToIt()
+    {
+        var document = SpreadsheetDocumentBuilder.BuildFromMarkdown("Energías renovables", Deck);
+        AllPartsWellFormed(document);
+
+        Assert.Contains("<drawing r:id=\"rId1\"/>", Part(document, "xl/worksheets/sheet1.xml"));
+        Assert.Contains("<xdr:col>3</xdr:col>", Part(document, "xl/drawings/drawing1.xml"));
+        Assert.Contains("'Evolución de la capacidad solar'!$A$2:$A$4", Part(document, "xl/charts/chart1.xml"));
     }
 
     [Fact]

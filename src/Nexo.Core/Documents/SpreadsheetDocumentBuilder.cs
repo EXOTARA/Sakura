@@ -19,7 +19,7 @@ namespace Nexo.Core.Documents;
 /// </summary>
 public static partial class SpreadsheetDocumentBuilder
 {
-    private sealed record Sheet(string Name, IReadOnlyList<IReadOnlyList<string>> Rows, bool HasHeader);
+    private sealed record Sheet(string Name, IReadOnlyList<IReadOnlyList<string>> Rows, bool HasHeader, ChartSpec? Chart = null);
 
     public static byte[] BuildFromMarkdown(string title, string markdown)
     {
@@ -35,12 +35,8 @@ public static partial class SpreadsheetDocumentBuilder
                     lastHeading = AnswerMarkdown.ToPlainText(heading.Spans).Trim();
                     break;
                 case AnswerTable table:
-                    var rows = new List<IReadOnlyList<string>>
-                    {
-                        table.Header.Select(cell => AnswerMarkdown.ToPlainText(cell).Trim()).ToList()
-                    };
-                    rows.AddRange(table.Rows.Select(row => (IReadOnlyList<string>)row.Select(cell => AnswerMarkdown.ToPlainText(cell).Trim()).ToList()));
-                    sheets.Add(new Sheet(lastHeading ?? $"Tabla {sheets.Count + 1}", rows, HasHeader: true));
+                    // 2026-09-15 — si la tabla es de cifras, la hoja lleva además su gráfica al lado.
+                    sheets.Add(new Sheet(lastHeading ?? $"Tabla {sheets.Count + 1}", TableRows(table), HasHeader: true, ChartPlan.From(table, lastHeading)));
                     break;
             }
         }
@@ -51,6 +47,23 @@ public static partial class SpreadsheetDocumentBuilder
         }
 
         return Package(title, UniqueNames(sheets));
+    }
+
+    /// <summary>
+    /// Un libro con una sola hoja que contiene la tabla tal cual, desde A1. Es la hoja que PowerPoint
+    /// guarda dentro de una gráfica para que «Editar datos» funcione.
+    /// </summary>
+    public static byte[] BuildTableWorkbook(string sheetName, AnswerTable table) =>
+        Package(sheetName, UniqueNames([new Sheet(sheetName, TableRows(table), HasHeader: true)]));
+
+    private static List<IReadOnlyList<string>> TableRows(AnswerTable table)
+    {
+        var rows = new List<IReadOnlyList<string>>
+        {
+            table.Header.Select(cell => AnswerMarkdown.ToPlainText(cell).Trim()).ToList()
+        };
+        rows.AddRange(table.Rows.Select(row => (IReadOnlyList<string>)row.Select(cell => AnswerMarkdown.ToPlainText(cell).Trim()).ToList()));
+        return rows;
     }
 
     /// <summary>Sin tablas: una fila por pieza, con el apartado al que pertenece y la sangría de la lista.</summary>
@@ -164,15 +177,25 @@ public static partial class SpreadsheetDocumentBuilder
         using var buffer = new MemoryStream();
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
         {
-            Write(archive, "[Content_Types].xml", ContentTypes(sheets.Count));
+            Write(archive, "[Content_Types].xml", ContentTypes(sheets));
             Write(archive, "_rels/.rels", RootRelationships);
             Write(archive, "docProps/core.xml", CoreProperties(title));
             Write(archive, "xl/workbook.xml", Workbook(sheets));
             Write(archive, "xl/_rels/workbook.xml.rels", WorkbookRelationships(sheets.Count));
             Write(archive, "xl/styles.xml", Styles);
+            var charts = 0;
             for (var i = 0; i < sheets.Count; i++)
             {
                 Write(archive, $"xl/worksheets/sheet{i + 1}.xml", Worksheet(sheets[i]));
+                if (sheets[i].Chart is { } chart)
+                {
+                    charts++;
+                    var columns = sheets[i].Rows.Max(row => row.Count);
+                    Write(archive, $"xl/worksheets/_rels/sheet{i + 1}.xml.rels", Relationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing", $"../drawings/drawing{charts}.xml"));
+                    Write(archive, $"xl/drawings/drawing{charts}.xml", Drawing(columns + 1, sheets[i].Name));
+                    Write(archive, $"xl/drawings/_rels/drawing{charts}.xml.rels", Relationship(ChartXml.RelationshipType, $"../charts/chart{charts}.xml"));
+                    Write(archive, $"xl/charts/chart{charts}.xml", ChartXml.Build(chart, sheets[i].Name, 1000, workbookRelationshipId: null));
+                }
             }
         }
 
@@ -232,9 +255,30 @@ public static partial class SpreadsheetDocumentBuilder
             builder.Append("<autoFilter ref=\"A1:").Append(ColumnName(columns - 1)).Append(sheet.Rows.Count).Append("\"/>");
         }
 
-        builder.Append("<pageMargins left=\"0.6\" right=\"0.6\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>");
-        return builder.ToString();
+        builder.Append("<pageMargins left=\"0.6\" right=\"0.6\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/>");
+        if (sheet.Chart is not null)
+        {
+            builder.Append("<drawing r:id=\"rId1\"/>");
+        }
+
+        return builder.Append("</worksheet>").ToString();
     }
+
+    /// <summary>La gráfica a la derecha de la tabla, dejando una columna libre, de unas 9 columnas por 18 filas.</summary>
+    private static string Drawing(int firstColumn, string name) =>
+        XmlDeclaration +
+        "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">" +
+        "<xdr:twoCellAnchor editAs=\"oneCell\"><xdr:from><xdr:col>" + firstColumn + "</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>" +
+        "<xdr:to><xdr:col>" + (firstColumn + 9) + "</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>18</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>" +
+        "<xdr:graphicFrame macro=\"\"><xdr:nvGraphicFramePr><xdr:cNvPr id=\"2\" name=\"" + EscapeAttribute("Gráfica " + name) + "\"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>" +
+        "<xdr:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/></xdr:xfrm><a:graphic><a:graphicData uri=\"" + ChartXml.Namespace + "\">" +
+        "<c:chart xmlns:c=\"" + ChartXml.Namespace + "\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" r:id=\"rId1\"/>" +
+        "</a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>";
+
+    private static string Relationship(string type, string target) =>
+        XmlDeclaration +
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+        "<Relationship Id=\"rId1\" Type=\"" + type + "\" Target=\"" + target + "\"/></Relationships>";
 
     private static string ColumnName(int index)
     {
@@ -301,8 +345,9 @@ public static partial class SpreadsheetDocumentBuilder
         return builder.Append("</Relationships>").ToString();
     }
 
-    private static string ContentTypes(int sheetCount)
+    private static string ContentTypes(IReadOnlyList<Sheet> sheets)
     {
+        var sheetCount = sheets.Count;
         var builder = new StringBuilder(XmlDeclaration)
             .Append("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">")
             .Append("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>")
@@ -314,6 +359,12 @@ public static partial class SpreadsheetDocumentBuilder
         {
             builder.Append("<Override PartName=\"/xl/worksheets/sheet").Append(i + 1)
                 .Append(".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>");
+        }
+
+        for (var i = 1; i <= sheets.Count(sheet => sheet.Chart is not null); i++)
+        {
+            builder.Append("<Override PartName=\"/xl/drawings/drawing").Append(i).Append(".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.drawing+xml\"/>")
+                .Append("<Override PartName=\"/xl/charts/chart").Append(i).Append(".xml\" ContentType=\"").Append(ChartXml.ContentType).Append("\"/>");
         }
 
         return builder.Append("</Types>").ToString();
