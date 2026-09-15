@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.30.4-beta]
+
+### Cambiado
+
+- **Peek aparece como una burbuja** desde su lado de la pantalla, con los mismos anillos con icono del panel superior; las cifras suben mientras el anillo se llena. Si tienes el ratón encima, espera a que lo quites para irse.
+- **El Command Center (Ctrl + K) tiene el mismo aspecto que la paleta de Ctrl + Espacio**: esquinas redondeadas, el icono de su sección en cada fila, los atajos dibujados como teclas y las filas entrando una detrás de otra.
+- **Los resaltados de Lens usan tu color de acento** con un halo suave y la flor de Sakura en la esquina; aparecen uno detrás de otro y se apagan poco a poco en vez de desaparecer de golpe.
+- **Elegir qué verá Lens y la vista previa de la captura** tienen la barra de título oscura, la selección con el acento en lugar del azul de Windows e iconos distintos para ventanas y monitores.
+- **El punto de «Mirando» late** mientras Lens observa.
+
+### Corregido
+
+- **El aviso para elegir una zona de la pantalla** (Ctrl + Shift + T) salía en la esquina del escritorio; ahora está arriba en el centro de la pantalla principal y muestra los atajos como teclas.
+- **En el Command Center aparecía una barra de desplazamiento dentro del cuadro de búsqueda** y lo escrito no quedaba alineado con el texto de ayuda.
+
 ## [0.30.3-beta]
 
 ### Cambiado
