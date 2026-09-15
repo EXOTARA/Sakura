@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using Nexo.Core.Commands;
 using Nexo.Core.Diagnostics;
 
+using Nexo.App.Motion;
 using Nexo.App.Shell;
 
 namespace Nexo.App;
@@ -143,8 +144,22 @@ public partial class CommandPaletteWindow : Window
         NormalizeRecentHistory();
         ReduceMotionCheckBox.IsChecked = _state.ReduceMotion;
         UpdateMotionSelection();
+        KeyHintItems.ItemsSource = KeyHints;
         RefreshSuggestions(string.Empty);
     }
+
+    private sealed record PaletteKeyHint(string[] KeyParts, string Action);
+
+    // Las mismas teclas que atiende Window_PreviewKeyDown; cada una con una etiqueta corta.
+    private static readonly PaletteKeyHint[] KeyHints =
+    [
+        new(["↑", "↓"], "elegir"),
+        new(["Enter"], "ejecutar o enviar"),
+        new(["Ctrl", "Enter"], "preguntar a Sakura"),
+        new(["Ctrl", "Tab"], "completar"),
+        new(["Tab"], "recorrer"),
+        new(["Shift", "Enter"], "nueva línea"),
+    ];
 
     public event EventHandler<CommandPalettePromptEventArgs>? PromptSubmitted;
 
@@ -218,14 +233,20 @@ public partial class CommandPaletteWindow : Window
             {
                 EasingFunction = easing
             });
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.97, duration) { EasingFunction = easing });
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.97, duration) { EasingFunction = easing });
     }
 
     private void HideImmediately()
     {
         RootBorder.BeginAnimation(OpacityProperty, null);
         PaletteTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
         RootBorder.Opacity = 0;
         PaletteTranslate.Y = -8;
+        PaletteScale.ScaleX = 1;
+        PaletteScale.ScaleY = 1;
         _isHiding = false;
         Hide();
     }
@@ -235,16 +256,34 @@ public partial class CommandPaletteWindow : Window
         RootBorder.BeginAnimation(OpacityProperty, null);
         PaletteTranslate.BeginAnimation(TranslateTransform.YProperty, null);
 
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+
         if (!ShouldAnimate())
         {
             RootBorder.Opacity = 1;
             PaletteTranslate.Y = 0;
+            PaletteScale.ScaleX = 1;
+            PaletteScale.ScaleY = 1;
             return;
         }
 
         var settings = ResolveMotionSettings(isHiding: false);
         var duration = TimeSpan.FromMilliseconds(settings.DurationMilliseconds);
         var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        // 2026-09-14 — además de bajar, se infla un poco desde el borde de arriba, como las burbujas;
+        // la flor da un cuarto de vuelta mientras aparece. La duración sigue siendo la del preset
+        // elegido (Fluido, Rápido, Calmo).
+        PaletteScale.ScaleX = 0.96;
+        PaletteScale.ScaleY = 0.96;
+        var spring = SakuraMotion.SubtleSpringCurve;
+        var scaleDuration = TimeSpan.FromMilliseconds(settings.DurationMilliseconds * 1.6);
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, scaleDuration) { EasingFunction = spring });
+        PaletteScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, scaleDuration) { EasingFunction = spring });
+        PaletteMarkRotation.BeginAnimation(
+            RotateTransform.AngleProperty,
+            new DoubleAnimation(-90, 0, scaleDuration) { EasingFunction = SakuraMotion.DecelerateCurve });
 
         RootBorder.Opacity = 0;
         PaletteTranslate.Y = -settings.Offset;
@@ -549,6 +588,7 @@ public partial class CommandPaletteWindow : Window
 
         if (_customizationVisible)
         {
+            UpdateMotionSelection();
             AnimateSurfaceIn(CustomizationSurface);
         }
 
@@ -571,6 +611,28 @@ public partial class CommandPaletteWindow : Window
         if (expanded && animate)
         {
             AnimateSurfaceIn(ExpandedSurface);
+            StaggerSuggestions();
+        }
+    }
+
+    /// <summary>
+    /// Cuando se abre la lista, las primeras sugerencias entran una detrás de otra. Solo al abrirse:
+    /// mientras se escribe la lista cambia a cada tecla, y animarla cada vez sería un parpadeo.
+    /// </summary>
+    private void StaggerSuggestions()
+    {
+        if (!ShouldAnimate())
+        {
+            return;
+        }
+
+        SuggestionsList.UpdateLayout();
+        for (var i = 0; i < Math.Min(6, SuggestionsList.Items.Count); i++)
+        {
+            if (SuggestionsList.ItemContainerGenerator.ContainerFromIndex(i) is FrameworkElement item)
+            {
+                EntranceMotion.Rise(item, TimeSpan.FromMilliseconds(25 * i), offset: 6);
+            }
         }
     }
 
@@ -837,7 +899,8 @@ public partial class CommandPaletteWindow : Window
 
     private void UpdateMotionSelection()
     {
-        var defaultBrush = TryFindResource("BrushSurfaceRaised") as Brush;
+        var defaultBrush = new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF));
+        var defaultBorder = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF));
         var selectedBrush = TryFindResource("BrushAccentSoft") as Brush;
         var buttons = new[]
         {
@@ -850,6 +913,7 @@ public partial class CommandPaletteWindow : Window
         foreach (var button in buttons)
         {
             button.Background = defaultBrush;
+            button.BorderBrush = defaultBorder;
             button.Foreground = TryFindResource("BrushTextSecondary") as Brush;
         }
 
@@ -861,7 +925,8 @@ public partial class CommandPaletteWindow : Window
             _ => FluidMotionButton
         };
         selected.Background = selectedBrush;
-        selected.Foreground = TryFindResource("BrushAccent") as Brush;
+        selected.BorderBrush = TryFindResource("BrushAccent") as Brush;
+        selected.Foreground = TryFindResource("BrushTextPrimary") as Brush;
     }
 
     private bool ShouldAnimate() =>
@@ -910,7 +975,26 @@ public partial class CommandPaletteWindow : Window
     /// Diseño D62 — el marco lo compone Windows. La paleta pinta su superficie con su propio
     /// degradado, así que aquí solo se pide el fondo del sistema.
     /// </summary>
-    private void Window_SourceInitialized(object? sender, EventArgs e) =>
+    /// <summary>
+    /// 2026-09-14 — cristal transparente con esquinas propias, como el shell. Con el acrílico de DWM
+    /// la ventana tenía las esquinas casi rectas de Windows alrededor de un contenido redondeado y un
+    /// canto del color de acento arriba. Sin cristal disponible, se vuelve al fondo del sistema.
+    /// </summary>
+    private void Window_SourceInitialized(object? sender, EventArgs e)
+    {
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (!SystemParameters.HighContrast && Nexo.Windows.Shell.WindowsDwmChrome.TryApplyClearGlass(handle))
+        {
+            if (System.Windows.Interop.HwndSource.FromHwnd(handle)?.CompositionTarget is { } target)
+            {
+                target.BackgroundColor = Colors.Transparent;
+            }
+
+            RootBorder.CornerRadius = new CornerRadius(26);
+            return;
+        }
+
         SakuraWindowChrome.ApplyBackdropOnly(this);
+    }
 
 }
