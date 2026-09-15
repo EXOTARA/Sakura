@@ -1,7 +1,10 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using Nexo.App.Motion;
+using Nexo.App.Views.Controls;
 using Nexo.Core.Metrics;
 using Nexo.Core.Settings;
 
@@ -23,7 +26,8 @@ public partial class PeekWindow : Window
         {
             Interval = TimeSpan.FromSeconds(3.5)
         };
-        _hideTimer.Tick += (_, _) => { if (!IsKeyboardFocusWithin) HidePeekAnimated(); };
+        // Con el ratón o el teclado encima se espera: quien la está leyendo no quiere que se vaya.
+        _hideTimer.Tick += (_, _) => { if (!IsKeyboardFocusWithin && !IsMouseOver) HidePeekAnimated(); };
     }
 
     public void ShowSnapshot(SystemSnapshot snapshot, ShellPreferences preferences)
@@ -32,16 +36,13 @@ public partial class PeekWindow : Window
         ArgumentNullException.ThrowIfNull(preferences);
 
         _position = preferences.Position;
-        _animationsEnabled = preferences.AnimationsEnabled;
+        _animationsEnabled = preferences.AnimationsEnabled && SakuraMotion.AnimationsEnabled;
         ApplyPreferences(preferences);
-        UpdateSnapshot(snapshot);
         PositionWindow();
 
         _hideTimer.Stop();
+        var wasShowing = IsVisible && !_isHiding;
         _isHiding = false;
-
-        PeekBorder.BeginAnimation(OpacityProperty, null);
-        PeekTranslate.BeginAnimation(TranslateTransform.XProperty, null);
 
         if (!IsVisible)
         {
@@ -52,29 +53,29 @@ public partial class PeekWindow : Window
 
         if (!_animationsEnabled)
         {
-            PeekTranslate.X = 0;
+            PeekBorder.BeginAnimation(OpacityProperty, null);
             PeekBorder.Opacity = 1;
+            UpdateSnapshot(snapshot, animate: false);
             _hideTimer.Start();
             return;
         }
 
-        var offset = _position == SidebarPosition.Right ? 24 : -24;
-        PeekTranslate.X = offset;
-        PeekBorder.Opacity = 0;
+        // Si ya estaba a la vista, solo se ponen al día las cifras: volver a inflarla sería un
+        // parpadeo cada vez que se pulsa el atajo.
+        if (!wasShowing)
+        {
+            // El alto se fija mientras la burbuja crece: ajustando la ventana a su contenido, la
+            // ventana encogía con el círculo del principio y la tarjeta aparecía de golpe al final.
+            FixHeightToContent();
+            BubbleMotion.Inflate(PeekBorder, Anchor, () => SizeToContent = SizeToContent.Height);
+        }
 
-        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var duration = TimeSpan.FromMilliseconds(150);
-
-        PeekTranslate.BeginAnimation(
-            TranslateTransform.XProperty,
-            new DoubleAnimation(0, duration) { EasingFunction = easing });
-
-        PeekBorder.BeginAnimation(
-            OpacityProperty,
-            new DoubleAnimation(1, duration) { EasingFunction = easing });
-
+        UpdateSnapshot(snapshot, animate: true, firstReveal: !wasShowing);
         _hideTimer.Start();
     }
+
+    private HorizontalAlignment Anchor =>
+        _position == SidebarPosition.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;
 
     public void HideImmediately()
     {
@@ -84,6 +85,8 @@ public partial class PeekWindow : Window
         {
             Hide();
         }
+
+        SizeToContent = SizeToContent.Height;
     }
 
     private void ApplyPreferences(ShellPreferences preferences)
@@ -112,18 +115,84 @@ public partial class PeekWindow : Window
             baseColor.B));
     }
 
-    private void UpdateSnapshot(SystemSnapshot snapshot)
+    private void UpdateSnapshot(SystemSnapshot snapshot, bool animate, bool firstReveal = false)
     {
-        CpuValueText.Text = FormatPercentage(snapshot.CpuUsagePercent);
-        MemoryValueText.Text = FormatPercentage(snapshot.MemoryUsagePercent);
-        GpuValueText.Text = FormatPercentage(snapshot.GpuUsagePercent);
-        DiskValueText.Text = FormatPercentage(snapshot.SystemDriveUsagePercent);
+        (IconRing Ring, TextBlock Text, double? Value)[] metrics =
+        [
+            (CpuRing, CpuValueText, snapshot.CpuUsagePercent),
+            (MemoryRing, MemoryValueText, snapshot.MemoryUsagePercent),
+            (GpuRing, GpuValueText, snapshot.GpuUsagePercent),
+            (DiskRing, DiskValueText, snapshot.SystemDriveUsagePercent),
+        ];
+
+        var order = 0;
+        foreach (var (ring, text, value) in metrics)
+        {
+            ring.Tag = text;
+            if (value is not { } target)
+            {
+                ring.BeginAnimation(ShownPercentProperty, null);
+                ring.Percent = null;
+                text.Text = FormatPercentage(null);
+                continue;
+            }
+
+            if (!animate)
+            {
+                ring.BeginAnimation(ShownPercentProperty, null);
+                ring.SetValue(ShownPercentProperty, target);
+                continue;
+            }
+
+            // La primera vez suben desde cero cuando la burbuja ya tiene su forma, una detrás de
+            // otra; si ya se veía, van de la cifra de antes a la nueva.
+            if (firstReveal)
+            {
+                ring.BeginAnimation(ShownPercentProperty, null);
+                ring.SetValue(ShownPercentProperty, 0d);
+            }
+
+            var begin = firstReveal
+                ? TimeSpan.FromMilliseconds(260 + 60 * order)
+                : TimeSpan.Zero;
+            ring.BeginAnimation(
+                ShownPercentProperty,
+                new DoubleAnimation(target, TimeSpan.FromMilliseconds(720))
+                {
+                    BeginTime = begin,
+                    EasingFunction = SakuraMotion.DecelerateCurve
+                });
+            order++;
+        }
+
         TopProcessNameText.Text = string.IsNullOrWhiteSpace(snapshot.TopProcessName)
             ? "Proceso no disponible"
             : snapshot.TopProcessName;
         TopProcessMemoryText.Text = snapshot.TopProcessWorkingSetBytes.HasValue
             ? FormatBytes(snapshot.TopProcessWorkingSetBytes.Value)
             : string.Empty;
+    }
+
+    /// <summary>
+    /// La cifra que se ve mientras sube. Mueve a la vez el anillo y el número de debajo (guardado en
+    /// <see cref="FrameworkElement.Tag"/>), así los dos llegan juntos.
+    /// </summary>
+    private static readonly DependencyProperty ShownPercentProperty = DependencyProperty.RegisterAttached(
+        "ShownPercent", typeof(double), typeof(PeekWindow), new PropertyMetadata(0d, OnShownPercentChanged));
+
+    private static void OnShownPercentChanged(DependencyObject target, DependencyPropertyChangedEventArgs e)
+    {
+        if (target is not IconRing ring)
+        {
+            return;
+        }
+
+        var value = (double)e.NewValue;
+        ring.Percent = value;
+        if (ring.Tag is TextBlock text)
+        {
+            text.Text = FormatPercentage(value);
+        }
     }
 
     private void PositionWindow()
@@ -151,24 +220,33 @@ public partial class PeekWindow : Window
         }
 
         _isHiding = true;
-        var offset = _position == SidebarPosition.Right ? 18 : -18;
-        var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
-        var duration = TimeSpan.FromMilliseconds(120);
+        FixHeightToContent();
+        BubbleMotion.Deflate(PeekBorder, Anchor, () =>
+        {
+            // Si se volvió a pedir mientras se recogía, ShowSnapshot ya la ha inflado de nuevo.
+            if (!_isHiding)
+            {
+                return;
+            }
 
-        var opacityAnimation = new DoubleAnimation(0, duration)
-        {
-            EasingFunction = easing
-        };
-        opacityAnimation.Completed += (_, _) =>
-        {
-            Hide();
             _isHiding = false;
-        };
+            Hide();
+            SizeToContent = SizeToContent.Height;
+        });
+    }
 
-        PeekTranslate.BeginAnimation(
-            TranslateTransform.XProperty,
-            new DoubleAnimation(offset, duration) { EasingFunction = easing });
-        PeekBorder.BeginAnimation(OpacityProperty, opacityAnimation);
+    private void FixHeightToContent()
+    {
+        // Ya fijado: una salida a medias lo dejó con el alto completo, que es el que sirve.
+        if (SizeToContent == SizeToContent.Manual)
+        {
+            return;
+        }
+
+        UpdateLayout();
+        var height = ActualHeight;
+        SizeToContent = SizeToContent.Manual;
+        Height = height;
     }
 
     private static string FormatPercentage(double? value)

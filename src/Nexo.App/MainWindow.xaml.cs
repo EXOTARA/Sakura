@@ -4223,20 +4223,20 @@ public partial class MainWindow : Window
     {
         // Un comando por destino conocido: la lista sale de ShellNavigationPolicy, así que no
         // puede desincronizarse de la navegación real del shell.
-        (string Destination, string Title, string[] Keywords)[] destinations =
+        (string Destination, string Title, string Icon, string[] Keywords)[] destinations =
         [
-            (ShellNavigationPolicy.Home, "Ir a Inicio", ["inicio", "home", "principal"]),
-            (ShellNavigationPolicy.Assistant, "Ir a Asistente", ["asistente", "chat", "conversación"]),
-            (ShellNavigationPolicy.Tasks, "Ir a Hoy", ["hoy", "tareas", "pendientes"]),
-            (ShellNavigationPolicy.Focus, "Ir a Enfoque", ["enfoque", "concentración"]),
-            (ShellNavigationPolicy.Routines, "Ir a Rutinas", ["rutinas", "automatización"]),
-            (ShellNavigationPolicy.Audio, "Ir a Audio", ["audio", "volumen", "sonido"]),
-            (ShellNavigationPolicy.Capture, "Ir a Captura", ["captura", "pantalla", "screenshot"]),
-            (ShellNavigationPolicy.System, "Ir a Sistema", ["sistema", "estado", "diagnóstico", "hardware"]),
-            (ShellNavigationPolicy.Settings, "Ir a Personalizar", ["personalizar", "configuración", "ajustes", "preferencias"])
+            (ShellNavigationPolicy.Home, "Ir a Inicio", "IconSakuraHome", ["inicio", "home", "principal"]),
+            (ShellNavigationPolicy.Assistant, "Ir a Asistente", "IconSakuraAssistant", ["asistente", "chat", "conversación"]),
+            (ShellNavigationPolicy.Tasks, "Ir a Hoy", "IconSakuraTasks", ["hoy", "tareas", "pendientes"]),
+            (ShellNavigationPolicy.Focus, "Ir a Enfoque", "IconSakuraFocus", ["enfoque", "concentración"]),
+            (ShellNavigationPolicy.Routines, "Ir a Rutinas", "IconSakuraRoutines", ["rutinas", "automatización"]),
+            (ShellNavigationPolicy.Audio, "Ir a Audio", "IconSakuraAudio", ["audio", "volumen", "sonido"]),
+            (ShellNavigationPolicy.Capture, "Ir a Captura", "IconSakuraCapture", ["captura", "pantalla", "screenshot"]),
+            (ShellNavigationPolicy.System, "Ir a Sistema", "IconSakuraSystem", ["sistema", "estado", "diagnóstico", "hardware"]),
+            (ShellNavigationPolicy.Settings, "Ir a Personalizar", "IconSakuraSettings", ["personalizar", "configuración", "ajustes", "preferencias"])
         ];
 
-        foreach (var (destination, title, keywords) in destinations)
+        foreach (var (destination, title, icon, keywords) in destinations)
         {
             var target = destination;
             yield return new SakuraCommandDescriptor(
@@ -4249,7 +4249,8 @@ public partial class MainWindow : Window
                     NavigateTo(target, animate: _preferences.AnimationsEnabled);
                     return Task.FromResult(CommandExecutionResult.Success());
                 },
-                keywords: keywords);
+                keywords: keywords,
+                iconKey: icon);
         }
     }
 
@@ -7472,6 +7473,38 @@ public partial class MainWindow : Window
     /// mientras dura la captura y el análisis, nunca más — el modelo de confianza exige que ese
     /// paso sea siempre visible, nunca silencioso.
     /// </summary>
+    /// <summary>
+    /// 2026-09-15 — el punto de «Mirando» late mientras Lens observa, para que se note que está
+    /// activo. Solo mientras se ve: una animación sin fin en un elemento oculto seguiría gastando.
+    /// </summary>
+    private void LensIndicator_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        LensIndicatorDot.BeginAnimation(OpacityProperty, null);
+        LensIndicatorDotScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        LensIndicatorDotScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+
+        if (!LensIndicator.IsVisible || !SakuraMotion.AnimationsEnabled)
+        {
+            return;
+        }
+
+        var beat = TimeSpan.FromMilliseconds(760);
+        LensIndicatorDot.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0.45, beat)
+        {
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = SakuraMotion.StandardCurve
+        });
+        var pulse = new DoubleAnimation(1, 1.35, beat)
+        {
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = SakuraMotion.StandardCurve
+        };
+        LensIndicatorDotScale.BeginAnimation(ScaleTransform.ScaleXProperty, pulse);
+        LensIndicatorDotScale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse);
+    }
+
     private async Task<CommandExecutionResult> ExecuteLensAsync(LensMode mode)
     {
         var now = DateTimeOffset.Now;

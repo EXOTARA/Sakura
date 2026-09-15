@@ -21,14 +21,38 @@
         AutomationProperties.Name="Centro de comandos de Sakura">
 
     <!--
-        Diseño D62 — el marco lo compone Windows: acrílico, esquinas y sombra. Sin
-        AllowsTransparency la ventana la pinta la tarjeta gráfica, y la sombra deja de recalcularse
-        cada vez que cambia algo dentro. La superficie no lleva radio ni trazo propios porque el
-        recorte de las esquinas es de DWM y un borde nuestro se cortaría en el arco.
+        2026-09-15 — el mismo marco que la paleta de Ctrl + Espacio: cristal transparente con esquinas
+        propias y un degradado casi opaco. Con el acrílico de DWM las esquinas eran las casi rectas de
+        Windows. La diferencia con la paleta está en el icono: aquí no hay IA, así que en vez de la
+        flor va el símbolo de comandos, y cada fila lleva el icono de su sección.
     -->
-    <Border x:Name="Surface" Padding="0">
+    <Border x:Name="Surface"
+            Padding="12"
+            RenderTransformOrigin="0.5,0"
+            BorderThickness="1"
+            SnapsToDevicePixels="True">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#F2111620" Offset="0" />
+                <GradientStop Color="#F2151B27" Offset="0.64" />
+                <GradientStop Color="#F21B1826" Offset="1" />
+            </LinearGradientBrush>
+        </Border.Background>
+        <Border.BorderBrush>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#70FFFFFF" Offset="0" />
+                <GradientStop Color="#1FFFFFFF" Offset="0.42" />
+                <GradientStop Color="#4A8B6CFF" Offset="1" />
+            </LinearGradientBrush>
+        </Border.BorderBrush>
+        <Border.RenderTransform>
+            <TransformGroup>
+                <ScaleTransform x:Name="SurfaceScale" ScaleX="1" ScaleY="1" />
+                <TranslateTransform x:Name="SurfaceTranslate" Y="0" />
+            </TransformGroup>
+        </Border.RenderTransform>
 
-        <Grid Margin="18,16,18,16">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -37,11 +61,11 @@
 
             <!-- Campo de búsqueda -->
             <Border Grid.Row="0"
-                    Background="{DynamicResource BrushSurfaceRaised}"
-                    BorderBrush="{DynamicResource BrushBorder}"
+                    Padding="9,8"
+                    Background="#B20D121B"
+                    BorderBrush="#2DFFFFFF"
                     BorderThickness="1"
-                    CornerRadius="{DynamicResource RadiusMedium}"
-                    Padding="13,0">
+                    CornerRadius="20">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -49,31 +73,49 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Path Grid.Column="0"
-                          Width="17"
-                          Height="17"
-                          VerticalAlignment="Center"
-                          Stretch="Uniform"
-                          Data="{StaticResource IconCommandPalette}"
-                          Stroke="{DynamicResource BrushTextSecondary}"
-                          StrokeThickness="1.7"
-                          StrokeStartLineCap="Round"
-                          StrokeEndLineCap="Round"
-                          StrokeLineJoin="Round" />
+                    <Border Width="40"
+                            Height="40"
+                            Background="{DynamicResource BrushAccentSoft}"
+                            BorderBrush="{DynamicResource BrushAccentBorder}"
+                            BorderThickness="1"
+                            CornerRadius="13">
+                        <Path x:Name="SearchIcon"
+                              Width="18"
+                              Height="18"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              RenderTransformOrigin="0.5,0.5"
+                              Stretch="Uniform"
+                              Data="{StaticResource IconCommandPalette}"
+                              Stroke="{DynamicResource BrushAccent}"
+                              StrokeThickness="1.8"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round">
+                            <Path.RenderTransform>
+                                <RotateTransform x:Name="SearchIconRotation" />
+                            </Path.RenderTransform>
+                        </Path>
+                    </Border>
 
-                    <Grid Grid.Column="1" Margin="11,0,0,0">
+                    <Grid Grid.Column="1" Margin="12,0,0,0">
                         <TextBlock x:Name="SearchHintText"
+                                   Margin="2,0,0,0"
                                    VerticalAlignment="Center"
                                    Text="Busca una acción…"
-                                   FontSize="{DynamicResource FontSizeBody}"
+                                   FontSize="{DynamicResource FontSizeTitle3}"
                                    IsHitTestVisible="False"
                                    Foreground="{DynamicResource BrushTextTertiary}" />
+                        <!-- Sin el relleno del estilo general: con él el texto no cabía en 40 px, salía la barra de desplazamiento y lo escrito empezaba más a la derecha que el texto de ayuda. -->
                         <TextBox x:Name="SearchBox"
-                                 Height="46"
+                                 Height="40"
+                                 Padding="0"
+                                 TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Disabled"
                                  VerticalContentAlignment="Center"
                                  Background="Transparent"
                                  BorderThickness="0"
-                                 FontSize="{DynamicResource FontSizeBody}"
+                                 FontSize="{DynamicResource FontSizeTitle3}"
                                  Foreground="{DynamicResource BrushTextPrimary}"
                                  CaretBrush="{DynamicResource BrushAccent}"
                                  TextChanged="SearchBox_TextChanged"
@@ -82,15 +124,17 @@
                     </Grid>
 
                     <Border Grid.Column="2"
+                            Margin="9,0,4,0"
+                            Padding="9,4,9,5"
                             VerticalAlignment="Center"
-                            Background="{DynamicResource BrushSurface}"
-                            BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1"
-                            CornerRadius="6"
-                            Padding="7,3">
+                            Background="#1FFFFFFF"
+                            BorderBrush="#30FFFFFF"
+                            BorderThickness="1,1,1,2"
+                            CornerRadius="9">
                         <TextBlock Text="Esc"
                                    FontSize="{DynamicResource FontSizeCaption}"
-                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource BrushTextSecondary}" />
                     </Border>
                 </Grid>
             </Border>
@@ -98,8 +142,8 @@
             <!-- Resultados -->
             <ListBox x:Name="ResultsList"
                      Grid.Row="1"
-                     Margin="0,12,0,0"
-                     MaxHeight="352"
+                     Margin="0,10,0,0"
+                     MaxHeight="360"
                      Background="Transparent"
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -121,15 +165,15 @@
                                             Background="Transparent"
                                             BorderBrush="Transparent"
                                             BorderThickness="1"
-                                            CornerRadius="{DynamicResource RadiusMedium}"
-                                            Padding="12,10">
+                                            CornerRadius="16"
+                                            Padding="10,8">
                                         <ContentPresenter />
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="ItemSurface"
                                                     Property="Background"
-                                                    Value="{DynamicResource BrushSurfaceHover}" />
+                                                    Value="#14FFFFFF" />
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
                                             <Setter TargetName="ItemSurface"
@@ -153,21 +197,42 @@
                     <DataTemplate>
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0">
+                            <Border Width="38"
+                                    Height="38"
+                                    VerticalAlignment="Center"
+                                    Background="#66222938"
+                                    BorderBrush="#20FFFFFF"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Path Width="17"
+                                      Height="17"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Stretch="Uniform"
+                                      Data="{Binding IconData}"
+                                      Stroke="{DynamicResource BrushAccent}"
+                                      StrokeThickness="1.7"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round" />
+                            </Border>
+
+                            <StackPanel Grid.Column="1" Margin="12,0,10,0" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{Binding Title}"
-                                               FontSize="{DynamicResource FontSizeCallout}"
+                                               FontSize="{DynamicResource FontSizeBody}"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource BrushTextPrimary}" />
-                                    <Border Margin="9,0,0,0"
+                                    <Border Margin="8,0,0,0"
                                             VerticalAlignment="Center"
-                                            Background="{DynamicResource BrushSurfaceRaised}"
-                                            CornerRadius="5"
-                                            Padding="6,2">
+                                            Background="#14FFFFFF"
+                                            CornerRadius="8"
+                                            Padding="7,1,7,2">
                                         <TextBlock Text="{Binding CategoryLabel}"
                                                    FontSize="{DynamicResource FontSizeCaption}"
                                                    Foreground="{DynamicResource BrushTextTertiary}" />
@@ -175,70 +240,78 @@
                                 </StackPanel>
                                 <TextBlock Text="{Binding Detail}"
                                            Margin="0,3,0,0"
-                                           FontSize="{DynamicResource FontSizeFootnote}"
+                                           FontSize="{DynamicResource FontSizeCaption}"
                                            TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource BrushTextSecondary}" />
                             </StackPanel>
 
-                            <Border Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Margin="10,0,0,0"
-                                    Background="{DynamicResource BrushSurfaceRaised}"
-                                    CornerRadius="5"
-                                    Padding="7,3"
-                                    Visibility="{Binding ShortcutVisibility}">
-                                <TextBlock Text="{Binding Shortcut}"
-                                           FontSize="{DynamicResource FontSizeCaption}"
-                                           Foreground="{DynamicResource BrushTextSecondary}" />
-                            </Border>
+                            <ItemsControl Grid.Column="2"
+                                          ItemsSource="{Binding ShortcutParts}"
+                                          Visibility="{Binding ShortcutVisibility}"
+                                          Style="{StaticResource CompactKeycapsStyle}" />
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
 
             <!-- Estado vacío -->
-            <TextBlock x:Name="EmptyStateText"
-                       Grid.Row="1"
-                       Margin="0,26,0,18"
-                       HorizontalAlignment="Center"
-                       Visibility="Collapsed"
-                       FontSize="{DynamicResource FontSizeCallout}"
-                       Foreground="{DynamicResource BrushTextSecondary}"
-                       Text="No hay ninguna acción que coincida." />
+            <StackPanel Grid.Row="1"
+                        Margin="0,26,0,18"
+                        HorizontalAlignment="Center"
+                        Visibility="{Binding Visibility, ElementName=EmptyStateText}">
+                <a11y:DecorativeMark Focusable="False"
+                                     Width="26"
+                                     Height="26"
+                                     Opacity="0.7"
+                                     Style="{StaticResource SakuraFlowerMarkStyle}" />
+                <TextBlock x:Name="EmptyStateText"
+                           Margin="0,10,0,0"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"
+                           FontSize="{DynamicResource FontSizeCallout}"
+                           Foreground="{DynamicResource BrushTextSecondary}"
+                           Text="No hay ninguna acción que coincida." />
+            </StackPanel>
 
             <!-- Pie con ayuda de teclado -->
-            <Border Grid.Row="2"
-                    Margin="0,12,0,0"
-                    Padding="2,10,2,0"
-                    BorderBrush="{DynamicResource BrushBorder}"
-                    BorderThickness="0,1,0,0">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="↑ ↓ elegir"
-                               FontSize="{DynamicResource FontSizeCaption}"
-                               Foreground="{DynamicResource BrushTextTertiary}" />
-                    <a11y:DecorativeText Text="·"
-                               Margin="9,0"
-                               FontSize="{DynamicResource FontSizeCaption}"
-                               Foreground="{DynamicResource BrushTextTertiary}" />
-                    <TextBlock Text="Enter ejecutar"
-                               FontSize="{DynamicResource FontSizeCaption}"
-                               Foreground="{DynamicResource BrushTextTertiary}" />
-                    <a11y:DecorativeText Text="·"
-                               Margin="9,0"
-                               FontSize="{DynamicResource FontSizeCaption}"
-                               Foreground="{DynamicResource BrushTextTertiary}" />
-                    <TextBlock Text="Esc cerrar"
-                               FontSize="{DynamicResource FontSizeCaption}"
-                               Foreground="{DynamicResource BrushTextTertiary}" />
+            <Grid Grid.Row="2" Margin="10,10,10,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                    <TextBlock x:Name="StatusText"
-                               Margin="16,0,0,0"
-                               FontSize="{DynamicResource FontSizeCaption}"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource BrushWarning}"
-                               Visibility="Collapsed" />
-                </StackPanel>
-            </Border>
+                <ItemsControl x:Name="KeyHintItems"
+                              Focusable="False"
+                              AutomationProperties.Name="Atajos del centro de comandos">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,14,0" Orientation="Horizontal">
+                                <ItemsControl ItemsSource="{Binding KeyParts}" Style="{StaticResource CompactKeycapsStyle}" />
+                                <TextBlock Text="{Binding Action}"
+                                           Margin="4,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource BrushTextTertiary}"
+                                           FontSize="{DynamicResource FontSizeCaption}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock x:Name="StatusText"
+                           Grid.Column="1"
+                           Margin="6,0,0,0"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource BrushWarning}"
+                           Visibility="Collapsed" />
+            </Grid>
         </Grid>
     </Border>
 </Window>

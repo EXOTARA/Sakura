@@ -4,7 +4,10 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using Nexo.App.Motion;
+using Nexo.App.Views.Controls;
 using Nexo.Core.Vision;
 
 namespace Nexo.App;
@@ -34,7 +37,7 @@ public partial class LensHighlightOverlay : Window
         _autoHideTimer.Tick += (_, _) =>
         {
             _autoHideTimer.Stop();
-            Hide();
+            FadeOut();
         };
     }
 
@@ -70,25 +73,108 @@ public partial class LensHighlightOverlay : Window
         Width = windowWidth;
         Height = windowHeight;
 
+        // 2026-09-15 — los recuadros con el acento de Sakura en vez de dorado: un halo suave, el
+        // trazo y la flor en la esquina, para que se sepa quién está señalando. Aparecen uno detrás
+        // de otro encogiéndose hasta su sitio y, al terminar, se apagan en vez de desaparecer de golpe.
+        var accent = (TryFindResource("BrushAccent") as SolidColorBrush)?.Color ?? Color.FromRgb(0xE8, 0x73, 0x9E);
+        var index = 0;
         foreach (var region in regions)
         {
-            var rectangle = new Rectangle
-            {
-                Width = Math.Max(0, region.Width),
-                Height = Math.Max(0, region.Height),
-                RadiusX = 4,
-                RadiusY = 4,
-                Stroke = Brushes.Gold,
-                StrokeThickness = 2,
-                Fill = new SolidColorBrush(Color.FromArgb(60, 255, 215, 0))
-            };
-            Canvas.SetLeft(rectangle, region.Left - windowLeft);
-            Canvas.SetTop(rectangle, region.Top - windowTop);
-            HighlightCanvas.Children.Add(rectangle);
+            var mark = BuildMark(region, accent);
+            Canvas.SetLeft(mark, region.Left - windowLeft - HaloPadding);
+            Canvas.SetTop(mark, region.Top - windowTop - HaloPadding);
+            HighlightCanvas.Children.Add(mark);
+            Reveal(mark, index++);
         }
 
+        HighlightCanvas.BeginAnimation(OpacityProperty, null);
+        HighlightCanvas.Opacity = 1;
         Show();
         _autoHideTimer.Start();
+    }
+
+    private const double HaloPadding = 10;
+
+    private static FrameworkElement BuildMark(LensHighlightRegion region, Color accent)
+    {
+        var width = Math.Max(0, region.Width);
+        var height = Math.Max(0, region.Height);
+        var root = new Grid
+        {
+            Width = width + HaloPadding * 2,
+            Height = height + HaloPadding * 2,
+        };
+
+        root.Children.Add(new Rectangle
+        {
+            Margin = new Thickness(HaloPadding - 5),
+            RadiusX = 14,
+            RadiusY = 14,
+            Stroke = new SolidColorBrush(Color.FromArgb(0x40, accent.R, accent.G, accent.B)),
+            StrokeThickness = 6
+        });
+        root.Children.Add(new Rectangle
+        {
+            Margin = new Thickness(HaloPadding),
+            RadiusX = 9,
+            RadiusY = 9,
+            Stroke = new SolidColorBrush(accent),
+            StrokeThickness = 2,
+            Fill = new SolidColorBrush(Color.FromArgb(0x24, accent.R, accent.G, accent.B))
+        });
+
+        var badge = new Border
+        {
+            Width = 20,
+            Height = 20,
+            CornerRadius = new CornerRadius(10),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0),
+            Background = (Application.Current?.TryFindResource("BrushBackground") as Brush) ?? Brushes.Black,
+            BorderBrush = new SolidColorBrush(accent),
+            BorderThickness = new Thickness(1.5),
+            Child = new DecorativeMark
+            {
+                Width = 12,
+                Height = 12,
+                Focusable = false,
+                Style = Application.Current?.TryFindResource("SakuraFlowerMarkStyle") as Style
+            }
+        };
+        root.Children.Add(badge);
+        return root;
+    }
+
+    private static void Reveal(FrameworkElement mark, int index) =>
+        EntranceMotion.Pop(mark, TimeSpan.FromMilliseconds(70 * Math.Min(index, 6)), from: 1.14);
+
+    private void FadeOut()
+    {
+        if (!IsVisible)
+        {
+            return;
+        }
+
+        if (!SakuraMotion.AnimationsEnabled)
+        {
+            Hide();
+            return;
+        }
+
+        var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(260)) { EasingFunction = SakuraMotion.AccelerateCurve };
+        fade.Completed += (_, _) =>
+        {
+            // Unos recuadros nuevos pueden haber llegado mientras se apagaba: esos se quedan.
+            if (_autoHideTimer.IsEnabled)
+            {
+                return;
+            }
+
+            Hide();
+            HighlightCanvas.Children.Clear();
+        };
+        HighlightCanvas.BeginAnimation(OpacityProperty, fade);
     }
 
     [DllImport("user32.dll", SetLastError = true)]

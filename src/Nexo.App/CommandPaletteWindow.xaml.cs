@@ -148,17 +148,15 @@ public partial class CommandPaletteWindow : Window
         RefreshSuggestions(string.Empty);
     }
 
-    private sealed record PaletteKeyHint(string[] KeyParts, string Action);
-
     // Las mismas teclas que atiende Window_PreviewKeyDown; cada una con una etiqueta corta.
-    private static readonly PaletteKeyHint[] KeyHints =
+    private static readonly Nexo.Core.Shell.CheatItem[] KeyHints =
     [
-        new(["↑", "↓"], "elegir"),
-        new(["Enter"], "ejecutar o enviar"),
-        new(["Ctrl", "Enter"], "preguntar a Sakura"),
-        new(["Ctrl", "Tab"], "completar"),
-        new(["Tab"], "recorrer"),
-        new(["Shift", "Enter"], "nueva línea"),
+        new("↑ + ↓", "elegir"),
+        new("Enter", "ejecutar o enviar"),
+        new("Ctrl + Enter", "preguntar a Sakura"),
+        new("Ctrl + Tab", "completar"),
+        new("Tab", "recorrer"),
+        new("Shift + Enter", "nueva línea"),
     ];
 
     public event EventHandler<CommandPalettePromptEventArgs>? PromptSubmitted;
@@ -982,15 +980,8 @@ public partial class CommandPaletteWindow : Window
     /// </summary>
     private void Window_SourceInitialized(object? sender, EventArgs e)
     {
-        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        if (!SystemParameters.HighContrast && Nexo.Windows.Shell.WindowsDwmChrome.TryApplyClearGlass(handle))
+        if (SakuraWindowChrome.TryApplyRoundedGlass(this, RootBorder, 26))
         {
-            if (System.Windows.Interop.HwndSource.FromHwnd(handle)?.CompositionTarget is { } target)
-            {
-                target.BackgroundColor = Colors.Transparent;
-            }
-
-            RootBorder.CornerRadius = new CornerRadius(26);
             return;
         }
 

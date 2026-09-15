@@ -121,6 +121,51 @@ public static class SakuraWindowChrome
     }
 
     /// <summary>
+    /// 2026-09-15 — cristal transparente con esquinas dibujadas por WPF, para las ventanas flotantes
+    /// sin AllowsTransparency (la paleta y el Command Center). DWM no pinta fondo ni borde, así que no
+    /// hay canto del color de acento ni esquinas casi rectas alrededor del contenido redondeado.
+    /// Devuelve <c>false</c> si no se pudo (contraste alto, Windows sin soporte) para que la ventana
+    /// vuelva a su marco de siempre.
+    /// </summary>
+    public static bool TryApplyRoundedGlass(Window window, Border surface, double cornerRadius)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        ArgumentNullException.ThrowIfNull(surface);
+
+        var handle = new WindowInteropHelper(window).Handle;
+        if (SystemParameters.HighContrast || !WindowsDwmChrome.TryApplyClearGlass(handle))
+        {
+            return false;
+        }
+
+        if (HwndSource.FromHwnd(handle)?.CompositionTarget is { } target)
+        {
+            target.BackgroundColor = Colors.Transparent;
+        }
+
+        surface.CornerRadius = new CornerRadius(cornerRadius);
+        return true;
+    }
+
+    /// <summary>
+    /// La barra de título del color de la ventana y no del acento de Windows, para las ventanas con
+    /// marco normal (la bienvenida, los diálogos de Lens).
+    /// </summary>
+    public static void MatchCaptionToTheme(Window window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+
+        if (window.TryFindResource("BrushBackground") is SolidColorBrush background &&
+            window.TryFindResource("BrushTextSecondary") is SolidColorBrush text)
+        {
+            WindowsDwmChrome.TrySetCaptionColors(
+                new WindowInteropHelper(window).Handle,
+                background.Color.R, background.Color.G, background.Color.B,
+                text.Color.R, text.Color.G, text.Color.B);
+        }
+    }
+
+    /// <summary>
     /// Solo el fondo del sistema, para ventanas que pintan su superficie con una brocha propia
     /// —un degradado, por ejemplo— y no con un color del tema.
     /// </summary>

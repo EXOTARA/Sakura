@@ -5,7 +5,7 @@
         AutomationProperties.Name="Resumen del sistema"
         Title="Sakura Peek"
         Width="420"
-        Height="132"
+        SizeToContent="Height"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -14,70 +14,104 @@
         ShowActivated="False"
         Topmost="True"
         WindowStartupLocation="Manual">
-    <Border x:Name="PeekBorder"
-            Margin="10"
-            Background="{DynamicResource BrushBackground}"
-            BorderBrush="{DynamicResource BrushBorder}"
-            BorderThickness="1"
-            CornerRadius="17"
-            Padding="14"
-            Opacity="0">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="24"
-                              ShadowDepth="6"
-                              Opacity="0.38"
-                              Color="#000000" />
-        </Border.Effect>
-        <Border.RenderTransform>
-            <TranslateTransform x:Name="PeekTranslate" X="24" />
-        </Border.RenderTransform>
+    <!--
+        2026-09-15 — Peek con el lenguaje del resto de Sakura: aparece como burbuja desde su lado de
+        la pantalla, cada pieza lleva el mismo anillo con icono del panel superior y las cifras suben
+        desde cero mientras el anillo se llena. Antes eran números sueltos sobre una tarjeta plana.
+        El margen deja sitio a la sombra y al temblor de la burbuja.
+    -->
+    <Grid Margin="10,10,10,16">
+        <Border x:Name="PeekBorder"
+                Background="{DynamicResource BrushBackground}"
+                BorderBrush="#26FFFFFF"
+                BorderThickness="1"
+                CornerRadius="24"
+                Opacity="0">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="24"
+                                  ShadowDepth="6"
+                                  Opacity="0.38"
+                                  Color="#000000" />
+            </Border.Effect>
 
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+            <Grid Margin="16,13,16,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <UniformGrid x:Name="PeekMetricsGrid" Columns="3">
-                <StackPanel x:Name="CpuMetricPanel" Margin="0,0,12,0">
-                    <TextBlock Text="CPU" Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="CpuValueText" Text="—" FontSize="{DynamicResource FontSizeTitle2}" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal">
+                    <a11y:DecorativeMark Focusable="False"
+                                         Width="15"
+                                         Height="15"
+                                         VerticalAlignment="Center"
+                                         Style="{StaticResource SakuraFlowerMarkStyle}" />
+                    <TextBlock Margin="7,0,0,0"
+                               VerticalAlignment="Center"
+                               Text="Tu equipo ahora"
+                               FontSize="{DynamicResource FontSizeCaption}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrushTextSecondary}" />
                 </StackPanel>
-                <StackPanel x:Name="MemoryMetricPanel" Margin="0,0,12,0">
-                    <TextBlock Text="RAM" Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="MemoryValueText" Text="—" FontSize="{DynamicResource FontSizeTitle2}" FontWeight="SemiBold" />
-                </StackPanel>
-                <StackPanel x:Name="GpuMetricPanel" Margin="0,0,12,0">
-                    <TextBlock Text="GPU" Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="GpuValueText" Text="—" FontSize="{DynamicResource FontSizeTitle2}" FontWeight="SemiBold" />
-                </StackPanel>
-                <StackPanel x:Name="DiskMetricPanel">
-                    <TextBlock Text="DISCO" Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="DiskValueText" Text="—" FontSize="{DynamicResource FontSizeTitle2}" FontWeight="SemiBold" />
-                </StackPanel>
-            </UniformGrid>
 
-            <Grid x:Name="TopProcessPanel" Grid.Row="1" Margin="0,11,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <a11y:DecorativeMark Focusable="False" Width="14"
-                                Height="14"
-                                VerticalAlignment="Center"
-                                Foreground="{DynamicResource BrushAccent}"
-                                Style="{StaticResource SakuraFlowerMarkStyle}" />
-                <TextBlock x:Name="TopProcessNameText"
-                           Grid.Column="1"
-                           Margin="8,0,10,0"
-                           Text="Leyendo procesos..."
-                           TextTrimming="CharacterEllipsis"
-                           Foreground="{DynamicResource BrushTextSecondary}" />
-                <TextBlock x:Name="TopProcessMemoryText"
-                           Grid.Column="2"
-                           Foreground="{DynamicResource BrushTextSecondary}" />
+                <UniformGrid x:Name="PeekMetricsGrid" Grid.Row="1" Margin="0,12,0,0" Columns="3">
+                    <StackPanel x:Name="CpuMetricPanel" HorizontalAlignment="Center" AutomationProperties.Name="Procesador">
+                        <a11y:IconRing x:Name="CpuRing" Width="46" Height="46" GaugeSize="44" IconData="{StaticResource IconMetricCpu}" />
+                        <TextBlock x:Name="CpuValueText" Margin="0,6,0,0" HorizontalAlignment="Center" Text="—" FontSize="{DynamicResource FontSizeTitle3}" FontWeight="SemiBold" />
+                        <TextBlock HorizontalAlignment="Center" Text="CPU" Style="{StaticResource MutedTextStyle}" FontSize="{DynamicResource FontSizeCaption}" />
+                    </StackPanel>
+                    <StackPanel x:Name="MemoryMetricPanel" HorizontalAlignment="Center" AutomationProperties.Name="Memoria">
+                        <a11y:IconRing x:Name="MemoryRing" Width="46" Height="46" GaugeSize="44" IconData="{StaticResource IconMetricMemory}" />
+                        <TextBlock x:Name="MemoryValueText" Margin="0,6,0,0" HorizontalAlignment="Center" Text="—" FontSize="{DynamicResource FontSizeTitle3}" FontWeight="SemiBold" />
+                        <TextBlock HorizontalAlignment="Center" Text="RAM" Style="{StaticResource MutedTextStyle}" FontSize="{DynamicResource FontSizeCaption}" />
+                    </StackPanel>
+                    <StackPanel x:Name="GpuMetricPanel" HorizontalAlignment="Center" AutomationProperties.Name="Tarjeta gráfica">
+                        <a11y:IconRing x:Name="GpuRing" Width="46" Height="46" GaugeSize="44" IconData="{StaticResource IconMetricGpu}" />
+                        <TextBlock x:Name="GpuValueText" Margin="0,6,0,0" HorizontalAlignment="Center" Text="—" FontSize="{DynamicResource FontSizeTitle3}" FontWeight="SemiBold" />
+                        <TextBlock HorizontalAlignment="Center" Text="GPU" Style="{StaticResource MutedTextStyle}" FontSize="{DynamicResource FontSizeCaption}" />
+                    </StackPanel>
+                    <StackPanel x:Name="DiskMetricPanel" HorizontalAlignment="Center" AutomationProperties.Name="Disco">
+                        <a11y:IconRing x:Name="DiskRing" Width="46" Height="46" GaugeSize="44" IconData="{StaticResource IconMetricDisk}" />
+                        <TextBlock x:Name="DiskValueText" Margin="0,6,0,0" HorizontalAlignment="Center" Text="—" FontSize="{DynamicResource FontSizeTitle3}" FontWeight="SemiBold" />
+                        <TextBlock HorizontalAlignment="Center" Text="DISCO" Style="{StaticResource MutedTextStyle}" FontSize="{DynamicResource FontSizeCaption}" />
+                    </StackPanel>
+                </UniformGrid>
+
+                <Border x:Name="TopProcessPanel"
+                        Grid.Row="2"
+                        Margin="0,13,0,0"
+                        Padding="12,8"
+                        CornerRadius="14"
+                        Background="#12FFFFFF"
+                        BorderBrush="#1CFFFFFF"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Lo que más usa"
+                                   FontSize="{DynamicResource FontSizeCaption}"
+                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                        <TextBlock x:Name="TopProcessNameText"
+                                   Grid.Column="1"
+                                   Margin="10,0,10,0"
+                                   VerticalAlignment="Center"
+                                   Text="Leyendo procesos..."
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource BrushTextPrimary}" />
+                        <TextBlock x:Name="TopProcessMemoryText"
+                                   Grid.Column="2"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource BrushAccent}"
+                                   FontWeight="SemiBold" />
+                    </Grid>
+                </Border>
             </Grid>
-        </Grid>
-    </Border>
+        </Border>
+    </Grid>
 </Window>
