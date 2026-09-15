@@ -634,6 +634,7 @@ public partial class SettingsView : UserControl
     {
         AiApiKeyPasswordBox.Clear();
         ApiKeyChanged?.Invoke(SelectedAiProvider, string.Empty);
+        ShowSavedKey(hasKey: false, ending: null);
     }
 
     /// <summary>
@@ -646,7 +647,7 @@ public partial class SettingsView : UserControl
     /// de otro proveedor, así que se vacía a propósito —nunca se vuelve a mostrar una clave ya
     /// guardada, ni siquiera la suya propia— y el texto de ayuda dice si ya hay algo guardado.
     /// </summary>
-    public void SetStoredApiKeyPresence(bool hasKey)
+    public void SetStoredApiKeyPresence(bool hasKey, string? ending = null)
     {
         if (AiApiKeyStatusText is null)
         {
@@ -658,6 +659,24 @@ public partial class SettingsView : UserControl
         _isApplyingPreferences = false;
 
         UpdateApiKeyStatusText(hasKey);
+        ShowSavedKey(hasKey, ending);
+    }
+
+    /// <summary>Con clave guardada: el aviso de que la hay. Sin clave: el cuadro para pegarla.</summary>
+    private void ShowSavedKey(bool hasKey, string? ending)
+    {
+        AiSavedKeyText.Text = string.IsNullOrEmpty(ending) || ending == "…"
+            ? "Clave guardada en este equipo"
+            : $"Clave guardada · termina en {ending}";
+        AiSavedKeyPanel.Visibility = hasKey ? Visibility.Visible : Visibility.Collapsed;
+        AiApiKeyPasswordBox.Visibility = hasKey ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void AiChangeApiKeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        AiSavedKeyPanel.Visibility = Visibility.Collapsed;
+        AiApiKeyPasswordBox.Visibility = Visibility.Visible;
+        AiApiKeyPasswordBox.Focus();
     }
 
     /// <summary>
@@ -671,7 +690,7 @@ public partial class SettingsView : UserControl
     public void UpdateApiKeyStatusText(bool hasKey)
     {
         AiApiKeyStatusText.Text = hasKey
-            ? "Hay una clave guardada en este equipo, cifrada con tu cuenta de Windows. Escribe una nueva solo si quieres reemplazarla."
+            ? "Está cifrada con tu cuenta de Windows y no se enseña entera. Sakura la usa cada vez que abres la app."
             : "Pega aquí tu clave. Se guarda cifrada en este equipo y nunca se escribe en el archivo de ajustes.";
         AiForgetApiKeyButton.IsEnabled = hasKey;
     }

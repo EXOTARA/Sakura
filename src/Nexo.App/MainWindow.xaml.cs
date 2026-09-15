@@ -623,6 +623,7 @@ public partial class MainWindow : Window
         _voiceCoordinator.WakeWordCustomAliases = _preferences.WakeWordAliases;
         _audioView.ActionCompleted += AudioView_ActionCompleted;
         _captureView.CaptureRequested += CaptureView_CaptureRequested;
+        WireCaptureFeatures();
         _commandPaletteWindow.PromptSubmitted += CommandPaletteWindow_PromptSubmitted;
         _commandPaletteWindow.WorkspaceRequested += CommandPaletteWindow_WorkspaceRequested;
 
@@ -1266,8 +1267,11 @@ public partial class MainWindow : Window
         };
 
         _settingsView.ApiKeyRequested += provider =>
+        {
+            var stored = _apiKeyStore.Read(provider);
             _settingsView.SetStoredApiKeyPresence(
-                !string.IsNullOrWhiteSpace(_apiKeyStore.Read(provider)));
+                !string.IsNullOrWhiteSpace(stored), ApiKeyHint.Ending(stored));
+        };
 
         _settingsView.ApiKeyPageRequested += OpenExternalPage;
 
@@ -4402,6 +4406,8 @@ public partial class MainWindow : Window
                 "el traductor de pantalla no quedó disponible.");
         }
 
+        RegisterCaptureHotkeys(windowHandle);
+
         // Diseño D6.3 — el dictado global se registra igual que los demás atajos: como atajo de
         // sistema, para que funcione con Sakura sin foco (que es todo el sentido de dictar en otra
         // aplicación).
@@ -4492,6 +4498,7 @@ public partial class MainWindow : Window
 
     private void Window_Closed(object? sender, EventArgs e)
     {
+        StopRecordingOnExit();
         _isClosed = true;
         Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnSystemUserPreferenceChanged;
         _clockTimer.Stop();
@@ -4558,6 +4565,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(windowHandle, VoiceHotkeyId);
             UnregisterHotKey(windowHandle, TranslateHotkeyId);
             UnregisterHotKey(windowHandle, FlowHotkeyId);
+            UnregisterCaptureHotkeys(windowHandle);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
         }
 
@@ -4605,7 +4613,7 @@ public partial class MainWindow : Window
         else if (wParam.ToInt32() == LookHotkeyId)
         {
             RememberForegroundWindow();
-            _ = LookAtForegroundWindowAsync();
+            _ = ExplainForegroundWindowAsync();
             handled = true;
         }
         else if (wParam.ToInt32() == VoiceHotkeyId)
@@ -4616,6 +4624,10 @@ public partial class MainWindow : Window
         else if (wParam.ToInt32() == TranslateHotkeyId)
         {
             _ = TranslateRegionAsync();
+            handled = true;
+        }
+        else if (HandleCaptureHotkey(wParam.ToInt32()))
+        {
             handled = true;
         }
         else if (wParam.ToInt32() == EscapeHotkeyId)
@@ -5664,8 +5676,9 @@ public partial class MainWindow : Window
                 systemContext = BuildAiSystemContext(_latestSnapshot);
             }
 
-            if (_pendingVisionAttachment is not null &&
-                !string.IsNullOrWhiteSpace(_visualContextMetadata))
+            // El contexto de una ventana explicada va también sin imagen: con un modelo que no admite
+            // imágenes se explicó leyendo el texto de la ventana, y la pregunta siguiente lo necesita.
+            if (!string.IsNullOrWhiteSpace(_visualContextMetadata))
             {
                 systemContext = string.IsNullOrWhiteSpace(systemContext)
                     ? _visualContextMetadata
@@ -7899,6 +7912,7 @@ public partial class MainWindow : Window
         LensMode.Soporte => "modo soporte",
         LensMode.Estudio => "modo estudio",
         LensMode.Desarrollo => "modo desarrollo",
+        LensMode.Explicar => "explicar la ventana",
         _ => mode.ToString()
     };
 
@@ -8762,7 +8776,7 @@ public partial class MainWindow : Window
             "Focus" => ("Enfoque", "Sesiones cortas sin perder el ritmo"),
             "Routines" => ("Rutinas", "Acciones repetibles, claras y controladas"),
             "Audio" => ("Audio", "Control local por aplicación"),
-            "Capture" => ("Captura", "Selecciona qué puede ver Sakura"),
+            "Capture" => ("Captura", "Captura y graba la pantalla"),
             "System" => ("Sistema", "Estado y diagnóstico del equipo"),
             "Settings" => ("Personalizar", "Apariencia, privacidad y comportamiento"),
             _ => ("Sakura", "Tu espacio de acciones y contexto")

@@ -106,4 +106,18 @@ public sealed class LensContextBuilderTests
         Assert.DoesNotContain(new string('a', 5000), context.SystemContext);
         Assert.Contains("…", context.SystemContext);
     }
+
+    [Fact]
+    public void Explain_AsksForTheFourSectionsAndNotToInventProblems()
+    {
+        var context = LensContextBuilder.Build(LensMode.Explicar, "Configuración", EmptyOcr, NoElements);
+
+        foreach (var section in new[] { "**Qué es**", "**Qué está pasando**", "**Cómo resolverlo**", "**Pasos**" })
+        {
+            Assert.Contains(section, context.Prompt);
+        }
+
+        Assert.Contains("no inventes", context.Prompt);
+        Assert.Contains("Modo Sakura Lens: Explicar", context.SystemContext);
+    }
 }

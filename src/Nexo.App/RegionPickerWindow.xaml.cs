@@ -55,8 +55,10 @@ public partial class RegionPickerWindow : Window
     /// Enseña el velo y espera. Devuelve la zona en píxeles físicos, o <c>null</c> si se canceló o
     /// si lo seleccionado era tan pequeño que casi seguro fue un clic sin querer.
     /// </summary>
-    public Task<Int32Rect?> PickAsync()
+    public Task<Int32Rect?> PickAsync(string? title = null)
     {
+        // 2026-09-15 — el mismo selector sirve para traducir y para capturar: cambia solo lo que pide.
+        HintTitle.Text = title ?? "Arrastra sobre el texto que quieras traducir";
         _result = new TaskCompletionSource<Int32Rect?>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 

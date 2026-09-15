@@ -33,11 +33,25 @@ public static class LensContextBuilder
             ResolveRequestMode(mode, redactedOcr));
     }
 
+    /// <summary>
+    /// Lo que se pide al explicar una ventana. Cuatro apartados fijos, en este orden, para que la
+    /// respuesta se lea de un vistazo en la píldora; y la advertencia de no inventar un problema
+    /// cuando no lo hay, que es el fallo típico de pedir «cómo resolverlo» sobre una ventana normal.
+    /// </summary>
+    public const string ExplainPrompt =
+        "Explícame esta ventana. Responde con estos cuatro apartados, en este orden, cada uno con su " +
+        "título en negrita: **Qué es** (qué aplicación o página es y para qué sirve lo que se ve), " +
+        "**Qué está pasando** (lo importante: un error, un aviso, algo a medias o lo que se está haciendo), " +
+        "**Cómo resolverlo** (si hay algo que resolver; si no, qué se puede hacer aquí) y **Pasos** " +
+        "(numerados y concretos, con los nombres de botones y menús tal como aparecen en la ventana). " +
+        "Sé breve. Si no hay ningún problema, dilo claramente y no inventes uno.";
+
     private static string BuildPrompt(LensMode mode) => mode switch
     {
         LensMode.Soporte => "¿Qué problema hay en esta ventana y cómo lo resuelvo?",
         LensMode.Estudio => "¿Qué es esto y cómo funciona? Explícamelo paso a paso.",
         LensMode.Desarrollo => "Analiza el código o error visible aquí y dime qué corregir.",
+        LensMode.Explicar => ExplainPrompt,
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Modo de Lens no reconocido.")
     };
 
@@ -45,7 +59,7 @@ public static class LensContextBuilder
     {
         LensMode.Desarrollo => AiRequestMode.VisionTechnicalDiagnostic,
         LensMode.Estudio => AiRequestMode.VisionGeneral,
-        LensMode.Soporte => VisionIntentPolicy.Resolve(redactedOcr.FullText, hasImages: true),
+        LensMode.Soporte or LensMode.Explicar => VisionIntentPolicy.Resolve(redactedOcr.FullText, hasImages: true),
         _ => AiRequestMode.VisionGeneral
     };
 
@@ -96,6 +110,7 @@ public static class LensContextBuilder
         LensMode.Soporte => "Soporte",
         LensMode.Estudio => "Estudio",
         LensMode.Desarrollo => "Desarrollo",
+        LensMode.Explicar => "Explicar",
         _ => mode.ToString()
     };
 
