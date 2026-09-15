@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.5-beta]
+
+### Cambiado
+
+- **El gestor de modelos locales tiene el aspecto del resto de Sakura**: barra de título oscura, el estado de Ollama con un punto de color, cada modelo con su tamaño y «En uso» en el que Sakura tiene elegido, y la selección con tu color de acento. Doble clic en un modelo para usarlo.
+- **Las descargas de modelos se entienden mejor**: una barra que avanza suave, los pasos en castellano y cuánto lleva de cuánto («1,3 GB de 3,1 GB»). Hay botones con los nombres de los modelos recomendados.
+- **Eliminar un modelo se confirma dentro de la ventana** y dice cuánto espacio libera.
+
+### Corregido
+
+- **No había forma de cancelar la descarga de un modelo.** Ahora hay un botón Cancelar.
+- **Si Sakura no encontraba Ollama**, mostraba el mensaje técnico de Windows; ahora explica qué hacer y deja el detalle en la ayuda emergente.
+
 ## [0.30.4-beta]
 
 ### Cambiado
