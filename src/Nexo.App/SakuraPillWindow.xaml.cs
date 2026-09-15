@@ -174,15 +174,18 @@ public partial class SakuraPillWindow : Window
     /// </summary>
     private void PlayAppearAnimation()
     {
+        // Siempre se vuelve a ajustar al contenido. Leer el modo que había justo antes fallaba si la
+        // píldora reaparecía a mitad de irse: la salida lo había dejado en manual, se «restauraba»
+        // manual, y la píldora se quedaba con un alto fijo que recortaba las respuestas largas.
+        SizeToContent = SizeToContent.Height;
         UpdateLayout();
-        var restoreSizing = SizeToContent;
         if (ActualHeight > 0)
         {
             SizeToContent = SizeToContent.Manual;
             Height = ActualHeight;
         }
 
-        BubbleMotion.Inflate(PillBorder, HorizontalAlignment.Center, () => SizeToContent = restoreSizing);
+        BubbleMotion.Inflate(PillBorder, HorizontalAlignment.Center, () => SizeToContent = SizeToContent.Height);
     }
 
     private void PlayDisappearAnimation()

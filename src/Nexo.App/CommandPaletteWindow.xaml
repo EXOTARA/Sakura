@@ -101,7 +101,8 @@
 
         <Style x:Key="MotionChipStyle" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}" />
-            <Setter Property="Background" Value="{DynamicResource BrushSurfaceRaised}" />
+            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="BorderBrush" Value="#30FFFFFF" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="Margin" Value="0,0,8,0" />
@@ -111,11 +112,17 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
+                        <!--
+                            2026-09-14 — con canto y relleno propios. Sobre el panel de movimiento el
+                            relleno del tema casi coincidía con el fondo, y las cuatro opciones se leían
+                            como texto suelto en vez de como botones.
+                        -->
                         <Border x:Name="ChipSurface"
+                                Padding="{TemplateBinding Padding}"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="Transparent"
+                                BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="{DynamicResource RadiusMedium}">
+                                CornerRadius="12">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center" />
                         </Border>
@@ -151,14 +158,15 @@
     -->
     <Border x:Name="RootBorder"
             Padding="12"
+            RenderTransformOrigin="0.5,0"
             BorderThickness="1"
             Opacity="0"
             SnapsToDevicePixels="True">
         <Border.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#B8111620" Offset="0" />
-                <GradientStop Color="#B8151B27" Offset="0.64" />
-                <GradientStop Color="#B81B1826" Offset="1" />
+                <GradientStop Color="#F2111620" Offset="0" />
+                <GradientStop Color="#F2151B27" Offset="0.64" />
+                <GradientStop Color="#F21B1826" Offset="1" />
             </LinearGradientBrush>
         </Border.Background>
         <Border.BorderBrush>
@@ -169,7 +177,10 @@
             </LinearGradientBrush>
         </Border.BorderBrush>
         <Border.RenderTransform>
-            <TranslateTransform x:Name="PaletteTranslate" Y="-8" />
+            <TransformGroup>
+                <ScaleTransform x:Name="PaletteScale" ScaleX="1" ScaleY="1" />
+                <TranslateTransform x:Name="PaletteTranslate" Y="-8" />
+            </TransformGroup>
         </Border.RenderTransform>
 
         <Grid>
@@ -201,12 +212,18 @@
                             BorderBrush="{DynamicResource BrushAccentBorder}"
                             BorderThickness="1"
                             CornerRadius="15">
-                        <a11y:DecorativeText Text="✦"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource BrushAccent}"
-                                   FontSize="{DynamicResource FontSizeTitle2}"
-                                   FontWeight="SemiBold" />
+                        <a11y:DecorativeMark x:Name="PaletteMark"
+                                        Focusable="False"
+                                        Width="26"
+                                        Height="26"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        Style="{StaticResource SakuraFlowerMarkStyle}">
+                            <a11y:DecorativeMark.RenderTransform>
+                                <RotateTransform x:Name="PaletteMarkRotation" />
+                            </a11y:DecorativeMark.RenderTransform>
+                        </a11y:DecorativeMark>
                     </Border>
 
                     <Grid Grid.Column="1" VerticalAlignment="Center">
@@ -236,9 +253,11 @@
                     </Grid>
 
                     <Border Grid.Column="2"
-                            Margin="9,0,4,0"
-                            Padding="9,6"
+                            Margin="9,11,4,0"
+                            Padding="9,4,9,5"
                             VerticalAlignment="Top"
+                            BorderBrush="#30FFFFFF"
+                            BorderThickness="1,1,1,2"
                             Background="{DynamicResource BrushSurfaceRaised}"
                             CornerRadius="9">
                         <TextBlock Text="Esc"
@@ -248,14 +267,20 @@
 
                     <Button AutomationProperties.Name="Movimiento y apariencia" Grid.Column="3"
                             x:Name="CustomizeButton"
-                            Margin="4,0,0,0"
+                            Margin="4,3,0,0"
                             VerticalAlignment="Top"
                             Style="{StaticResource PaletteIconButtonStyle}"
-                            Content="❈"
-                            FontFamily="Segoe UI Symbol"
-                            FontSize="{DynamicResource FontSizeTitle3}"
                             ToolTip="Movimiento y apariencia"
-                            Click="CustomizeButton_Click" />
+                            Click="CustomizeButton_Click">
+                        <Path Width="18"
+                              Height="18"
+                              Stretch="Uniform"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.7"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              Data="{StaticResource IconSakuraSettings}" />
+                    </Button>
                 </Grid>
             </Border>
 
@@ -337,43 +362,87 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
+                    <!--
+                        2026-09-14 — el pie en dos filas: el estado y el tiempo arriba, y los atajos como
+                        teclas debajo, en un panel que salta de línea. Antes eran dos frases largas en
+                        columnas que se pisaban: «Shift + Enter nueva lín» chocaba con «Ctrl + Enter».
+                    -->
                     <Grid Grid.Row="1" Margin="12,9,12,5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse x:Name="InputModeDot"
-                                         Width="6"
-                                         Height="6"
-                                         Margin="0,0,7,0"
-                                         VerticalAlignment="Center"
-                                         Fill="{DynamicResource BrushTextTertiary}" />
-                                <TextBlock x:Name="InputModeText"
-                                           Text="Escribe para buscar o preguntar"
-                                           Foreground="{DynamicResource BrushTextSecondary}"
-                                           FontSize="{DynamicResource FontSizeCaption}" />
-                            </StackPanel>
-                            <TextBlock Margin="0,5,0,0"
-                                       Text="↑↓ elegir   ·   Ctrl+Tab completar · Tab recorrer   ·   Enter ejecutar o enviar   ·   Shift + Enter nueva línea"
-                                       Foreground="{DynamicResource BrushTextTertiary}"
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="InputModeDot"
+                                     Width="6"
+                                     Height="6"
+                                     Margin="0,0,7,0"
+                                     VerticalAlignment="Center"
+                                     Fill="{DynamicResource BrushTextTertiary}" />
+                            <TextBlock x:Name="InputModeText"
+                                       Text="Escribe para buscar o preguntar"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
                                        FontSize="{DynamicResource FontSizeCaption}" />
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center">
-                            <TextBlock x:Name="TimingText"
-                                       HorizontalAlignment="Right"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       FontSize="{DynamicResource FontSizeCaption}" />
-                            <TextBlock Margin="0,4,0,0"
-                                       Text="Ctrl + Enter fuerza consulta"
-                                       Foreground="{DynamicResource BrushTextTertiary}"
-                                       FontSize="{DynamicResource FontSizeCaption}" />
-                        </StackPanel>
+                        <TextBlock x:Name="TimingText"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource BrushTextTertiary}"
+                                   FontSize="{DynamicResource FontSizeCaption}" />
+
+                        <ItemsControl x:Name="KeyHintItems"
+                                      Grid.Row="1"
+                                      Grid.ColumnSpan="2"
+                                      Margin="0,8,0,0"
+                                      Focusable="False"
+                                      AutomationProperties.Name="Atajos de la paleta">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,14,4" Orientation="Horizontal">
+                                        <ItemsControl ItemsSource="{Binding KeyParts}" Focusable="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,0,3,0"
+                                                            MinWidth="20"
+                                                            Padding="6,1,6,2"
+                                                            CornerRadius="5"
+                                                            Background="#1FFFFFFF"
+                                                            BorderBrush="#30FFFFFF"
+                                                            BorderThickness="1,1,1,2">
+                                                        <TextBlock Text="{Binding}"
+                                                                   HorizontalAlignment="Center"
+                                                                   FontSize="10.5"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource BrushTextSecondary}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="{Binding Action}"
+                                                   Margin="4,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource BrushTextTertiary}"
+                                                   FontSize="{DynamicResource FontSizeCaption}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Grid>
                 </Grid>
             </Border>

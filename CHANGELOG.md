@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.3-beta]
+
+### Cambiado
+
+- **La paleta de Ctrl + Espacio tiene el estilo de Sakura.** Esquinas redondeadas de verdad, sin el canto de color que Windows le ponía arriba; la flor de Sakura en lugar de una estrella, que gira un poco mientras la paleta aparece; y las sugerencias entran una detrás de otra al abrirse la lista.
+- **Los atajos del pie de la paleta ya no se pisan**: se dibujan como teclas, cada uno con una etiqueta corta.
+- **Las opciones de movimiento de la paleta parecen botones**, y la elegida se marca con el color de acento.
+
+### Corregido
+
+- **Algunos paneles de Personalizar dejaban de atenuarse** al desactivar su opción después de haber visto la sección animada.
+- **La píldora de Sakura podía quedarse con una altura fija** si volvía a aparecer justo mientras se ocultaba.
+
 ## [0.30.2-beta]
 
 ### Cambiado
