@@ -26,6 +26,46 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Surface" Property="Opacity" Value="0.68" />
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Una tarjeta que se pulsa: Región, Con retraso. -->
+        <Style x:Key="CaptureCardButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}" />
+            <Setter Property="Background" Value="{DynamicResource BrushSurfaceRaised}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface"
+                                Padding="13"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource BrushBorder}"
+                                BorderThickness="1"
+                                CornerRadius="15">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.75" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.5" />
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -33,65 +73,62 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
         <StackPanel>
-            <TextBlock Text="Comparte solo la ventana o pantalla que elijas."
+            <TextBlock Text="Captura una zona, la pantalla entera o graba lo que pasa en ella. Nada sale de tu equipo si no lo compartes."
+                       TextWrapping="Wrap"
                        Style="{StaticResource MutedTextStyle}" />
-        </StackPanel>
 
-        <Button Grid.Row="1"
-                AutomationProperties.Name="Compartir una ventana o pantalla"
-                Margin="0,22,0,0"
-                Padding="18,16"
-                HorizontalContentAlignment="Stretch"
-                Style="{StaticResource CapturePrimaryButtonStyle}"
-                Click="CaptureButton_Click">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <Button AutomationProperties.Name="Compartir una ventana o pantalla"
+                    Margin="0,18,0,0"
+                    Padding="18,16"
+                    HorizontalContentAlignment="Stretch"
+                    Style="{StaticResource CapturePrimaryButtonStyle}"
+                    Click="CaptureButton_Click">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <Border Width="42"
-                        Height="42"
-                        Background="#26FFFFFF"
-                        CornerRadius="13">
-                    <TextBlock Text="▣"
-                               HorizontalAlignment="Center"
+                    <Border Width="42"
+                            Height="42"
+                            Background="#26FFFFFF"
+                            CornerRadius="13">
+                        <Path Width="20"
+                              Height="20"
+                              Stretch="Uniform"
+                              Stroke="White"
+                              StrokeThickness="1.8"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="{StaticResource IconSakuraLook}" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1"
+                                Margin="13,0,12,0"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="Analizar una ventana"
+                                   FontSize="{DynamicResource FontSizeBody}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Text="Elige una ventana o monitor y pregúntale a Sakura sobre ella."
+                                   Foreground="#D8FFFFFF"
+                                   FontSize="{DynamicResource FontSizeFootnote}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="2"
+                               Text="→"
                                VerticalAlignment="Center"
-                               FontSize="{DynamicResource FontSizeTitle3}" />
-                </Border>
+                               FontSize="{DynamicResource FontSizeTitle2}" />
+                </Grid>
+            </Button>
 
-                <StackPanel Grid.Column="1"
-                            Margin="13,0,12,0"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="Analizar una ventana"
-                               FontSize="{DynamicResource FontSizeBody}"
-                               FontWeight="SemiBold" />
-                    <TextBlock Margin="0,3,0,0"
-                               Text="Elige una ventana o monitor y confirma antes de compartir."
-                               Foreground="#D8FFFFFF"
-                               FontSize="{DynamicResource FontSizeFootnote}"
-                               TextWrapping="Wrap" />
-                </StackPanel>
-
-                <TextBlock Grid.Column="2"
-                           Text="→"
-                           VerticalAlignment="Center"
-                           FontSize="{DynamicResource FontSizeTitle2}" />
-            </Grid>
-        </Button>
-
-        <StackPanel Grid.Row="2" Margin="0,20,0,0">
-            <TextBlock Text="Más formas de capturar"
+            <TextBlock Margin="0,20,0,0"
+                       Text="Capturar"
                        FontSize="{DynamicResource FontSizeFootnote}"
                        FontWeight="SemiBold" />
 
@@ -101,67 +138,149 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Margin="0,0,6,0"
-                        Padding="13"
-                        Background="{DynamicResource BrushSurfaceRaised}"
-                        CornerRadius="13"
-                        Opacity="0.72">
+                <Button x:Name="RegionCaptureButton"
+                        Margin="0,0,6,0"
+                        AutomationProperties.Name="Capturar una región"
+                        Style="{StaticResource CaptureCardButtonStyle}"
+                        Click="RegionCaptureButton_Click">
                     <StackPanel>
-                        <TextBlock Text="Región"
-                                   FontWeight="SemiBold" />
+                        <Path Width="20"
+                              Height="20"
+                              HorizontalAlignment="Left"
+                              Stretch="Uniform"
+                              Stroke="{DynamicResource BrushAccent}"
+                              StrokeThickness="1.8"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="{StaticResource IconSakuraCapture}" />
+                        <TextBlock Margin="0,9,0,0" Text="Región" FontWeight="SemiBold" />
                         <TextBlock Margin="0,3,0,0"
-                                   Text="Recorte preciso"
+                                   Text="Arrastra sobre lo que quieras"
+                                   TextWrapping="Wrap"
                                    Style="{StaticResource MutedTextStyle}" />
-                        <TextBlock Margin="0,9,0,0"
-                                   Text="PRÓXIMAMENTE"
-                                   Foreground="{DynamicResource BrushAccent}"
-                                   FontSize="{DynamicResource FontSizeCaption}"
-                                   FontWeight="SemiBold" />
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="Alt + Shift + S"
+                                   Foreground="{DynamicResource BrushTextTertiary}"
+                                   FontSize="{DynamicResource FontSizeCaption}" />
                     </StackPanel>
-                </Border>
+                </Button>
 
-                <Border Grid.Column="1"
+                <Button x:Name="DelayedCaptureButton"
+                        Grid.Column="1"
                         Margin="6,0,0,0"
-                        Padding="13"
-                        Background="{DynamicResource BrushSurfaceRaised}"
-                        CornerRadius="13"
-                        Opacity="0.72">
+                        AutomationProperties.Name="Capturar la pantalla con retraso"
+                        Style="{StaticResource CaptureCardButtonStyle}"
+                        Click="DelayedCaptureButton_Click">
                     <StackPanel>
-                        <TextBlock Text="Con retraso"
-                                   FontWeight="SemiBold" />
+                        <Path Width="20"
+                              Height="20"
+                              HorizontalAlignment="Left"
+                              Stretch="Uniform"
+                              Stroke="{DynamicResource BrushAccent}"
+                              StrokeThickness="1.8"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="{StaticResource IconClock}" />
+                        <TextBlock Margin="0,9,0,0" Text="Con retraso" FontWeight="SemiBold" />
                         <TextBlock Margin="0,3,0,0"
-                                   Text="Tiempo para preparar la pantalla"
-                                   Style="{StaticResource MutedTextStyle}"
-                                   TextWrapping="Wrap" />
-                        <TextBlock Margin="0,9,0,0"
-                                   Text="PRÓXIMAMENTE"
-                                   Foreground="{DynamicResource BrushAccent}"
-                                   FontSize="{DynamicResource FontSizeCaption}"
-                                   FontWeight="SemiBold" />
+                                   Text="La pantalla donde está el ratón"
+                                   TextWrapping="Wrap"
+                                   Style="{StaticResource MutedTextStyle}" />
+                        <StackPanel x:Name="DelayChoices" Margin="0,8,0,0" Orientation="Horizontal" />
                     </StackPanel>
-                </Border>
+                </Button>
             </Grid>
-        </StackPanel>
 
-        <Border Grid.Row="3"
-                Margin="0,18,0,0"
-                Padding="12,10"
-                Background="#381A1D26"
-                CornerRadius="{DynamicResource RadiusMedium}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="✦"
-                           Margin="0,0,8,0"
-                           Foreground="{DynamicResource BrushAccent}" />
-                <TextBlock Grid.Column="1"
-                           Text="Sakura no captura nada hasta que confirmas la selección."
-                           Foreground="{DynamicResource BrushTextSecondary}"
-                           FontSize="{DynamicResource FontSizeFootnote}"
-                           TextWrapping="Wrap" />
-            </Grid>
-        </Border>
-    </Grid>
+            <TextBlock Margin="0,22,0,0"
+                       Text="Grabar la pantalla"
+                       FontSize="{DynamicResource FontSizeFootnote}"
+                       FontWeight="SemiBold" />
+
+            <!--
+                2026-09-15 — grabar la pantalla desde Sakura (Adler: «tipo NVIDIA»). Graba la pantalla
+                donde está el ratón en MP4 con la tarjeta gráfica, con el sonido del equipo y, si se
+                quiere, el micrófono. Se empieza y se para aquí o con Alt + Shift + G.
+            -->
+            <Border x:Name="RecordingCard"
+                    Margin="0,10,0,0"
+                    Padding="14"
+                    Background="{DynamicResource BrushSurfaceRaised}"
+                    BorderBrush="{DynamicResource BrushBorder}"
+                    BorderThickness="1"
+                    CornerRadius="15">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="40"
+                                Height="40"
+                                CornerRadius="20"
+                                Background="{DynamicResource BrushAccentSoft}">
+                            <Ellipse x:Name="RecordDot"
+                                     Width="14"
+                                     Height="14"
+                                     RenderTransformOrigin="0.5,0.5"
+                                     Fill="{DynamicResource BrushDanger}">
+                                <Ellipse.RenderTransform>
+                                    <ScaleTransform x:Name="RecordDotScale" />
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="12,0,10,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="RecordingTitle" Text="Grabar la pantalla" FontWeight="SemiBold" />
+                            <TextBlock x:Name="RecordingDetail"
+                                       Margin="0,3,0,0"
+                                       Text="Se guarda en Vídeos › Sakura"
+                                       TextWrapping="Wrap"
+                                       Style="{StaticResource MutedTextStyle}" />
+                            <TextBlock Margin="0,5,0,0"
+                                       Text="Alt + Shift + G"
+                                       Foreground="{DynamicResource BrushTextTertiary}"
+                                       FontSize="{DynamicResource FontSizeCaption}" />
+                        </StackPanel>
+                        <Button x:Name="RecordButton"
+                                Grid.Column="2"
+                                Padding="16,8"
+                                Content="Grabar"
+                                AutomationProperties.Name="Empezar a grabar la pantalla"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Click="RecordButton_Click" />
+                    </Grid>
+                    <WrapPanel x:Name="RecordingOptions" Margin="0,12,0,0">
+                        <CheckBox x:Name="RecordSystemAudioCheckBox"
+                                  Margin="0,0,18,0"
+                                  Content="Sonido del equipo"
+                                  IsChecked="True" />
+                        <CheckBox x:Name="RecordMicrophoneCheckBox"
+                                  Content="Micrófono" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Margin="0,18,0,0"
+                    Padding="12,10"
+                    Background="#381A1D26"
+                    CornerRadius="{DynamicResource RadiusMedium}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="✦"
+                               Margin="0,0,8,0"
+                               Foreground="{DynamicResource BrushAccent}" />
+                    <TextBlock Grid.Column="1"
+                               Text="Las capturas y grabaciones se quedan en tu equipo. Sakura solo ve una imagen si eliges compartirla."
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               FontSize="{DynamicResource FontSizeFootnote}"
+                               TextWrapping="Wrap" />
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

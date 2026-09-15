@@ -32,7 +32,9 @@ public static class CheatSheet
         {
             new("Alt + V", "Hablarle a Sakura"),
             new("Ctrl + Shift + Espacio", "Explicar la ventana que tienes delante"),
-            new("Ctrl + Shift + T", "Traducir un trozo de pantalla")
+            new("Ctrl + Shift + T", "Traducir un trozo de pantalla"),
+            new("Alt + Shift + S", "Capturar una zona de la pantalla"),
+            new("Alt + Shift + G", "Empezar o parar la grabación de la pantalla")
         };
 
         // El dictado se puede apagar en Personalizar; entonces el atajo no está registrado.

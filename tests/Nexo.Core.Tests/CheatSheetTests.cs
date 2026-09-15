@@ -16,7 +16,8 @@ public sealed class CheatSheetTests
         foreach (var expected in new[]
                  {
                      "Alt + A", "Alt + Shift + A", "Ctrl + Espacio", "Ctrl + Shift + Espacio",
-                     "Alt + V", "Ctrl + Shift + T", "Ctrl + Shift + D", "Ctrl + K", "Esc"
+                     "Alt + V", "Ctrl + Shift + T", "Ctrl + Shift + D", "Alt + Shift + S", "Alt + Shift + G",
+                     "Ctrl + K", "Esc"
                  })
         {
             Assert.Contains(expected, keys);

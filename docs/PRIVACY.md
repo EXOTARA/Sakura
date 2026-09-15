@@ -25,6 +25,10 @@ la otra cambia en el mismo commit.
   proveedores de IA se cifran además con DPAPI** de Windows, atado a la cuenta. *(Hasta el 13 de
   septiembre de 2026 esta línea decía que se cifraba «lo sensible» de todo lo anterior; no era
   exacto.)*
+- **Las capturas que guardas y las grabaciones de pantalla.** Una captura guardada va a
+  `Imágenes\Sakura` y una grabación a `Vídeos\Sakura`, como archivos normales. La grabación incluye
+  el sonido del equipo y, solo si se marca, el del micrófono; se codifica en el propio equipo y
+  Sakura no la envía a ningún sitio.
 - **Cualquier forma de telemetría, analítica, informe de errores o medición de uso.** No existe en el
   código. No hay ninguna, ni anónima ni agregada ni opcional.
 
@@ -87,8 +91,11 @@ de entorno del usuario si se prefiere; no viaja a ningún sitio que no sea el pr
 Qué se manda y cuándo:
 
 - El texto de la conversación, cuando se habla con Sakura teniendo un proveedor en la nube activo.
-- Una captura de pantalla, **solo** al usar Lens o al compartir una ventana a propósito. Las
-  capturas se redactan antes de salir: se tapa lo que el detector reconoce como dato sensible.
+- Una captura de pantalla, **solo** al usar Lens, al compartir una ventana a propósito, al elegir
+  «Preguntar a Sakura» con una captura o al pulsar `Ctrl + Shift + Espacio` para que explique la
+  ventana activa. Las capturas se redactan antes de salir: se tapa lo que el detector reconoce como
+  dato sensible. Con `Ctrl + Shift + Espacio` también viajan el texto leído de esa ventana y los
+  nombres de sus botones y menús, redactados igual; si el modelo no admite imágenes, solo ese texto.
 - El texto leído de un recuadro de la pantalla, **solo** al usar el traductor
   (`Ctrl + Shift + T`), después de pasar por el mismo redactor.
 - Nunca el audio. La transcripción ya ocurrió en local; lo que viaja es texto.

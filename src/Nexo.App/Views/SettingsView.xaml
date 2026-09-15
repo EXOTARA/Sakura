@@ -309,6 +309,43 @@
                     -->
                     <StackPanel x:Name="AiApiKeyPanel" Margin="0,14,0,0" Visibility="Collapsed">
                         <TextBlock Text="Clave de acceso" FontWeight="SemiBold" />
+                        <!--
+                            2026-09-15 — con una clave ya guardada se dice que la hay y en qué termina, en
+                            vez de enseñar un cuadro vacío. El cuadro vacío se leía como «se borró la
+                            clave» (Adler, con Groq). Cambiar abre el cuadro para pegar otra.
+                        -->
+                        <Border x:Name="AiSavedKeyPanel"
+                                Margin="0,7,0,0"
+                                Padding="12,7,6,7"
+                                CornerRadius="14"
+                                Background="{DynamicResource BrushAccentSoft}"
+                                BorderBrush="{DynamicResource BrushAccentBorder}"
+                                BorderThickness="1"
+                                Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Ellipse Width="8"
+                                         Height="8"
+                                         VerticalAlignment="Center"
+                                         Fill="{DynamicResource BrushSuccess}" />
+                                <TextBlock x:Name="AiSavedKeyText"
+                                           Grid.Column="1"
+                                           Margin="9,0,10,0"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource BrushTextPrimary}" />
+                                <Button x:Name="AiChangeApiKeyButton"
+                                        Grid.Column="2"
+                                        Content="Cambiar"
+                                        AutomationProperties.Name="Cambiar la clave guardada"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Click="AiChangeApiKeyButton_Click" />
+                            </Grid>
+                        </Border>
                         <PasswordBox x:Name="AiApiKeyPasswordBox"
                                      Margin="0,7,0,0"
                                      MinHeight="34"

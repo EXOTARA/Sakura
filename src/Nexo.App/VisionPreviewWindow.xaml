@@ -59,8 +59,10 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock VerticalAlignment="Center"
+            <TextBlock x:Name="FooterNote"
+                       VerticalAlignment="Center"
                        Text="La imagen se mantendrá solo hasta terminar el análisis o descartarla."
                        TextWrapping="Wrap"
                        Foreground="{StaticResource BrushTextSecondary}"
@@ -71,7 +73,24 @@
                     Content="Descartar"
                     Style="{StaticResource SecondaryButtonStyle}"
                     x:Name="DiscardButton" IsCancel="True" Click="DiscardButton_Click" />
-            <Button AutomationProperties.Name="Usar captura" Grid.Column="2"
+            <!-- 2026-09-15 — con una captura de la pestaña Captura: guardarla o copiarla, además de preguntar. -->
+            <StackPanel x:Name="KeepActions" Grid.Column="2" Orientation="Horizontal" Visibility="Collapsed">
+                <Button AutomationProperties.Name="Copiar la captura"
+                        x:Name="CopyButton"
+                        Margin="10,0,0,0"
+                        Padding="14,8"
+                        Content="Copiar"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="CopyButton_Click" />
+                <Button AutomationProperties.Name="Guardar la captura"
+                        Margin="10,0,0,0"
+                        Padding="14,8"
+                        Content="Guardar"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="SaveButton_Click" />
+            </StackPanel>
+            <Button AutomationProperties.Name="Usar captura" Grid.Column="3"
+                    x:Name="UseButton"
                     Margin="10,0,0,0"
                     Padding="14,8"
                     Content="Usar captura"

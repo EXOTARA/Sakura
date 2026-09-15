@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.7-beta]
+
+### Nuevo
+
+- **Grabar la pantalla**, con Alt + Shift + G o desde la pestaña Captura. Graba en MP4 a 60 fps con la tarjeta gráfica, con el sonido del equipo y, si lo marcas, el micrófono, y lo guarda en Vídeos › Sakura. Mientras graba se ve arriba una píldora con el tiempo y un botón para parar, que no sale en el vídeo.
+- **Captura de una región** (Alt + Shift + S) y **captura con retraso** (3, 5 o 10 segundos) en la pestaña Captura. Puedes guardarla en Imágenes › Sakura, copiarla o preguntarle a Sakura sobre ella.
+
+### Cambiado
+
+- **Ctrl + Shift + Espacio explica la ventana que tienes delante**: qué es, qué está pasando, cómo resolverlo y los pasos, en la píldora de respuesta. Funciona también con modelos que no admiten imágenes, leyendo el texto de la ventana, y las preguntas siguientes saben de qué ventana hablas.
+- **Personalizar dice si ya hay una clave de IA guardada** y en qué termina, en vez de mostrar un cuadro vacío que parecía que la clave se había borrado.
+- **La política de privacidad** explica que las capturas guardadas y las grabaciones se quedan en tu equipo, y qué se envía al proveedor de IA al explicar una ventana.
+
 ## [0.30.6-beta]
 
 ### Cambiado

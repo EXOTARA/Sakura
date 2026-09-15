@@ -10,5 +10,11 @@ public enum LensMode
 {
     Soporte,
     Estudio,
-    Desarrollo
+    Desarrollo,
+
+    /// <summary>
+    /// 2026-09-15 — Ctrl + Shift + Espacio: qué es lo que se ve, qué está pasando, cómo resolverlo y
+    /// los pasos, sin tener que preguntar nada (Adler: «debería darte la información que necesitas»).
+    /// </summary>
+    Explicar
 }
