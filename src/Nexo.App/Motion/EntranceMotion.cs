@@ -28,9 +28,8 @@ public static class EntranceMotion
         scale.ScaleX = 0.96;
         scale.ScaleY = 0.86;
         translate.Y = 22;
-        block.Opacity = 0;
 
-        block.Animate(UIElement.OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve, begin);
+        FadeIn(block, begin);
         scale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
         scale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve, begin);
         translate.AnimateTransform(TranslateTransform.YProperty, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
@@ -42,9 +41,7 @@ public static class EntranceMotion
         var (_, translate) = EnsureTransforms(element, new Point(0.5, 0.5));
 
         translate.Y = offset;
-        element.Opacity = 0;
-
-        element.Animate(UIElement.OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve, begin);
+        FadeIn(element, begin);
         translate.AnimateTransform(TranslateTransform.YProperty, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
     }
 
@@ -55,9 +52,7 @@ public static class EntranceMotion
 
         scale.ScaleX = from;
         scale.ScaleY = from;
-        element.Opacity = 0;
-
-        element.Animate(UIElement.OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve, begin);
+        FadeIn(element, begin);
         scale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
         scale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
     }
@@ -96,6 +91,38 @@ public static class EntranceMotion
 
             brush.BeginAnimation(Brush.OpacityProperty, animation);
         }
+    }
+
+    /// <summary>
+    /// Aparece desde transparente hasta su opacidad de siempre, **sin tocar esa opacidad**.
+    ///
+    /// Auditoría del 2026-09-14. La primera versión ponía la opacidad a 0 y animaba hasta 1, y una
+    /// animación terminada se queda sujetando su valor final: tapaba cualquier cambio posterior. Hay
+    /// paneles que el código atenúa a propósito —en Personalizar, lo que no está activo se queda al
+    /// 55 %—, y después de abrir su sección animada dejaban de atenuarse sin explicación.
+    ///
+    /// Ahora es una animación por fotogramas clave que se queda en 0 durante su retraso, sube hasta la
+    /// opacidad de base y, al acabar, se retira (<see cref="FillBehavior.Stop"/>): lo que queda es la
+    /// opacidad propia del elemento, también si el código la cambió mientras tanto.
+    /// </summary>
+    private static void FadeIn(UIElement element, TimeSpan begin)
+    {
+        if (!SakuraMotion.AnimationsEnabled)
+        {
+            return;
+        }
+
+        var resting = (double)element.GetAnimationBaseValue(UIElement.OpacityProperty);
+        var reveal = SakuraMotion.Reveal.TimeSpan;
+        var animation = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = begin + reveal,
+            FillBehavior = FillBehavior.Stop
+        };
+        animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(begin)));
+        animation.KeyFrames.Add(new EasingDoubleKeyFrame(resting, KeyTime.FromTimeSpan(begin + reveal), SakuraMotion.DecelerateCurve));
+        element.BeginAnimation(UIElement.OpacityProperty, animation);
     }
 
     private static (ScaleTransform Scale, TranslateTransform Translate) EnsureTransforms(UIElement element, Point origin)
