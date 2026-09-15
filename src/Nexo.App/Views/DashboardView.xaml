@@ -320,9 +320,14 @@
 
                 <!-- ============================ zona izquierda ============================ -->
                 <Grid Grid.Column="0" Margin="-6,0,0,0">
+                    <!--
+                        2026-09-15 — la fila de abajo ocupa todo el alto que queda (Adler): con alto
+                        automático y pegada arriba terminaba antes que el GIF de la columna derecha y
+                        dejaba un hueco debajo del reloj, el calendario y los anillos.
+                    -->
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <!--
@@ -425,7 +430,7 @@
                     </Grid>
 
                     <!-- Reloj estrecho · calendario ancho · anillos estrechos. -->
-                    <Grid Grid.Row="1" VerticalAlignment="Top">
+                    <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -461,7 +466,7 @@
                         </Border>
 
                         <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
-                            <StackPanel>
+                            <StackPanel VerticalAlignment="Center">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />

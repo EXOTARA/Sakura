@@ -12,8 +12,11 @@ public enum AnswerSpanStyle
     Code = 4
 }
 
-/// <summary>Un trozo de texto con su estilo.</summary>
-public readonly record struct AnswerSpan(string Text, AnswerSpanStyle Style);
+/// <summary>
+/// Un trozo de texto con su estilo. <see cref="Url"/> lleva la dirección cuando el trozo es un enlace;
+/// solo se aceptan direcciones http y https (ver <see cref="AnswerMarkdown.SafeWebUrl"/>).
+/// </summary>
+public readonly record struct AnswerSpan(string Text, AnswerSpanStyle Style, string? Url = null);
 
 public abstract record AnswerBlock;
 
@@ -38,8 +41,8 @@ public sealed record AnswerCode(string Text) : AnswerBlock;
 /// las negritas con los asteriscos a la vista).
 ///
 /// Solo lo que los modelos usan de verdad en una respuesta de chat: párrafos, títulos, negrita,
-/// cursiva, código, listas con viñetas o números, tablas y bloques de código. Los enlaces se quedan
-/// en su texto. Lo que no se reconoce se enseña tal cual: un asterisco suelto sigue siendo un
+/// cursiva, código, listas con viñetas o números, tablas, bloques de código y enlaces. Lo que no se
+/// reconoce se enseña tal cual: un asterisco suelto sigue siendo un
 /// asterisco, porque perder un carácter que el modelo escribió es peor que ver uno de más.
 ///
 /// Está en Core porque lo que se equivoca es la lectura, no el dibujo, y así se prueba sin ventana.
@@ -172,6 +175,21 @@ public static partial class AnswerMarkdown
             }
         }
 
+        // 2026-09-15 — los enlaces se pueden pulsar (Adler pidió «pásame los links» y salían como
+        // texto entre < >). Tres formas: [texto](url), <https://…> y una dirección suelta.
+        bool TryAddLink(string display, string url, int length)
+        {
+            if (SafeWebUrl(url) is not { } safe)
+            {
+                return false;
+            }
+
+            FlushPlain();
+            spans.Add(new AnswerSpan(display, AnswerSpanStyle.None, safe));
+            i += length;
+            return true;
+        }
+
         while (i < text.Length)
         {
             if (text[i] == '`')
@@ -226,9 +244,44 @@ public static partial class AnswerMarkdown
                 var link = Link().Match(text, i);
                 if (link.Success && link.Index == i)
                 {
-                    plain.Append(link.Groups["text"].Value);
-                    i += link.Length;
+                    // Muchos modelos ponen la propia dirección como texto: se enseña acortada.
+                    var display = link.Groups["text"].Value;
+                    if (display.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    {
+                        display = LinkDisplay(display);
+                    }
+
+                    if (!TryAddLink(display, link.Groups["url"].Value, link.Length))
+                    {
+                        // Una dirección que no es web se queda en su texto, sin enlace.
+                        plain.Append(link.Groups["text"].Value);
+                        i += link.Length;
+                    }
+
                     continue;
+                }
+            }
+
+            if (text[i] == '<')
+            {
+                var close = text.IndexOf('>', i + 1);
+                if (close > i + 1 &&
+                    TryAddLink(LinkDisplay(text[(i + 1)..close]), text[(i + 1)..close], close - i + 1))
+                {
+                    continue;
+                }
+            }
+
+            if ((text[i] == 'h' || text[i] == 'H') && (i == 0 || !char.IsLetterOrDigit(text[i - 1])))
+            {
+                var bare = BareUrl().Match(text, i);
+                if (bare.Success && bare.Index == i)
+                {
+                    var url = TrimTrailingPunctuation(bare.Value);
+                    if (TryAddLink(LinkDisplay(url), url, url.Length))
+                    {
+                        continue;
+                    }
                 }
             }
 
@@ -257,7 +310,7 @@ public static partial class AnswerMarkdown
                 continue;
             }
 
-            if (merged.Count > 0 && merged[^1].Style == span.Style)
+            if (merged.Count > 0 && merged[^1].Style == span.Style && merged[^1].Url is null && span.Url is null)
             {
                 merged[^1] = merged[^1] with { Text = merged[^1].Text + span.Text };
             }
@@ -268,6 +321,133 @@ public static partial class AnswerMarkdown
         }
 
         return merged;
+    }
+
+    /// <summary>
+    /// La dirección si es una web (http o https) bien formada; nulo en cualquier otro caso. Un enlace
+    /// que escribe un modelo no debe poder abrir un archivo del equipo ni ejecutar nada.
+    /// </summary>
+    public static string? SafeWebUrl(string? url)
+    {
+        var candidate = url?.Trim();
+        if (string.IsNullOrEmpty(candidate) ||
+            !Uri.TryCreate(candidate, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+            string.IsNullOrEmpty(uri.Host))
+        {
+            return null;
+        }
+
+        return uri.AbsoluteUri;
+    }
+
+    /// <summary>
+    /// Lo que se enseña de una dirección suelta: el sitio y el camino, sin «https://» ni «www.», y
+    /// acortado si es largo. La dirección entera sigue en el enlace y en su ayuda emergente.
+    /// </summary>
+    public static string LinkDisplay(string url, int maximum = 48)
+    {
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri) || string.IsNullOrEmpty(uri.Host))
+        {
+            return url;
+        }
+
+        var host = uri.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? uri.Host[4..] : uri.Host;
+        var path = uri.PathAndQuery == "/" ? string.Empty : uri.PathAndQuery.TrimEnd('/');
+        var display = host + path;
+        return display.Length <= maximum ? display : display[..(maximum - 1)] + "…";
+    }
+
+    /// <summary>
+    /// Mientras una respuesta llega, cierra lo que el modelo aún no ha cerrado en su último trozo —una
+    /// negrita, un código o un bloque de código a medias— para dibujarla ya con formato sin que se vean
+    /// los asteriscos hasta que llegue el cierre. Solo para enseñar; el texto guardado no se toca.
+    /// </summary>
+    public static string CloseDanglingMarks(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        if (CountOccurrences(text, "```") % 2 == 1)
+        {
+            return text.EndsWith('\n') ? text + "```" : text + "\n```";
+        }
+
+        // Un enlace a medio escribir —«[texto](https://ejem» o «<https://ejem»— se guarda hasta que
+        // llegue entero: a medias se verían los corchetes y media dirección.
+        var lineStart = text.LastIndexOf('\n') + 1;
+        var openLink = text.LastIndexOf('[');
+        if (openLink >= lineStart)
+        {
+            var rest = text[openLink..];
+            var closedLabel = rest.IndexOf("](", StringComparison.Ordinal);
+            if (!rest.Contains(']') || (closedLabel >= 0 && rest.IndexOf(')', closedLabel) < 0))
+            {
+                text = text[..openLink];
+            }
+        }
+
+        var openAngle = text.LastIndexOf('<');
+        if (openAngle >= lineStart && text.IndexOf('>', openAngle) < 0 &&
+            "<https".StartsWith(text[openAngle..Math.Min(text.Length, openAngle + 6)], StringComparison.OrdinalIgnoreCase))
+        {
+            text = text[..openAngle];
+        }
+
+        var lastLine = text[lineStart..];
+        var beforeCode = lastLine;
+        var suffix = string.Empty;
+
+        if (lastLine.Count(c => c == '`') % 2 == 1)
+        {
+            suffix = "`";
+            beforeCode = lastLine[..lastLine.LastIndexOf('`')];
+        }
+
+        if (CountOccurrences(beforeCode, "**") % 2 == 1)
+        {
+            // Un «**» recién abierto, sin nada detrás todavía, no es negrita de nada: se esconde.
+            if (suffix.Length == 0 && lastLine.EndsWith("**", StringComparison.Ordinal))
+            {
+                return text[..^2];
+            }
+
+            suffix = "**" + suffix;
+        }
+
+        return text + suffix;
+    }
+
+    private static int CountOccurrences(string text, string marker)
+    {
+        var count = 0;
+        for (var index = text.IndexOf(marker, StringComparison.Ordinal);
+             index >= 0;
+             index = text.IndexOf(marker, index + marker.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
+    }
+
+    private static string TrimTrailingPunctuation(string url)
+    {
+        var end = url.Length;
+        while (end > 0 && ".,;:!?\"'".Contains(url[end - 1]))
+        {
+            end--;
+        }
+
+        // Un paréntesis de cierre es parte de la dirección solo si abrió uno dentro de ella.
+        while (end > 0 && url[end - 1] == ')' && url[..end].Count(c => c == '(') < url[..end].Count(c => c == ')'))
+        {
+            end--;
+        }
+
+        return url[..end];
     }
 
     private static bool IsTableRow(string line) =>
@@ -299,4 +479,7 @@ public static partial class AnswerMarkdown
 
     [GeneratedRegex(@"\[(?<text>[^\]]+)\]\((?<url>[^)\s]+)\)")]
     private static partial Regex Link();
+
+    [GeneratedRegex(@"https?://[^\s<>\[\]`*|]+", RegexOptions.IgnoreCase)]
+    private static partial Regex BareUrl();
 }

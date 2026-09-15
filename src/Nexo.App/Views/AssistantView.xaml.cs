@@ -20,6 +20,7 @@ public partial class AssistantView : UserControl
     private readonly StringBuilder _streamingBuffer = new();
     private Border? _streamingBubble;
     private TextBlock? _streamingTextBlock;
+    private Controls.SakuraLoader? _streamingLoader;
     private bool _streamingHasContent;
     private string _aiProviderStatus = "Sin IA · las órdenes locales funcionan";
     private bool _saveHistory;
@@ -275,6 +276,22 @@ public partial class AssistantView : UserControl
             allowSections: false);
         _streamingTextBlock = FindMessageTextBlock(_streamingBubble);
 
+        // 2026-09-15 — el cargador de pétalos junto a «Pensando…», como en la píldora. Se quita con la
+        // primera palabra que llega.
+        if (_streamingTextBlock is not null)
+        {
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            _streamingLoader = new Controls.SakuraLoader { Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center };
+            _streamingTextBlock.VerticalAlignment = VerticalAlignment.Center;
+            _streamingBubble.Child = null;
+            Grid.SetColumn(_streamingTextBlock, 1);
+            row.Children.Add(_streamingLoader);
+            row.Children.Add(_streamingTextBlock);
+            _streamingBubble.Child = row;
+        }
+
         ConversationPanel.Children.Add(_streamingBubble);
         ScrollConversationToEnd();
     }
@@ -296,6 +313,10 @@ public partial class AssistantView : UserControl
             _streamingBuffer.Clear();
             _streamingTextBlock!.Text = string.Empty;
             _streamingHasContent = true;
+            if (_streamingLoader is not null)
+            {
+                _streamingLoader.Visibility = Visibility.Collapsed;
+            }
         }
 
         _streamingBuffer.Append(text);
@@ -400,7 +421,40 @@ public partial class AssistantView : UserControl
                 (Brush)FindResource(isUser ? "BrushAccentSoft" : "BrushSurfaceRaised")));
         }
 
+        if (_messages.Count > 0 && _messages[^1].Role == ConversationRole.Assistant)
+        {
+            ConversationPanel.Children.Add(CreateFollowUpChips());
+        }
+
         ScrollConversationToEnd();
+    }
+
+    /// <summary>
+    /// 2026-09-15 — botones para seguir con la última respuesta sin saber cómo pedirlo: «Más corto»,
+    /// «¿Primer paso?», «Ponlo a prueba»… Cada uno se envía como un mensaje más, así que la respuesta
+    /// anterior va en el contexto. Solo debajo de la última: debajo de todas serían ruido.
+    /// </summary>
+    private FrameworkElement CreateFollowUpChips()
+    {
+        var panel = new WrapPanel { Margin = new Thickness(0, 9, 0, 2), MaxWidth = 440, HorizontalAlignment = HorizontalAlignment.Left };
+        System.Windows.Automation.AutomationProperties.SetName(panel, "Seguir con la respuesta");
+
+        foreach (var followUp in Nexo.Core.Assistant.AnswerFollowUps.All)
+        {
+            var button = new Button
+            {
+                Content = followUp.Label,
+                ToolTip = followUp.Prompt,
+                Margin = new Thickness(0, 0, 6, 6),
+                Style = (Style)FindResource("SoftChipButtonStyle")
+            };
+            System.Windows.Automation.AutomationProperties.SetName(button, followUp.Label);
+            var prompt = followUp.Prompt;
+            button.Click += (_, _) => PromptSubmitted?.Invoke(this, new PromptSubmittedEventArgs(prompt));
+            panel.Children.Add(button);
+        }
+
+        return panel;
     }
 
     private void ShowConversationSurface()
@@ -425,6 +479,7 @@ public partial class AssistantView : UserControl
 
         _streamingBubble = null;
         _streamingTextBlock = null;
+        _streamingLoader = null;
         _streamingBuffer.Clear();
         _streamingHasContent = false;
     }

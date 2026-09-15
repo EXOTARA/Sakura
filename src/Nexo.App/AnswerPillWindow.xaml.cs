@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Nexo.App.Motion;
+using Nexo.Core.Assistant;
 using Nexo.Core.Settings;
 using Nexo.Core.Shell;
 
@@ -70,14 +71,23 @@ public partial class AnswerPillWindow : Window
 
     private const int VirtualKeyEscape = 0x1B;
 
+    /// <summary>
+    /// Cada cuánto sale un poco más de texto. A este ritmo el texto se lee como un flujo continuo y
+    /// dibujar la respuesta con formato en cada paso sigue siendo barato.
+    /// </summary>
+    private static readonly TimeSpan RevealInterval = TimeSpan.FromMilliseconds(55);
+
     private readonly DispatcherTimer _escapeWatcher;
     private readonly DispatcherTimer _growthTimer;
     private readonly DispatcherTimer _dismissTimer;
+    private readonly DispatcherTimer _revealTimer;
     private readonly StringBuilder _answer = new();
 
     private double _animatedHeight;
     private bool _streaming;
     private bool _dismissing;
+    private int _shownLength;
+    private bool _activationAllowed;
 
     public AnswerPillWindow()
     {
@@ -87,8 +97,25 @@ public partial class AnswerPillWindow : Window
         _growthTimer = new DispatcherTimer { Interval = GrowthInterval };
         _growthTimer.Tick += (_, _) => ReconcileHeight();
 
+        _revealTimer = new DispatcherTimer { Interval = RevealInterval };
+        _revealTimer.Tick += (_, _) => RevealMore();
+
+        // No se va mientras se está usando: con el ratón encima, escribiendo o con algo a medio
+        // escribir. Se vuelve a mirar en el siguiente plazo.
         _dismissTimer = new DispatcherTimer();
-        _dismissTimer.Tick += (_, _) => { if (!IsKeyboardFocusWithin) Dismiss(); };
+        _dismissTimer.Tick += (_, _) =>
+        {
+            if (!IsKeyboardFocusWithin && !IsMouseOver && FollowUpBox.Text.Length == 0)
+            {
+                Dismiss();
+            }
+        };
+
+        FollowUpChips.ItemsSource = AnswerFollowUps.Compact;
+        FollowUpBox.TextChanged += (_, _) =>
+            FollowUpHint.Visibility = FollowUpBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        FollowUpBox.PreviewMouseLeftButtonDown += (_, _) => AllowActivation();
+        FollowUpBox.PreviewKeyDown += FollowUpBox_PreviewKeyDown;
 
         _escapeWatcher = new DispatcherTimer { Interval = EscapeWatchInterval };
         _escapeWatcher.Tick += (_, _) =>
@@ -113,17 +140,118 @@ public partial class AnswerPillWindow : Window
             RaiseOpenRequested();
         };
         OpenInSakuraText.Cursor = Cursors.Hand;
-        MouseLeftButtonUp += (_, _) => Dismiss();
+        //
+        // 2026-09-15 — salvo en lo que se usa: los botones para seguir, el cuadro de escribir y el
+        // texto de la respuesta, donde se pulsan enlaces o se desplaza.
+        MouseLeftButtonUp += (_, e) =>
+        {
+            if (e.OriginalSource is DependencyObject source &&
+                (IsInside(source, FollowUpPanel) || IsInside(source, AnswerScroll)))
+            {
+                return;
+            }
+
+            Dismiss();
+        };
     }
 
     /// <summary>Se pidió ver la respuesta completa en Sakura.</summary>
     public event EventHandler? OpenInSakuraRequested;
+
+    /// <summary>
+    /// 2026-09-15 — se escribió o se pulsó algo para seguir la conversación desde la píldora. La
+    /// respuesta vuelve a esta misma píldora.
+    /// </summary>
+    public event EventHandler<string>? FollowUpSubmitted;
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         var handle = new WindowInteropHelper(this).Handle;
         var styles = GetWindowLong(handle, GwlExStyle);
         SetWindowLong(handle, GwlExStyle, styles | WsExNoActivate | WsExToolWindow);
+    }
+
+    /// <summary>
+    /// La píldora no toma el foco para no quitarle las teclas a quien escribe en otro programa. Al
+    /// pulsar el cuadro de seguir preguntando, sí: ahí la persona quiere escribir en ella. Se vuelve a
+    /// quitar al enviar o al cerrarla.
+    /// </summary>
+    private void AllowActivation()
+    {
+        if (_activationAllowed)
+        {
+            return;
+        }
+
+        _activationAllowed = true;
+        var handle = new WindowInteropHelper(this).Handle;
+        SetWindowLong(handle, GwlExStyle, GetWindowLong(handle, GwlExStyle) & ~WsExNoActivate);
+        Activate();
+        FollowUpBox.Focus();
+    }
+
+    private void ForbidActivation()
+    {
+        if (!_activationAllowed)
+        {
+            return;
+        }
+
+        _activationAllowed = false;
+        var handle = new WindowInteropHelper(this).Handle;
+        SetWindowLong(handle, GwlExStyle, GetWindowLong(handle, GwlExStyle) | WsExNoActivate);
+    }
+
+    private void FollowUpBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            SubmitFollowUp(FollowUpBox.Text);
+        }
+    }
+
+    private void FollowUpSendButton_Click(object sender, RoutedEventArgs e) =>
+        SubmitFollowUp(FollowUpBox.Text);
+
+    private void FollowUpChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AnswerFollowUp followUp })
+        {
+            SubmitFollowUp(followUp.Prompt, followUp.Label);
+        }
+    }
+
+    private void SubmitFollowUp(string prompt, string? label = null)
+    {
+        var text = prompt.Trim();
+        if (text.Length == 0 || _streaming)
+        {
+            return;
+        }
+
+        FollowUpBox.Clear();
+        ForbidActivation();
+        _pendingQuestionLabel = label;
+        FollowUpSubmitted?.Invoke(this, text);
+    }
+
+    private string? _pendingQuestionLabel;
+
+    private static bool IsInside(DependencyObject source, DependencyObject container)
+    {
+        for (var current = source; current is not null;
+             current = current is Visual or System.Windows.Media.Media3D.Visual3D
+                 ? VisualTreeHelper.GetParent(current)
+                 : LogicalTreeHelper.GetParent(current))
+        {
+            if (ReferenceEquals(current, container))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void OnKeyDown(object sender, KeyEventArgs e)
@@ -137,40 +265,59 @@ public partial class AnswerPillWindow : Window
     /// <summary>
     /// Empieza una respuesta. La pregunta se enseña arriba porque la píldora aparece encima de otra
     /// cosa: sin ella, a los pocos segundos hay un texto flotando sin saber a qué contesta.
+    ///
+    /// Si la píldora ya estaba a la vista —se sigue la conversación desde ella— no vuelve a nacer
+    /// como burbuja: cambia lo de dentro y se queda donde está.
     /// </summary>
     public void BeginAnswer(string question, SidebarPosition side)
     {
+        var continuing = IsVisible && !_dismissing;
+
         _dismissTimer.Stop();
+        _revealTimer.Stop();
         _dismissing = false;
         _streaming = true;
         IsHitTestVisible = true;
         _answer.Clear();
+        _shownLength = 0;
 
-        QuestionText.Text = question.Trim();
-        AnswerText.Text = "Pensando…";
-        AnswerText.Visibility = Visibility.Visible;
+        // Un botón manda una frase larga («Dímelo más corto, solo con lo esencial»); arriba se ve su
+        // nombre, que es lo que se pulsó.
+        QuestionText.Text = (_pendingQuestionLabel ?? question).Trim();
+        _pendingQuestionLabel = null;
+
+        ThinkingPanel.Visibility = Visibility.Visible;
+        AnswerScroll.Visibility = Visibility.Collapsed;
         AnswerRich.Content = null;
-        AnswerRich.Visibility = Visibility.Collapsed;
         OpenInSakuraText.Visibility = Visibility.Collapsed;
+        FollowUpPanel.Visibility = Visibility.Collapsed;
         HintText.Text = "Esc";
+        _side = side;
 
-        Position(side);
-
-        if (!IsVisible)
+        if (continuing)
         {
-            Show();
+            EntranceMotion.Rise(ThinkingPanel, TimeSpan.Zero, offset: 4);
+        }
+        else
+        {
+            ForbidActivation();
+            Position(side);
+
+            if (!IsVisible)
+            {
+                Show();
+            }
+
+            // Nace como burbuja desde el lado de Sakura y se estira hacia el centro (Adler, 2026-09-14).
+            BubbleMotion.Inflate(PillBorder, AnchorFor(side));
+            _animatedHeight = Height;
         }
 
-        // Nace como burbuja desde el lado de Sakura y se estira hacia el centro (Adler, 2026-09-14).
-        _side = side;
-        BubbleMotion.Inflate(PillBorder, AnchorFor(side));
-
-        _animatedHeight = Height;
         _growthTimer.Start();
         _escapeWatcher.Start();
     }
 
-    /// <summary>Añade un trozo de respuesta. El alto se ajusta solo, sin saltos.</summary>
+    /// <summary>Añade un trozo de respuesta. Sale a ritmo parejo y el alto se ajusta solo.</summary>
     public void AppendAnswer(string chunk)
     {
         if (!_streaming || string.IsNullOrEmpty(chunk))
@@ -178,28 +325,18 @@ public partial class AnswerPillWindow : Window
             return;
         }
 
-        if (_answer.Length == 0)
-        {
-            AnswerText.Text = string.Empty;
-        }
-
         _answer.Append(chunk);
-        AnswerText.Text = _answer.ToString();
-
-        // El aviso se enseña en cuanto la respuesta ya no cabe, sin esperar a que termine: si
-        // apareciera solo al final, reservaría su hueco de golpe y el texto ya leído daría un salto
-        // justo cuando la persona está terminando de leerlo.
-        if (OpenInSakuraText.Visibility != Visibility.Visible &&
-            AnswerPillPolicy.DeservesOpeningInSakura(AnswerText.Text))
+        if (!_revealTimer.IsEnabled)
         {
-            OpenInSakuraText.Visibility = Visibility.Visible;
+            _revealTimer.Start();
         }
     }
 
     /// <summary>
-    /// Cierra la respuesta y arranca la cuenta atrás, que depende de cuánto haya que leer. Se llama
-    /// también cuando la consulta falla, con el mensaje de error como texto: una píldora que se
-    /// queda en «Pensando…» para siempre sería peor que decir que salió mal.
+    /// Cierra la respuesta. Se llama también cuando la consulta falla, con el mensaje de error como
+    /// texto: una píldora que se queda pensando para siempre sería peor que decir que salió mal. Lo
+    /// que falte por enseñar sale deprisa, y al terminar arrancan la cuenta atrás y los botones para
+    /// seguir.
     /// </summary>
     public void CompleteAnswer(string? finalText = null)
     {
@@ -214,22 +351,72 @@ public partial class AnswerPillWindow : Window
         {
             _answer.Clear();
             _answer.Append(finalText);
-            AnswerText.Text = finalText;
+            _shownLength = Math.Min(_shownLength, _answer.Length);
         }
 
-        var answer = _answer.ToString();
-
-        if (AnswerPillPolicy.DeservesOpeningInSakura(answer))
+        if (!_revealTimer.IsEnabled)
         {
-            OpenInSakuraText.Visibility = Visibility.Visible;
+            _revealTimer.Start();
         }
 
-        if (answer.Trim().Length > 0)
+        RevealMore();
+    }
+
+    /// <summary>Un paso del texto que va saliendo.</summary>
+    private void RevealMore()
+    {
+        var text = _answer.ToString();
+        var next = StreamingTextPacer.NextLength(text, _shownLength, finished: !_streaming);
+
+        if (next != _shownLength)
         {
-            AnswerRich.Content = Views.Controls.AnswerRenderer.Render(answer.Trim());
-            AnswerRich.Visibility = Visibility.Visible;
-            AnswerText.Visibility = Visibility.Collapsed;
+            _shownLength = next;
+            var visible = text[.._shownLength];
+            var drawn = _streaming || _shownLength < text.Length
+                ? AnswerMarkdown.CloseDanglingMarks(visible)
+                : visible;
+
+            // Hasta que llega algo que leer —una letra o una cifra— sigue el cargador: una viñeta o un
+            // guion sueltos no son todavía una respuesta.
+            if (drawn.Any(char.IsLetterOrDigit))
+            {
+                if (ThinkingPanel.Visibility == Visibility.Visible)
+                {
+                    ThinkingPanel.Visibility = Visibility.Collapsed;
+                    AnswerScroll.Visibility = Visibility.Visible;
+                }
+
+                AnswerRich.Content = Views.Controls.AnswerRenderer.Render(drawn.Trim());
+            }
+
+            // El enlace a Sakura se enseña en cuanto la respuesta ya no cabe, sin esperar a que
+            // termine: si apareciera solo al final, reservaría su hueco de golpe y el texto ya leído
+            // daría un salto justo cuando la persona está terminando de leerlo.
+            if (OpenInSakuraText.Visibility != Visibility.Visible &&
+                AnswerPillPolicy.DeservesOpeningInSakura(visible))
+            {
+                OpenInSakuraText.Visibility = Visibility.Visible;
+            }
         }
+
+        if (_streaming || _shownLength < text.Length)
+        {
+            return;
+        }
+
+        _revealTimer.Stop();
+        FinishReveal(text);
+    }
+
+    private void FinishReveal(string answer)
+    {
+        if (answer.Trim().Length == 0)
+        {
+            ThinkingPanel.Visibility = Visibility.Collapsed;
+        }
+
+        FollowUpPanel.Visibility = Visibility.Visible;
+        EntranceMotion.Rise(FollowUpPanel, TimeSpan.Zero, offset: 6);
 
         ReconcileHeight();
         _growthTimer.Stop();
@@ -242,6 +429,8 @@ public partial class AnswerPillWindow : Window
     {
         _growthTimer.Stop();
         _dismissTimer.Stop();
+        _revealTimer.Stop();
+        ForbidActivation();
         _escapeWatcher.Stop();
         _streaming = false;
         _dismissing = false;
@@ -272,8 +461,10 @@ public partial class AnswerPillWindow : Window
         _dismissing = true;
         _dismissTimer.Stop();
         _growthTimer.Stop();
+        _revealTimer.Stop();
         _escapeWatcher.Stop();
         _streaming = false;
+        ForbidActivation();
 
         // Diseño D57 — deja de aceptar clics en cuanto se decide que se va, no cuando termina
         // de irse. Es la misma protección que D56 le puso al cajón, y esta ventana se oculta
@@ -321,12 +512,14 @@ public partial class AnswerPillWindow : Window
         // dejaría un texto cortado sin decir de qué es ni cómo ver el resto.
         HeaderRow.Measure(new Size(available, double.PositiveInfinity));
         OpenInSakuraText.Measure(new Size(available, double.PositiveInfinity));
+        FollowUpPanel.Measure(new Size(available, double.PositiveInfinity));
+        ThinkingPanel.Measure(new Size(available, double.PositiveInfinity));
 
-        var reserved = HeaderRow.DesiredSize.Height + OpenInSakuraText.DesiredSize.Height + chrome;
-        var budget = MaximumHeight() - reserved - AnswerText.Margin.Top;
+        var reserved = HeaderRow.DesiredSize.Height + OpenInSakuraText.DesiredSize.Height +
+                       FollowUpPanel.DesiredSize.Height + FollowUpPanel.Margin.Top + chrome;
+        var budget = MaximumHeight() - reserved - AnswerScroll.Margin.Top;
 
-        AnswerText.MaxHeight = Math.Max(40, budget);
-        AnswerRich.MaxHeight = AnswerText.MaxHeight;
+        AnswerScroll.MaxHeight = Math.Max(40, budget);
 
         ContentPanel.Measure(new Size(available, double.PositiveInfinity));
 
@@ -357,7 +550,7 @@ public partial class AnswerPillWindow : Window
     /// aquí y se ofrece abrirla en Sakura, que es donde se lee entera.
     /// </summary>
     private static double MaximumHeight() =>
-        Math.Max(200, SystemParameters.WorkArea.Height * 0.45);
+        Math.Max(260, SystemParameters.WorkArea.Height * 0.55);
 
     /// <summary>
     /// Se coloca en la esquina superior del lado donde vive Sakura. Ir siempre al mismo lado da

@@ -22,43 +22,6 @@
           en castellano («1,2 GB de 3,4 GB») y un botón para cancelar la descarga, que antes no había;
         · eliminar se confirma en la propia ventana, al lado del botón, y no con un cuadro de Windows.
     -->
-    <Window.Resources>
-        <Style x:Key="ModelChipStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}" />
-            <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ChipSurface"
-                                Padding="10,4,10,5"
-                                CornerRadius="12"
-                                Background="#14FFFFFF"
-                                BorderBrush="#26FFFFFF"
-                                BorderThickness="1">
-                            <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ChipSurface" Property="Background" Value="#22FFFFFF" />
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="ChipSurface" Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ChipSurface" Property="Opacity" Value="0.7" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ChipSurface" Property="Opacity" Value="0.45" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
     <Grid Margin="22,20,22,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -300,7 +263,7 @@
                     <StackPanel x:Name="SuggestionChips" Grid.Column="1" Orientation="Horizontal">
                         <Button x:Name="RecommendedChip"
                                 AutomationProperties.Name="Usar el nombre del modelo recomendado, qwen3.5:4b"
-                                Style="{StaticResource ModelChipStyle}"
+                                Style="{StaticResource SoftChipButtonStyle}"
                                 Tag="qwen3.5:4b"
                                 Click="SuggestionChip_Click">
                             <StackPanel Orientation="Horizontal">
@@ -310,7 +273,7 @@
                         </Button>
                         <Button AutomationProperties.Name="Usar el nombre gemma3:4b"
                                 Margin="6,0,0,0"
-                                Style="{StaticResource ModelChipStyle}"
+                                Style="{StaticResource SoftChipButtonStyle}"
                                 Tag="gemma3:4b"
                                 Content="gemma3:4b"
                                 Click="SuggestionChip_Click" />
