@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.30.18-beta]
+
+### Nuevo
+
+- **Inicio nuevo, más tranquilo.** Solo queda lo que responde a «¿qué hago ahora?»:
+  - Un saludo con la fecha.
+  - Una burbuja **Ahora** con lo más importante del día. Al tocarla se parte en dos: **Empezar**, que arranca 25 minutos de enfoque en esa tarea, y **Mañana**, que la pasa al día siguiente sin reproches.
+  - Dos cifras del día: tareas hechas y minutos de enfoque.
+  - **¿Un resumen de ayer?**: se abre como un hilo con lo que hiciste ayer y a qué hora. Sale solo de lo que hay en este equipo; no lee tus conversaciones.
+  - Las tres últimas cosas que pasaron, en pequeño.
+- Las tareas atrasadas dicen «Quedó pendiente», no «vencida».
+
+### Cambiado
+
+- **Debajo de cada respuesta ya no hay dos filas de botones.** «Más corto», «¿Primer paso?», «Guardar como Word»… siguen ahí, detrás de un **+** pequeño.
+
+### Corregido
+
+- **El panel de volumen y brillo a veces seguía sin irse** (Adler, en la 0.30.17). Vive en el borde, justo donde se queda el ratón que lo abrió, y el ratón parado encima lo mantenía. Ahora solo lo mantiene un ratón que se mueve: parado, se va a los ocho segundos. Tampoco lo retiene un foco de teclado viejo si el panel no está delante.
+
 ## [0.30.17-beta]
 
 ### Corregido

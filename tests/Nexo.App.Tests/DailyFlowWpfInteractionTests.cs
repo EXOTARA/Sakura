@@ -833,68 +833,107 @@ public sealed class DailyFlowWpfInteractionTests
 
     // ---------- Inicio ----------
 
+    private static HomeTodayModel TaskModel() =>
+        new(
+            "Buenas tardes",
+            "miércoles, 16 de septiembre",
+            new HomeNow(HomeNowKind.Task, "Terminar el borrador", "Importante · hoy a las 18:00", Guid.NewGuid()),
+            DoneToday: 2,
+            PlannedToday: 3,
+            FocusMinutesToday: 45,
+            Yesterday: new HomeYesterday(1, 25, [new HomeYesterdayItem("10:55", "Enfoque de 25 min")]));
+
     [Fact]
-    public void HomeView_Refresh_ShowsRoutineCardValues()
+    public void HomeView_Refresh_ShowsTheNextThingAndTheDay()
     {
         _fixture.Invoke(() =>
         {
             var view = new HomeView();
             using var host = CreateOffscreenHost(view);
             host.Show();
+            view.Refresh(TaskModel());
             host.UpdateLayout();
 
-            view.Refresh(new HomeDashboardViewModel(
-                "Buenos días", "hoy", "0", "Todavía no tienes tareas para hoy",
-                "—", "No hay una sesión de enfoque activa", false, false,
-                "2", "2 disponibles",
-                "Lista para analizar", "detalle"));
-            host.UpdateLayout();
-
-            var routineCount = (TextBlock)view.FindName("RoutineCountText")!;
-            Assert.Equal("2", routineCount.Text);
+            Assert.Equal("Terminar el borrador", ((TextBlock)view.FindName("NowTitleText")!).Text);
+            Assert.Equal("2 de 3", ((TextBlock)view.FindName("DoneText")!).Text);
+            Assert.Equal("45 min", ((TextBlock)view.FindName("FocusText")!).Text);
+            Assert.Equal(Visibility.Visible, ((FrameworkElement)view.FindName("YesterdayBlock")!).Visibility);
         });
     }
 
     [Fact]
-    public void HomeView_QuickActionButtons_ExistAndAreWired()
-    {
-        // Confirma que cada manejador de clic existe en el code-behind y que el evento
-        // correspondiente está declarado (evita que un handler quede huérfano si el botón de XAML
-        // se renombra sin actualizar el .cs).
-        (string HandlerMethodName, string EventName)[] pairs =
-        [
-            ("NewTaskQuickAction_Click", nameof(HomeView.NewTaskRequested)),
-            ("StartFocusQuickAction_Click", nameof(HomeView.StartFocusRequested)),
-            ("CommandCenterQuickAction_Click", nameof(HomeView.CommandCenterRequested))
-        ];
-
-        foreach (var (handlerMethodName, eventName) in pairs)
-        {
-            Assert.NotNull(typeof(HomeView).GetMethod(
-                handlerMethodName,
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance));
-            Assert.NotNull(typeof(HomeView).GetEvent(eventName));
-        }
-    }
-
-    [Fact]
-    public void HomeView_RoutinesCard_RaisesRoutinesRequested()
+    public void HomeView_TheNowBubble_SplitsIntoItsTwoChoices()
     {
         _fixture.Invoke(() =>
         {
             var view = new HomeView();
             using var host = CreateOffscreenHost(view);
             host.Show();
+            view.Refresh(TaskModel());
             host.UpdateLayout();
 
-            var raised = false;
-            view.RoutinesRequested += (_, _) => raised = true;
+            var actions = (FrameworkElement)view.FindName("NowActions")!;
+            Assert.Equal(Visibility.Collapsed, actions.Visibility);
 
-            var routinesCard = FindButtonByAutomationName(view, "Rutinas. Ir a Rutinas");
-            Assert.NotNull(routinesCard);
-            routinesCard!.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            var bubble = FindButtonByAutomationName(view, "Ahora: Terminar el borrador. Toca para decidir");
+            Assert.NotNull(bubble);
+            bubble!.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
 
-            Assert.True(raised);
+            Assert.Equal(Visibility.Visible, actions.Visibility);
+
+            // «Empezar» pide enfocarse en esa tarea; «Mañana», moverla.
+            TaskFocusRequestedEventArgs? started = null;
+            TaskFocusRequestedEventArgs? postponed = null;
+            view.StartTaskFocusRequested += (_, e) => started = e;
+            view.PostponeTaskRequested += (_, e) => postponed = e;
+
+            ((Button)view.FindName("NowPrimaryButton")!).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            ((Button)view.FindName("NowSecondaryButton")!).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+
+            Assert.Equal("Terminar el borrador", started?.TaskTitle);
+            Assert.Equal("Terminar el borrador", postponed?.TaskTitle);
+        });
+    }
+
+    [Fact]
+    public void HomeView_WithNothingImportant_TheBubbleAsksForATask()
+    {
+        _fixture.Invoke(() =>
+        {
+            var view = new HomeView();
+            using var host = CreateOffscreenHost(view);
+            host.Show();
+            view.Refresh(TaskModel() with
+            {
+                Now = new HomeNow(HomeNowKind.Empty, "Nada importante para hoy", "Toca para añadir una tarea"),
+                Yesterday = null
+            });
+            host.UpdateLayout();
+
+            var asked = false;
+            view.NewTaskRequested += (_, _) => asked = true;
+            ((Button)view.FindName("NowBubble")!).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+
+            Assert.True(asked);
+            Assert.Equal(Visibility.Collapsed, ((FrameworkElement)view.FindName("NowActions")!).Visibility);
+            Assert.Equal(Visibility.Collapsed, ((FrameworkElement)view.FindName("YesterdayBlock")!).Visibility);
+        });
+    }
+
+    [Fact]
+    public void HomeView_KeepsOnlyTheLastThreeThingsThatHappened()
+    {
+        _fixture.Invoke(() =>
+        {
+            var view = new HomeView();
+            foreach (var title in new[] { "Uno", "Dos", "Tres", "Cuatro" })
+            {
+                view.AddRecentAction(title, "detalle");
+            }
+
+            var trail = (ItemsControl)view.FindName("TrailItems")!;
+            Assert.Equal(3, trail.Items.Count);
+            Assert.Equal("Cuatro", ((HomeRecentAction)trail.Items[0]).Title);
         });
     }
 

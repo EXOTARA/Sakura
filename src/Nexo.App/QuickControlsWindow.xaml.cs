@@ -104,6 +104,8 @@ public partial class QuickControlsWindow : Window
 
         _dismissing = false;
         _dragging = null;
+        _stillTicks = 0;
+        _lastCursor = null;
         IsHitTestVisible = true;
 
         BuildControls(kinds);
@@ -427,7 +429,16 @@ public partial class QuickControlsWindow : Window
     /// </summary>
     private void DismissIfIdle()
     {
-        if (_dragging is not null || IsKeyboardFocusWithin || IsCursorOverPanel())
+        var cursorOver = IsCursorOverPanel(out var cursor);
+        _stillTicks = cursorOver && _lastCursor is { } last && last.X == cursor.X && last.Y == cursor.Y
+            ? _stillTicks + 1
+            : 0;
+        _lastCursor = cursorOver ? cursor : null;
+
+        var handle = new WindowInteropHelper(this).Handle;
+        var keyboardInside = IsKeyboardFocusWithin && handle != IntPtr.Zero && GetForegroundWindow() == handle;
+
+        if (QuickControlsPolicy.ShouldStay(_dragging is not null, keyboardInside, cursorOver, _stillTicks))
         {
             return;
         }
@@ -435,13 +446,20 @@ public partial class QuickControlsWindow : Window
         Dismiss();
     }
 
+    private int _stillTicks;
+    private CursorPoint? _lastCursor;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
     /// <summary>
     /// Dónde está el ratón según Windows, no según los eventos de WPF, que en una ventana que no se
     /// activa pueden no llegar.
     /// </summary>
-    private bool IsCursorOverPanel()
+    private bool IsCursorOverPanel(out CursorPoint cursor)
     {
-        if (!IsVisible || PanelBorder.ActualWidth <= 0 || !GetCursorPos(out var cursor))
+        cursor = default;
+        if (!IsVisible || PanelBorder.ActualWidth <= 0 || !GetCursorPos(out cursor))
         {
             return false;
         }
