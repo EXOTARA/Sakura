@@ -4,7 +4,8 @@ using System.Text.RegularExpressions;
 namespace Nexo.Core.Tasks;
 
 /// <summary>Lo que se entendió de una línea escrita en Hoy.</summary>
-public sealed record QuickCaptureResult(string Title, DateTimeOffset? DueAt, TaskPriority Priority);
+/// <param name="Leftover">Lo que quedó sin entender como fecha, hora o importancia; vacío si se entendió todo.</param>
+public sealed record QuickCaptureResult(string Title, DateTimeOffset? DueAt, TaskPriority Priority, string Leftover = "");
 
 /// <summary>
 /// 2026-09-16 — capturar una tarea en una sola línea («entregar U2A2 el viernes a las 5 !»).
@@ -131,6 +132,7 @@ public static partial class QuickCapture
         date ??= day;
 
         var title = CleanTitle(working);
+        var leftover = title;
         if (title.Length == 0)
         {
             title = (text ?? string.Empty).Trim();
@@ -143,7 +145,7 @@ public static partial class QuickCapture
             dueAt = new DateTimeOffset(local, now.Offset);
         }
 
-        return new QuickCaptureResult(title, dueAt, priority);
+        return new QuickCaptureResult(title, dueAt, priority, leftover);
     }
 
     private static bool TryDate(DateOnly today, int day, int month, out DateOnly date)

@@ -94,7 +94,7 @@ public static class TodayPlan
     {
         if (task.CompletedAt is { } completed)
         {
-            return "Hecha a las " + completed.ToString("HH:mm", Spanish);
+            return "Hecha a las " + Clock(completed);
         }
 
         if (task.DueAt is not { } due)
@@ -104,7 +104,7 @@ public static class TodayPlan
 
         var today = DateOnly.FromDateTime(now.Date);
         var day = Day(due);
-        var time = due.TimeOfDay == TimeSpan.Zero ? string.Empty : " · " + due.ToString("HH:mm", Spanish);
+        var time = due.TimeOfDay == TimeSpan.Zero ? string.Empty : " · " + Clock(due);
 
         if (day < today)
         {
@@ -122,6 +122,16 @@ public static class TodayPlan
         }
 
         return Capitalize(due.ToString("ddd d MMM", Spanish).Replace(".", string.Empty)) + time;
+    }
+
+    /// <summary>
+    /// La hora como se dice: «5:00 pm», «9:30 am». Adler pidió el formato de 12 horas con am/pm en
+    /// lugar del de 24.
+    /// </summary>
+    public static string Clock(DateTimeOffset value)
+    {
+        var hour = value.Hour % 12 == 0 ? 12 : value.Hour % 12;
+        return $"{hour}:{value.Minute:00} {(value.Hour < 12 ? "am" : "pm")}";
     }
 
     private static void Add(List<TodaySection> sections, TodaySectionKind kind, string title, List<NexoTask> tasks, DateTimeOffset now)

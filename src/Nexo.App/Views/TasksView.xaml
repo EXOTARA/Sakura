@@ -165,41 +165,59 @@
                            Text="Nueva tarea"
                            FontWeight="SemiBold"
                            FontSize="{DynamicResource FontSizeBody}" />
-                <TextBox x:Name="TitleTextBox"
-                         AutomationProperties.Name="Título de la tarea"
-                         Margin="0,9,0,0"
-                         Style="{StaticResource CompactTextBoxStyle}"
-                         ToolTip="Título de la tarea" />
-                <TextBox x:Name="NotesTextBox"
-                         AutomationProperties.Name="Notas de la tarea"
-                         Margin="0,7,0,0"
-                         Height="54"
-                         Style="{StaticResource PromptTextBoxStyle}"
-                         AcceptsReturn="True"
-                         ToolTip="Notas opcionales" />
+                <Grid Margin="0,9,0,0">
+                    <TextBox x:Name="TitleTextBox"
+                             AutomationProperties.Name="Título de la tarea"
+                             Style="{StaticResource CompactTextBoxStyle}"
+                             TextChanged="EditorHint_TextChanged" />
+                    <TextBlock x:Name="TitleHint"
+                               Margin="13,0,0,0"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"
+                               Text="¿Qué hay que hacer?"
+                               Style="{StaticResource MutedTextStyle}" />
+                </Grid>
+                <!--
+                    2026-09-16 — cada caja dice qué va en ella (Adler: «la barra de abajo casi no la
+                    entiendo»). La fecha y la hora se escriben juntas y como se dicen, en vez del
+                    calendario de Windows, que no seguía el estilo de Sakura y casi no se leía.
+                -->
+                <Grid Margin="0,7,0,0">
+                    <TextBox x:Name="NotesTextBox"
+                             AutomationProperties.Name="Notas de la tarea"
+                             Height="54"
+                             Style="{StaticResource PromptTextBoxStyle}"
+                             AcceptsReturn="True"
+                             TextChanged="EditorHint_TextChanged" />
+                    <TextBlock x:Name="NotesHint"
+                               Margin="13,9,0,0"
+                               IsHitTestVisible="False"
+                               Text="Notas (opcional)"
+                               Style="{StaticResource MutedTextStyle}" />
+                </Grid>
 
                 <Grid Margin="0,7,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.15*" />
-                        <ColumnDefinition Width="0.85*" />
-                        <ColumnDefinition Width="1*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <DatePicker x:Name="DueDatePicker"
-                                Height="36"
-                                VerticalContentAlignment="Center"
-                                ToolTip="Fecha opcional" />
-                    <TextBox x:Name="DueTimeTextBox"
-                             AutomationProperties.Name="Hora de vencimiento"
-                             Grid.Column="1"
-                             Margin="7,0,0,0"
+                    <TextBox x:Name="WhenTextBox"
+                             AutomationProperties.Name="Cuándo"
+                             AutomationProperties.HelpText="Por ejemplo: hoy 5 pm, mañana, viernes 9:30 am, 20/09. Vacío si no tiene fecha."
                              Style="{StaticResource CompactTextBoxStyle}"
-                             Text=""
-                             ToolTip="Hora en formato HH:mm; vacía si no tiene hora" />
+                             TextChanged="WhenTextBox_TextChanged" />
+                    <TextBlock x:Name="WhenHint"
+                               Margin="13,0,0,0"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"
+                               Text="Cuándo: «hoy 5 pm», «viernes», «20/09»"
+                               Style="{StaticResource MutedTextStyle}" />
                     <ComboBox x:Name="PriorityComboBox"
                               AutomationProperties.Name="Prioridad de la tarea"
-                              Grid.Column="2"
+                              Grid.Column="1"
                               Margin="7,0,0,0"
                               Height="36"
+                              MinWidth="120"
                               SelectedIndex="1"
                               VerticalContentAlignment="Center"
                               ToolTip="Prioridad">
@@ -209,9 +227,19 @@
                     </ComboBox>
                 </Grid>
 
+                <WrapPanel Margin="0,7,0,0">
+                    <Button Content="Hoy" Tag="hoy" Margin="0,0,6,0" Style="{StaticResource SoftChipButtonStyle}" Click="WhenChip_Click" />
+                    <Button Content="Mañana" Tag="mañana" Margin="0,0,6,0" Style="{StaticResource SoftChipButtonStyle}" Click="WhenChip_Click" />
+                    <Button Content="Sin fecha" Tag="" Margin="0,0,10,0" Style="{StaticResource SoftChipButtonStyle}" Click="WhenChip_Click" />
+                    <TextBlock x:Name="WhenPreviewText"
+                               VerticalAlignment="Center"
+                               FontSize="{DynamicResource FontSizeCaption}"
+                               Foreground="{DynamicResource BrushAccent}" />
+                </WrapPanel>
+
                 <CheckBox x:Name="ReminderCheckBox"
                           Margin="0,8,0,0"
-                          Content="Recordarme en la fecha y hora indicadas" />
+                          Content="Avisarme a esa hora" />
                 <TextBlock x:Name="EditorErrorText"
                            Margin="0,6,0,0"
                            Foreground="{DynamicResource BrushWarning}"
@@ -320,9 +348,9 @@
                                                                 Opacity="0">
                                                         <Button Content="▶"
                                                                 CommandParameter="{Binding Id}"
-                                                                Visibility="{Binding PendingVisibility}"
+                                                                Visibility="{Binding FocusVisibility}"
                                                                 Style="{StaticResource RowActionStyle}"
-                                                                ToolTip="Enfocarme en esta tarea"
+                                                                ToolTip="Trabajar en esto un rato"
                                                                 AutomationProperties.Name="Enfocarme en esta tarea"
                                                                 Click="FocusTaskButton_Click" />
                                                         <Button Content="Mañana"

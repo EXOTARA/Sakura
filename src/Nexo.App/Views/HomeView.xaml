@@ -112,6 +112,63 @@
                 </Button>
             </Grid>
 
+            <!--
+                2026-09-16 — repaso de la mañana: una vez al día, solo si quedó algo de antes. Cada
+                cosa se decide con un toque; al terminar, el bloque se va.
+            -->
+            <Border x:Name="ReviewBlock"
+                    Margin="0,0,0,12"
+                    Padding="16,14"
+                    CornerRadius="26"
+                    Background="{DynamicResource BrushSurfaceRaised}"
+                    BorderBrush="{DynamicResource BrushAccentSoft}"
+                    BorderThickness="1"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="ANTES DE EMPEZAR"
+                               FontSize="{DynamicResource FontSizeCaption}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrushAccent}" />
+                    <TextBlock Margin="0,4,0,0"
+                               Text="Esto quedó pendiente. ¿Qué hacemos con cada cosa?"
+                               TextWrapping="Wrap"
+                               FontWeight="SemiBold" />
+                    <ItemsControl x:Name="ReviewItems" Margin="0,8,0,0" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Detail}" FontSize="{DynamicResource FontSizeCaption}" Style="{StaticResource MutedTextStyle}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="Hoy" Tag="today" CommandParameter="{Binding TaskId}" Margin="6,0,0,0"
+                                                Style="{StaticResource SoftChipButtonStyle}" Click="ReviewAction_Click"
+                                                AutomationProperties.Name="Pasar a hoy" />
+                                        <Button Content="Mañana" Tag="tomorrow" CommandParameter="{Binding TaskId}" Margin="6,0,0,0"
+                                                Style="{StaticResource SoftChipButtonStyle}" Click="ReviewAction_Click"
+                                                AutomationProperties.Name="Pasar a mañana" />
+                                        <Button Content="Soltar" Tag="release" CommandParameter="{Binding TaskId}" Margin="6,0,0,0"
+                                                Style="{StaticResource SoftChipButtonStyle}" Click="ReviewAction_Click"
+                                                AutomationProperties.Name="Soltar" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Margin="0,12,0,0"
+                            HorizontalAlignment="Right"
+                            Content="Listo"
+                            Padding="18,7"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Click="ReviewDone_Click" />
+                </StackPanel>
+            </Border>
+
             <!-- Ahora -->
             <StackPanel x:Name="NowBlock">
                 <Button x:Name="NowBubble"

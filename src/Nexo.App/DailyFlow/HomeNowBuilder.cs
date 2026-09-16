@@ -23,7 +23,8 @@ public sealed record HomeNow(
     string Title,
     string Detail,
     Guid? TaskId = null,
-    bool IsPaused = false);
+    bool IsPaused = false,
+    bool IsImportant = false);
 
 /// <summary>Una línea del hilo de ayer: la hora y lo que pasó.</summary>
 public sealed record HomeYesterdayItem(string Time, string Text);
@@ -60,7 +61,11 @@ public sealed record HomeTodayModel(
     int DoneToday,
     int PlannedToday,
     int FocusMinutesToday,
-    HomeYesterday? Yesterday);
+    HomeYesterday? Yesterday,
+    IReadOnlyList<HomeReviewItem>? Review = null);
+
+/// <summary>Una tarea que quedó pendiente de días anteriores, para el repaso de la mañana.</summary>
+public sealed record HomeReviewItem(Guid TaskId, string Title, string Detail);
 
 /// <summary>
 /// 2026-09-16 — el Inicio nuevo (dirección «Burbujas» con la calma de «Calma», elegida por Adler).
@@ -80,7 +85,7 @@ public static class HomeNowBuilder
 {
     private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-MX");
 
-    public static HomeTodayModel Build(TaskManager taskManager, FocusManager focusManager, string? name, DateTimeOffset now)
+    public static HomeTodayModel Build(TaskManager taskManager, FocusManager focusManager, string? name, DateTimeOffset now, bool includeReview = false)
     {
         ArgumentNullException.ThrowIfNull(taskManager);
         ArgumentNullException.ThrowIfNull(focusManager);
@@ -108,7 +113,7 @@ public static class HomeNowBuilder
         }
         else if (candidates.FirstOrDefault() is { } next)
         {
-            current = new HomeNow(HomeNowKind.Task, next.Title, Describe(next, now), next.Id);
+            current = new HomeNow(HomeNowKind.Task, next.Title, Describe(next, now), next.Id, IsImportant: next.Priority == TaskPriority.High);
         }
         else if (tasks.Count == 0)
         {
@@ -146,8 +151,25 @@ public static class HomeNowBuilder
             doneToday,
             doneToday + candidates.Count,
             focus.FocusMinutesToday,
-            Yesterday(tasks, focusManager.GetHistory(), today.AddDays(-1)));
+            Yesterday(tasks, focusManager.GetHistory(), today.AddDays(-1)),
+            includeReview ? Review(pending, today) : null);
     }
+
+    /// <summary>
+    /// 2026-09-16 — el repaso de la mañana: lo que quedó de días anteriores, para decidir con un
+    /// toque si va hoy, mañana o se suelta. Sin esto lo atrasado se acumula en silencio, que es lo
+    /// que la investigación señala como la causa de abandonar una lista.
+    /// </summary>
+    private static IReadOnlyList<HomeReviewItem> Review(IEnumerable<NexoTask> pending, DateTime today) =>
+        pending
+            .Where(task => task.DueAt is { } due && due.Date < today)
+            .OrderBy(task => task.DueAt)
+            .Take(5)
+            .Select(task => new HomeReviewItem(
+                task.Id,
+                task.Title,
+                (today - task.DueAt!.Value.Date).Days == 1 ? "Era para ayer" : $"Era para el {task.DueAt.Value.ToString("dddd d", Spanish)}"))
+            .ToList();
 
     /// <summary>
     /// Lo que cuenta como «de hoy»: lo importante, lo que vence hoy y lo que quedó pendiente de días
@@ -170,7 +192,7 @@ public static class HomeNowBuilder
         {
             var day = due.Date;
             var hasTime = due.TimeOfDay != TimeSpan.Zero;
-            var time = hasTime ? " a las " + due.ToString("HH:mm", Spanish) : string.Empty;
+            var time = hasTime ? " a las " + TodayPlan.Clock(due) : string.Empty;
 
             when = day < now.Date
                 ? "quedó pendiente"
@@ -227,7 +249,7 @@ public static class HomeNowBuilder
             tasksDone,
             (int)Math.Round(focusMinutes),
             items.OrderBy(item => item.At)
-                .Select(item => new HomeYesterdayItem(item.At.ToString("HH:mm", CultureInfo.InvariantCulture), item.Text))
+                .Select(item => new HomeYesterdayItem(TodayPlan.Clock(item.At), item.Text))
                 .ToList());
     }
 

@@ -40,7 +40,7 @@ public sealed class HomeNowBuilderTests
 
         Assert.Equal(HomeNowKind.Task, model.Now.Kind);
         Assert.Equal("Terminar el borrador", model.Now.Title);
-        Assert.Equal("Importante · vence el viernes a las 15:00", model.Now.Detail);
+        Assert.Equal("Importante · vence el viernes a las 3:00 pm", model.Now.Detail);
     }
 
     [Fact]
@@ -128,8 +128,31 @@ public sealed class HomeNowBuilderTests
         Assert.NotNull(model.Yesterday);
         Assert.Equal("1 tarea · 25 min de enfoque", model.Yesterday.Headline);
         Assert.Equal(["Enfoque de 25 min", "Leer capítulo 3"], model.Yesterday.Items.Select(item => item.Text));
-        Assert.Equal("11:00", model.Yesterday.Items[0].Time);
+        Assert.Equal("11:00 am", model.Yesterday.Items[0].Time);
     }
+
+    [Fact]
+    public void TheMorningReview_ListsOnlyWhatWasLeftFromBefore()
+    {
+        var model = HomeNowBuilder.Build(
+            Tasks(
+                new NexoTask { Title = "Enviar el correo", DueAt = Now.AddDays(-1) },
+                new NexoTask { Title = "Para hoy", DueAt = Now.AddHours(1) },
+                new NexoTask { Title = "Hecha", DueAt = Now.AddDays(-2), CompletedAt = Now }),
+            Focus(),
+            null,
+            Now,
+            includeReview: true);
+
+        var item = Assert.Single(model.Review!);
+        Assert.Equal("Enviar el correo", item.Title);
+        Assert.Equal("Era para ayer", item.Detail);
+        Assert.Null(HomeNowBuilder.Build(Tasks(), Focus(), null, Now).Review);
+    }
+
+    [Fact]
+    public void ANewInstall_IsInvitedInsteadOfShownZeros() =>
+        Assert.Equal("Tu día empieza aquí", HomeNowBuilder.Build(Tasks(), Focus(), null, Now).Now.Title);
 
     [Fact]
     public void AnEmptyYesterday_IsNotOffered() =>

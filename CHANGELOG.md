@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.30.20-beta]
+
+### Nuevo
+
+- **Repaso de la mañana.** La primera vez que abres Sakura cada día, si quedó algo pendiente de antes, Inicio empieza preguntando qué hacer con cada cosa: **Hoy**, **Mañana** o **Soltar**. Sale una vez al día y solo si hay algo.
+- **Alt+Shift+N para apuntar desde cualquier aplicación.** Se abre una cajita arriba: escribes, Enter y listo, sin abrir Sakura.
+
+### Cambiado
+
+- **Las horas se muestran como se dicen:** «5:00 pm», «9:30 am», en vez de 17:00.
+- **Editar una tarea es más claro** (Adler: «casi no se ve nada al seleccionar el día»):
+  - Cada caja dice qué va en ella.
+  - La fecha y la hora se escriben juntas y como se dicen («hoy 5 pm», «viernes», «20/09»), con botones Hoy, Mañana y Sin fecha, en lugar del calendario de Windows.
+  - Debajo se ve lo que se entendió.
+- **Enfocarse ya no arranca 25 minutos sin preguntar.** ▶ solo aparece en lo importante y pregunta cuánto rato (desde «solo 5 min para empezar»). En Inicio, una tarea que no es importante ofrece **Hecha** en lugar de **Empezar**: un recordatorio como «comprar tortillas» no pide sentarse a trabajar.
+- El aviso «Soltaste…» se va solo a los ocho segundos.
+
+### Corregido
+
+- El ejemplo de los atajos de texto en Personalizar mostraba un correo con el nombre del autor; ahora es genérico.
+
 ## [0.30.19-beta]
 
 ### Nuevo
