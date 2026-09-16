@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.13-beta]
+
+### Corregido
+
+- **El chat se quedaba mudo tras explicar una ventana.** Al seguir preguntando (por ejemplo con «Más fácil»), la captura seguía en el contexto, la pregunta iba al modelo con visión y el proveedor la rechazaba entera por el tamaño previsto de la respuesta: «Request too large… reduce max_tokens». Ahora Sakura lee el tope que el propio proveedor indica, repite la petición pidiendo menos y contesta. Si ni así cabe, lo explica en español y dice qué hacer, en vez de enseñar el error del proveedor en inglés.
+- **Los botones de seguimiento ya no reenvían la captura.** «Más corto», «Más fácil», «Hazlo lista» y los demás trabajan sobre la respuesta anterior, que ya está en la conversación: no necesitan la imagen y así no obligan a usar el modelo con visión.
+
 ## [0.30.12-beta]
 
 ### Nuevo
