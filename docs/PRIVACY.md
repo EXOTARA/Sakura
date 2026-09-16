@@ -100,13 +100,24 @@ Qué se manda y cuándo:
   (`Ctrl + Shift + T`), después de pasar por el mismo redactor.
 - Nunca el audio. La transcripción ya ocurrió en local; lo que viaja es texto.
 
-### 4. Descarga de Ollama — solo si el usuario lo instala desde Sakura
+### 4. Imágenes de las presentaciones — solo si se autoriza
+
+Cuando una respuesta pide una imagen para una diapositiva («Imagen: …») y se guarda como
+PowerPoint, Sakura puede buscarla en Wikimedia Commons, donde las imágenes son de licencia libre.
+Llega desactivado: la primera vez Sakura pregunta, y la respuesta se guarda en Ajustes, donde se
+cambia cuando se quiera.
+
+Si está activado, lo único que sale del equipo es el término de búsqueda (por ejemplo «turbinas
+eólicas en el mar»); nunca la respuesta, el documento ni ningún dato del equipo. La presentación
+incluye el autor y la licencia de cada imagen, como piden esas licencias.
+
+### 5. Descarga de Ollama — solo si el usuario lo instala desde Sakura
 
 Si se acepta que Sakura instale Ollama, consulta su versión publicada en
 `api.github.com/repos/ollama/ollama/releases/latest` y la descarga. Es una acción explícita del
 usuario, no ocurre sola.
 
-### 5. Órdenes de red que pida el usuario
+### 6. Órdenes de red que pida el usuario
 
 Algunas órdenes del equipo usan la red por definición. «Comprobar si hay conexión» ejecuta
 `ping -n 4 1.1.1.1`. Solo se ejecutan cuando se piden y con el permiso de «Actuar sobre el equipo».
@@ -151,6 +162,9 @@ Everything that leaves the machine is listed above. In short:
    DPAPI or read from a user environment variable. Providers and their privacy
    policies are listed above. The default local option is Ollama on `127.0.0.1`, which sends
    nothing anywhere.
-4. **Ollama installation (on user action):** version lookup and download from GitHub.
+4. **Presentation images (opt-in only):** when an answer asks for a slide image and it is saved as a
+   PowerPoint file, Sakura can look it up on Wikimedia Commons. Sakura asks the first time; only the
+   search term leaves the machine, and the deck credits each image's author and licence.
+5. **Ollama installation (on user action):** version lookup and download from GitHub.
 
 No advertising, no profiling, no sale or sharing of user data.

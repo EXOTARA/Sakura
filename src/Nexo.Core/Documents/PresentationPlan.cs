@@ -40,7 +40,10 @@ public enum SlideLayout
     Quote,
 
     /// <summary>La conclusión, al final, sobre fondo oscuro.</summary>
-    Closing
+    Closing,
+
+    /// <summary>La última: de dónde salió cada imagen.</summary>
+    Credits
 }
 
 /// <summary>Una diapositiva: su diseño, su título, sus líneas, su tabla o gráfica y las notas del orador.</summary>
@@ -52,7 +55,8 @@ public sealed record SlideSpec(
     ChartSpec? Chart = null,
     string? Subtitle = null,
     string? Notes = null,
-    int? SectionNumber = null)
+    int? SectionNumber = null,
+    string? ImageQuery = null)
 {
     public bool IsCover => Layout == SlideLayout.Cover;
 }
@@ -91,6 +95,7 @@ public static partial class PresentationPlan
         public SectionKind Kind { get; } = kind;
         public List<AnswerBlock> Blocks { get; } = [];
         public List<string> Notes { get; } = [];
+        public List<string> Images { get; } = [];
     }
 
     public static IReadOnlyList<SlideSpec> From(string title, string markdown)
@@ -106,7 +111,7 @@ public static partial class PresentationPlan
         }
 
         string? subtitle = null;
-        if (blocks.FirstOrDefault() is AnswerParagraph lead && NotesText(lead.Spans) is null &&
+        if (blocks.FirstOrDefault() is AnswerParagraph lead && NotesText(lead.Spans) is null && ImageText(lead.Spans) is null &&
             AnswerMarkdown.ToPlainText(lead.Spans).Trim() is { Length: > 0 and <= MaximumSubtitleCharacters } leadText)
         {
             // «Claro, aquí tienes…:» es la frase del chat, no un subtítulo: no va en la portada.
@@ -179,6 +184,14 @@ public static partial class PresentationPlan
                 Lay(slides, section, isStep ? documentTitle : section.Title, isLast: i == sections.Count - 1, stepDetails: isStep);
             }
 
+            // Cada «Imagen: …» del apartado va a una diapositiva suya, por orden. Si el apartado no
+            // dibujó ninguna con sitio para una foto —una imagen suelta antes del primer título, por
+            // ejemplo—, se busca hacia atrás: así acaba en la portada o en el separador de la parte.
+            foreach (var query in section.Images)
+            {
+                Place(slides, first, query);
+            }
+
             if (section.Notes.Count > 0)
             {
                 // Las notas van a la primera diapositiva del apartado; sin diapositivas, a la anterior.
@@ -194,6 +207,40 @@ public static partial class PresentationPlan
         return slides;
     }
 
+    /// <summary>Los diseños con sitio para una foto; en una tabla, una gráfica o un índice no cabe.</summary>
+    public static bool AcceptsImage(SlideLayout layout) =>
+        layout is SlideLayout.Cover or SlideLayout.Content or SlideLayout.Section or SlideLayout.Closing;
+
+    private static void Place(List<SlideSpec> slides, int from, string query)
+    {
+        for (var i = Math.Max(0, from); i < slides.Count; i++)
+        {
+            if (Assign(slides, i, query))
+            {
+                return;
+            }
+        }
+
+        for (var i = Math.Min(from, slides.Count - 1); i >= 0; i--)
+        {
+            if (Assign(slides, i, query))
+            {
+                return;
+            }
+        }
+    }
+
+    private static bool Assign(List<SlideSpec> slides, int index, string query)
+    {
+        if (!AcceptsImage(slides[index].Layout) || slides[index].ImageQuery is not null)
+        {
+            return false;
+        }
+
+        slides[index] = slides[index] with { ImageQuery = query };
+        return true;
+    }
+
     private static List<Section> Split(List<AnswerBlock> blocks, string introTitle, bool bySteps, int? dividerLevel, int slideLevel)
     {
         var sections = new List<Section>();
@@ -201,7 +248,7 @@ public static partial class PresentationPlan
 
         void Open(Section next)
         {
-            if (current.Blocks.Count > 0 || current.Notes.Count > 0 || current.Kind != SectionKind.Intro)
+            if (current.Blocks.Count > 0 || current.Notes.Count > 0 || current.Images.Count > 0 || current.Kind != SectionKind.Intro)
             {
                 sections.Add(current);
             }
@@ -230,6 +277,9 @@ public static partial class PresentationPlan
                     break;
                 case AnswerQuote quote when NotesText(quote.Spans) is { } quotedNote:
                     current.Notes.Add(quotedNote);
+                    break;
+                case AnswerParagraph paragraph when ImageText(paragraph.Spans) is { } image:
+                    current.Images.Add(image);
                     break;
                 default:
                     current.Blocks.Add(block);
@@ -359,12 +409,27 @@ public static partial class PresentationPlan
         return clean.Length == 0 ? title : clean;
     }
 
+    /// <summary>Lo que hay que buscar para cada diapositiva que pide imagen, sin repetir.</summary>
+    public static IReadOnlyList<string> ImageQueries(string title, string markdown) =>
+        From(title, markdown).Select(slide => slide.ImageQuery).OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+    /// <summary>El término de un párrafo que pide imagen («Imagen: …»), o nulo si no lo es.</summary>
+    private static string? ImageText(IReadOnlyList<AnswerSpan> spans)
+    {
+        var match = ImagePrefix().Match(AnswerMarkdown.ToPlainText(spans).Trim());
+        return match.Success && match.Groups["text"].Value.Trim() is { Length: > 0 } text ? text : null;
+    }
+
     /// <summary>El texto de un párrafo de notas del orador («Notas: …»), o nulo si no lo es.</summary>
     private static string? NotesText(IReadOnlyList<AnswerSpan> spans)
     {
         var match = NotesPrefix().Match(AnswerMarkdown.ToPlainText(spans).Trim());
         return match.Success && match.Groups["text"].Value.Trim() is { Length: > 0 } text ? text : null;
     }
+
+    [GeneratedRegex(@"^(imagen|foto|fotograf[ií]a|ilustraci[oó]n)\s*:\s*(?<text>.+)$", RegexOptions.IgnoreCase)]
+    private static partial Regex ImagePrefix();
 
     [GeneratedRegex(@"^(notas?( (del|para el) (orador|presentador|ponente))?|gui[oó]n( del orador)?)\s*:\s*(?<text>[\s\S]+)$", RegexOptions.IgnoreCase)]
     private static partial Regex NotesPrefix();

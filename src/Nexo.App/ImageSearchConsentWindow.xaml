@@ -1,0 +1,64 @@
+<Window x:Class="Nexo.App.ImageSearchConsentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:a11y="clr-namespace:Nexo.App.Views.Controls"
+        Title="Imágenes para la presentación"
+        Width="560"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}"
+        Foreground="{StaticResource BrushTextPrimary}"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        SourceInitialized="Window_SourceInitialized">
+    <StackPanel Margin="24">
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <a11y:DecorativeMark Focusable="False"
+                                 Width="22"
+                                 Height="22"
+                                 Margin="0,0,10,0"
+                                 VerticalAlignment="Center"
+                                 Style="{StaticResource SakuraFlowerMarkStyle}" />
+            <TextBlock Text="¿Busco imágenes para la presentación?"
+                       VerticalAlignment="Center"
+                       FontSize="{DynamicResource FontSizeTitle2}"
+                       FontWeight="SemiBold" />
+        </StackPanel>
+
+        <TextBlock x:Name="DetailText"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,10"
+                   Foreground="{StaticResource BrushTextSecondary}" />
+
+        <TextBlock TextWrapping="Wrap"
+                   Margin="0,0,0,18"
+                   Foreground="{StaticResource BrushTextSecondary}"
+                   FontSize="{DynamicResource FontSizeFootnote}"
+                   Text="Sakura busca en Wikimedia Commons, donde las imágenes son de licencia libre. Solo sale de tu equipo el término de búsqueda. La presentación lleva el autor y la licencia de cada imagen, como piden esas licencias. Puedes cambiarlo en Ajustes." />
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="1"
+                    x:Name="SkipButton"
+                    AutomationProperties.Name="Guardar sin imágenes"
+                    Padding="14,8"
+                    Content="Sin imágenes"
+                    IsCancel="True"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Click="SkipButton_Click" />
+            <Button Grid.Column="2"
+                    x:Name="SearchButton"
+                    AutomationProperties.Name="Buscar imágenes"
+                    Margin="10,0,0,0"
+                    Padding="14,8"
+                    Content="Sí, buscarlas"
+                    IsDefault="True"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Click="SearchButton_Click" />
+        </Grid>
+    </StackPanel>
+</Window>

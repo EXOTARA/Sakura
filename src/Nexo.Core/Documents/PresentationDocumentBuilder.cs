@@ -35,17 +35,44 @@ public static class PresentationDocumentBuilder
     private const string Muted = "57606A";
     private const string Soft = "F3F5F8";
 
-    public static byte[] BuildFromMarkdown(string title, string markdown)
+    /// <param name="images">
+    /// Las imágenes ya descargadas, por el texto que las pedía. Sin ellas la presentación sale igual,
+    /// solo que sin fotos: una búsqueda que falle no puede costar el documento entero.
+    /// </param>
+    public static byte[] BuildFromMarkdown(string title, string markdown, IReadOnlyDictionary<string, PresentationImage>? images = null)
     {
-        var slides = PresentationPlan.From(title, markdown);
+        var slides = PresentationPlan.From(title, markdown).ToList();
         var documentTitle = slides[0].Title;
         var charts = new List<(ChartSpec Spec, AnswerTable Table)>();
+
+        // Solo las imágenes que de verdad se van a ver, en el orden en que salen.
+        var used = new List<PresentationImage>();
+        var perSlide = new Dictionary<int, PresentationImage>();
+        for (var i = 0; i < slides.Count; i++)
+        {
+            if (Find(images, slides[i].ImageQuery) is { } image && PresentationPlan.AcceptsImage(slides[i].Layout))
+            {
+                perSlide[i] = image;
+                if (!used.Contains(image))
+                {
+                    used.Add(image);
+                }
+            }
+        }
+
+        if (used.Count > 0)
+        {
+            slides.Add(new SlideSpec("Créditos de imágenes",
+                used.Select(image => new SlideLine([new AnswerSpan(WikimediaImagePolicy.CreditLine(image), AnswerSpanStyle.None)], 0, null, IsBullet: true)).ToList(),
+                SlideLayout.Credits));
+        }
+
         var notes = slides.Select((slide, index) => (slide, index)).Where(item => !string.IsNullOrWhiteSpace(item.slide.Notes)).Select(item => item.index + 1).ToList();
 
         using var buffer = new MemoryStream();
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
         {
-            Write(archive, "[Content_Types].xml", ContentTypes(slides.Count, slides.Count(slide => slide.Chart is not null), notes));
+            Write(archive, "[Content_Types].xml", ContentTypes(slides.Count, slides.Count(slide => slide.Chart is not null), notes, used));
             Write(archive, "_rels/.rels", RootRelationships);
             Write(archive, "docProps/core.xml", CoreProperties(title));
             Write(archive, "ppt/presentation.xml", Presentation(slides.Count, notes.Count > 0));
@@ -59,7 +86,8 @@ public static class PresentationDocumentBuilder
             for (var i = 0; i < slides.Count; i++)
             {
                 var spec = slides[i];
-                var slide = new SlideWriter(i + 1, slides.Count, documentTitle, charts);
+                var slide = new SlideWriter(i + 1, slides.Count, documentTitle, charts,
+                    perSlide.TryGetValue(i, out var image) ? (image, used.IndexOf(image) + 1) : null);
                 var xml = spec.Layout switch
                 {
                     SlideLayout.Cover => slide.Cover(spec),
@@ -71,6 +99,7 @@ public static class PresentationDocumentBuilder
                     SlideLayout.Chart when spec.Chart is not null && spec.Table is not null => slide.ChartSlide(spec),
                     SlideLayout.Quote => slide.Quote(spec),
                     SlideLayout.Closing => slide.Closing(spec),
+                    SlideLayout.Credits => slide.Credits(spec),
                     _ => slide.Content(spec)
                 };
                 Write(archive, $"ppt/slides/slide{i + 1}.xml", xml);
@@ -81,6 +110,11 @@ public static class PresentationDocumentBuilder
                     Write(archive, $"ppt/notesSlides/notesSlide{i + 1}.xml", NotesSlide(spec.Notes!));
                     Write(archive, $"ppt/notesSlides/_rels/notesSlide{i + 1}.xml.rels", NotesSlideRelationships(i + 1));
                 }
+            }
+
+            for (var i = 0; i < used.Count; i++)
+            {
+                WriteBytes(archive, $"ppt/media/image{i + 1}.{used[i].Extension}", used[i].Bytes);
             }
 
             for (var i = 0; i < charts.Count; i++)
@@ -111,12 +145,28 @@ public static class PresentationDocumentBuilder
 
     private const string EmbeddedSheet = "Hoja1";
 
-    private sealed class SlideWriter(int number, int total, string documentTitle, List<(ChartSpec Spec, AnswerTable Table)> charts)
+    private static PresentationImage? Find(IReadOnlyDictionary<string, PresentationImage>? images, string? query)
+    {
+        if (images is null || string.IsNullOrWhiteSpace(query))
+        {
+            return null;
+        }
+
+        if (images.TryGetValue(query, out var exact))
+        {
+            return exact;
+        }
+
+        return images.FirstOrDefault(pair => string.Equals(pair.Key, query, StringComparison.OrdinalIgnoreCase)).Value;
+    }
+
+    private sealed class SlideWriter(int number, int total, string documentTitle, List<(ChartSpec Spec, AnswerTable Table)> charts, (PresentationImage Image, int Number)? picture)
     {
         private readonly List<string> _links = [];
         private readonly List<int> _charts = [];
         private int _shapeId = 1;
         private bool _dark;
+        private bool _usesPicture;
 
         private int NextId() => ++_shapeId;
 
@@ -126,11 +176,24 @@ public static class PresentationDocumentBuilder
             const long textWidth = panel - (2 * Margin) - 457200;
             var titleSize = spec.Title.Length <= 40 ? 4000 : spec.Title.Length <= 70 ? 3400 : 2800;
 
-            var shapes = new StringBuilder()
-                .Append(Shape("rect", panel, 0, SlideWidth - panel, SlideHeight, Navy))
-                .Append(Shape("ellipse", SlideWidth - 2743200, -914400, 3657600, 3657600, Blue, alpha: 55))
-                .Append(Shape("ellipse", panel - 1143000, 3886200, 2286000, 2286000, Accent))
-                .Append(Shape("ellipse", SlideWidth - 1600200, SlideHeight - 1371600, 685800, 685800, Pink, alpha: 80))
+            // Con foto, la foto es el panel; sin ella, el panel oscuro con sus círculos.
+            var shapes = new StringBuilder();
+            if (picture is not null)
+            {
+                shapes.Append(Picture(panel, 0, SlideWidth - panel, SlideHeight))
+                    .Append(Shape("rect", panel, SlideHeight - 457200, SlideWidth - panel, 457200, Navy, alpha: 75,
+                        text: "<a:p><a:pPr algn=\"ctr\"/>" + PlainRun(Credit(), 900, "E6EDF5") + "</a:p>"))
+                    .Append(Shape("rect", panel, 0, 45720, SlideHeight, Accent));
+            }
+            else
+            {
+                shapes.Append(Shape("rect", panel, 0, SlideWidth - panel, SlideHeight, Navy))
+                    .Append(Shape("ellipse", SlideWidth - 2743200, -914400, 3657600, 3657600, Blue, alpha: 55))
+                    .Append(Shape("ellipse", panel - 1143000, 3886200, 2286000, 2286000, Accent))
+                    .Append(Shape("ellipse", SlideWidth - 1600200, SlideHeight - 1371600, 685800, 685800, Pink, alpha: 80));
+            }
+
+            shapes
                 .Append(TextBox(Margin, 914400, textWidth, 2971800, "b",
                     "<a:p><a:pPr><a:spcAft><a:spcPts val=\"1200\"/></a:spcAft><a:buNone/></a:pPr>" + PlainRun("PRESENTACIÓN", 1400, Accent, bold: true, spacing: 300) + "</a:p>" +
                     Paragraph([new AnswerSpan(spec.Title, AnswerSpanStyle.Bold)], titleSize, Navy, bullet: null, lineSpacing: 90)))
@@ -225,9 +288,23 @@ public static class PresentationDocumentBuilder
         {
             _dark = true;
             var titleSize = spec.Title.Length <= 40 ? 4000 : 3200;
-            var shapes = new StringBuilder()
-                .Append(Shape("ellipse", SlideWidth - 3657600, SlideHeight - 3200400, 4572000, 4572000, Blue, alpha: 45))
-                .Append(Shape("ellipse", SlideWidth - 4206240, 822960, 1188720, 1188720, Accent, alpha: 85))
+            var shapes = new StringBuilder();
+
+            // Con foto, ocupa toda la diapositiva con el azul por encima: el texto se sigue leyendo.
+            if (picture is not null)
+            {
+                shapes.Append(Picture(0, 0, SlideWidth, SlideHeight))
+                    .Append(Shape("rect", 0, 0, SlideWidth, SlideHeight, Navy, alpha: 80))
+                    .Append(TextBox(SlideWidth - Margin - 4572000, SlideHeight - 822960, 4572000, 320040, "b",
+                        "<a:p><a:pPr algn=\"r\"/>" + PlainRun(Credit(), 900, "9FB3C8") + "</a:p>"));
+            }
+            else
+            {
+                shapes.Append(Shape("ellipse", SlideWidth - 3657600, SlideHeight - 3200400, 4572000, 4572000, Blue, alpha: 45))
+                    .Append(Shape("ellipse", SlideWidth - 4206240, 822960, 1188720, 1188720, Accent, alpha: 85));
+            }
+
+            shapes
                 .Append(TextBox(Margin, 1463040, 3657600, 1280160, "b",
                     "<a:p>" + PlainRun((spec.SectionNumber ?? 1).ToString("00", CultureInfo.InvariantCulture), 6000, Pink, bold: true) + "</a:p>"))
                 .Append(Shape("rect", Margin, 2834640, 1097280, 54864, Pink))
@@ -240,8 +317,32 @@ public static class PresentationDocumentBuilder
 
         public string Content(SlideSpec spec)
         {
+            // Con foto, ocupa la franja derecha de arriba abajo y el texto se queda en la izquierda.
+            var width = SlideWidth - (2 * Margin);
+            var shapes = new StringBuilder();
+            if (picture is not null)
+            {
+                const long photo = 4937760;
+                width = SlideWidth - photo - Margin - 457200;
+                shapes.Append(Picture(SlideWidth - photo, 0, photo, SlideHeight))
+                    .Append(Shape("rect", SlideWidth - photo, SlideHeight - 365760, photo, 365760, Navy, alpha: 70,
+                        text: "<a:p><a:pPr algn=\"ctr\"/>" + PlainRun(Credit(), 900, "E6EDF5") + "</a:p>"));
+            }
+
+            shapes.Append(Header(spec.Title, width))
+                .Append(TextBox(Margin, BodyTop, width, BodyBottom - BodyTop, "t", Body(spec.Lines, Ink), autofit: true))
+                .Append(Footer(picture is not null));
+            return SlideXml(shapes.ToString(), "FFFFFF");
+        }
+
+        /// <summary>De dónde salió cada imagen: sin esto, una licencia libre se estaría incumpliendo.</summary>
+        public string Credits(SlideSpec spec)
+        {
             var shapes = new StringBuilder(Header(spec.Title))
-                .Append(TextBox(Margin, BodyTop, SlideWidth - (2 * Margin), BodyBottom - BodyTop, "t", Body(spec.Lines, Ink), autofit: true))
+                .Append(TextBox(Margin, BodyTop, SlideWidth - (2 * Margin), BodyBottom - BodyTop - 457200, "t",
+                    string.Concat(spec.Lines.Select(line => Paragraph(line.Spans, 1400, Muted, (null, 0), spaceBefore: 600))), autofit: true))
+                .Append(TextBox(Margin, BodyBottom - 320040, SlideWidth - (2 * Margin), 320040, "b",
+                    "<a:p>" + PlainRun("Imágenes de Wikimedia Commons con licencia libre.", 1200, "8C959F") + "</a:p>"))
                 .Append(Footer());
             return SlideXml(shapes.ToString(), "FFFFFF");
         }
@@ -315,8 +416,17 @@ public static class PresentationDocumentBuilder
         public string Closing(SlideSpec spec)
         {
             _dark = true;
-            var shapes = new StringBuilder()
-                .Append(Shape("ellipse", SlideWidth - 2560320, SlideHeight - 2286000, 3657600, 3657600, Blue, alpha: 40))
+            var shapes = new StringBuilder();
+            if (picture is not null)
+            {
+                shapes.Append(Picture(0, 0, SlideWidth, SlideHeight))
+                    .Append(Shape("rect", 0, 0, SlideWidth, SlideHeight, Navy, alpha: 82))
+                    .Append(TextBox(SlideWidth - Margin - 4572000, SlideHeight - 822960, 4572000, 320040, "b",
+                        "<a:p><a:pPr algn=\"r\"/>" + PlainRun(Credit(), 900, "9FB3C8") + "</a:p>"));
+            }
+
+            shapes
+                .Append(Shape("ellipse", SlideWidth - 2560320, SlideHeight - 2286000, 3657600, 3657600, Blue, alpha: picture is null ? 40 : 20))
                 .Append(TextBox(Margin, 457200, SlideWidth - (2 * Margin), 868680, "b",
                     Paragraph([new AnswerSpan(spec.Title, AnswerSpanStyle.Bold)], TitleSize(spec.Title), "FFFFFF", bullet: null)))
                 .Append(Shape("rect", Margin, 1371600, 914400, 45720, Pink))
@@ -338,6 +448,13 @@ public static class PresentationDocumentBuilder
                     .Append(EscapeAttribute(_links[i])).Append("\" TargetMode=\"External\"/>");
             }
 
+            if (_usesPicture && picture is { } item)
+            {
+                builder.Append("<Relationship Id=\"image").Append(item.Number)
+                    .Append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"../media/image")
+                    .Append(item.Number).Append('.').Append(item.Image.Extension).Append("\"/>");
+            }
+
             foreach (var chart in _charts)
             {
                 builder.Append("<Relationship Id=\"chart").Append(chart).Append("\" Type=\"").Append(ChartXml.RelationshipType)
@@ -355,19 +472,52 @@ public static class PresentationDocumentBuilder
 
         private static int TitleSize(string title) => title.Length <= 45 ? 2800 : title.Length <= 75 ? 2400 : 2000;
 
-        private string Header(string title) =>
-            TextBox(Margin, 457200, SlideWidth - (2 * Margin), 868680, "b",
+        private string Header(string title, long? width = null) =>
+            TextBox(Margin, 457200, width ?? (SlideWidth - (2 * Margin)), 868680, "b",
                 Paragraph([new AnswerSpan(title, AnswerSpanStyle.Bold)], TitleSize(title), Navy, bullet: null)) +
             Shape("rect", Margin, 1371600, 914400, 45720, Accent);
 
-        private string Footer()
+        /// <param name="narrow">Con una foto a la derecha, el pie se queda en la mitad izquierda.</param>
+        private string Footer(bool narrow = false)
         {
             var color = _dark ? "9FB3C8" : "8C959F";
-            return TextBox(Margin, SlideHeight - 548640, (SlideWidth / 2) - Margin, 320040, "ctr",
+            var right = narrow ? (SlideWidth / 2) - Margin : SlideWidth - Margin - 1828800;
+            return TextBox(Margin, SlideHeight - 548640, (SlideWidth / 2) - Margin - (narrow ? 1828800 : 0), 320040, "ctr",
                        "<a:p>" + PlainRun(documentTitle, 1100, color) + "</a:p>") +
-                   TextBox(SlideWidth - Margin - 1828800, SlideHeight - 548640, 1828800, 320040, "ctr",
+                   TextBox(right, SlideHeight - 548640, 1828800, 320040, "ctr",
                        "<a:p><a:pPr algn=\"r\"/>" + PlainRun($"{number} / {total}", 1100, color) + "</a:p>");
         }
+
+        /// <summary>El crédito corto que acompaña a la foto en la propia diapositiva.</summary>
+        private string Credit() =>
+            picture is { } item ? WikimediaImagePolicy.Credit(item.Image.Author, item.Image.License) : string.Empty;
+
+        /// <summary>
+        /// La foto, recortada por el centro para llenar el hueco sin deformarse: una imagen estirada
+        /// canta más que una recortada.
+        /// </summary>
+        private string Picture(long x, long y, long width, long height)
+        {
+            if (picture is not { } item)
+            {
+                return string.Empty;
+            }
+
+            _usesPicture = true;
+            var box = (double)width / height;
+            var image = item.Image.Height == 0 ? box : (double)item.Image.Width / item.Image.Height;
+            var crop = image > box
+                ? $"<a:srcRect l=\"{Percent((1 - (box / image)) / 2)}\" r=\"{Percent((1 - (box / image)) / 2)}\"/>"
+                : $"<a:srcRect t=\"{Percent((1 - (image / box)) / 2)}\" b=\"{Percent((1 - (image / box)) / 2)}\"/>";
+
+            return "<p:pic><p:nvPicPr><p:cNvPr id=\"" + NextId() + "\" name=\"" + EscapeAttribute(item.Image.Title) + "\" descr=\"" +
+                   EscapeAttribute(WikimediaImagePolicy.Credit(item.Image.Author, item.Image.License)) + "\"/>" +
+                   "<p:cNvPicPr><a:picLocks noChangeAspect=\"1\"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>" +
+                   "<p:blipFill><a:blip r:embed=\"image" + item.Number + "\"/>" + crop + "<a:stretch><a:fillRect/></a:stretch></p:blipFill>" +
+                   "<p:spPr>" + Transform(x, y, width, height) + "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr></p:pic>";
+        }
+
+        private static int Percent(double fraction) => (int)Math.Round(Math.Clamp(fraction, 0, 0.45) * 100000);
 
         /// <summary>
         /// El texto de una diapositiva. Con pocas líneas va más grande para llenar y leerse de lejos; con
@@ -659,13 +809,15 @@ public static class PresentationDocumentBuilder
         return builder.Append("</Relationships>").ToString();
     }
 
-    private static string ContentTypes(int slideCount, int chartCount, IReadOnlyList<int> notes)
+    private static string ContentTypes(int slideCount, int chartCount, IReadOnlyList<int> notes, IReadOnlyList<PresentationImage> images)
     {
         var builder = new StringBuilder(XmlDeclaration)
             .Append("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">")
             .Append("<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>")
             .Append("<Default Extension=\"xml\" ContentType=\"application/xml\"/>")
             .Append("<Default Extension=\"xlsx\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"/>")
+            .Append(images.Any(image => image.Extension == "jpg") ? "<Default Extension=\"jpg\" ContentType=\"image/jpeg\"/>" : string.Empty)
+            .Append(images.Any(image => image.Extension == "png") ? "<Default Extension=\"png\" ContentType=\"image/png\"/>" : string.Empty)
             .Append("<Override PartName=\"/ppt/presentation.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"/>")
             .Append("<Override PartName=\"/ppt/slideMasters/slideMaster1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml\"/>")
             .Append("<Override PartName=\"/ppt/slideLayouts/slideLayout1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml\"/>")

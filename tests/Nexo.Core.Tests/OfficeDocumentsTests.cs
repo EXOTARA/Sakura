@@ -211,6 +211,84 @@ public sealed class OfficeDocumentsTests
         Assert.Contains("name=\"Hoja1\"", Part(workbook, "xl/workbook.xml"));
     }
 
+    private const string Illustrated = """
+        # Energías renovables
+
+        Situación actual y retos.
+
+        Imagen: parque solar fotovoltaico
+
+        ## ¿Por qué importan?
+        - Menos emisiones
+
+        Imagen: paneles solares en un tejado
+
+        ## Datos
+
+        | Año | GW |
+        |---|---|
+        | 2020 | 6 |
+        | 2021 | 7 |
+
+        Imagen: turbinas eólicas
+        """;
+
+    [Fact]
+    public void Plan_EachImageGoesToASlideThatCanShowIt()
+    {
+        var slides = PresentationPlan.From("Energías renovables", Illustrated);
+
+        // La imagen suelta de antes del primer título no tiene diapositiva propia: es la de la portada.
+        Assert.Equal("parque solar fotovoltaico", slides[0].ImageQuery);
+        Assert.Equal(SlideLayout.Content, slides[1].Layout);
+        Assert.Equal("paneles solares en un tejado", slides[1].ImageQuery);
+        // En una gráfica no cabe una foto: se busca hacia atrás una diapositiva con sitio.
+        Assert.Equal(SlideLayout.Chart, slides[2].Layout);
+        Assert.Null(slides[2].ImageQuery);
+        Assert.DoesNotContain("Imagen:", slides.SelectMany(slide => slide.Lines).Select(line => AnswerMarkdown.ToPlainText(line.Spans)));
+        // «turbinas eólicas» se queda fuera: no queda ninguna diapositiva con sitio, y no se busca en
+        // internet una imagen que después no se va a ver.
+        Assert.Equal(["parque solar fotovoltaico", "paneles solares en un tejado"],
+            PresentationPlan.ImageQueries("Energías renovables", Illustrated));
+    }
+
+    [Fact]
+    public void Presentation_WithImages_EmbedsThemAndCreditsThem()
+    {
+        var images = new Dictionary<string, PresentationImage>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["parque solar fotovoltaico"] = new([1, 2, 3], "jpg", 1600, 1000, "Parque solar", "TitiNicola", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Parque.jpg")
+        };
+
+        var document = PresentationDocumentBuilder.BuildFromMarkdown("Energías renovables", Illustrated, images);
+        AllPartsWellFormed(document);
+
+        var cover = Part(document, "ppt/slides/slide1.xml");
+        Assert.Contains("<a:blip r:embed=\"image1\"/>", cover);
+        Assert.Contains("TitiNicola · CC BY-SA 4.0", cover);
+        Assert.Contains("../media/image1.jpg", Part(document, "ppt/slides/_rels/slide1.xml.rels"));
+        Assert.Contains("<Default Extension=\"jpg\" ContentType=\"image/jpeg\"/>", Part(document, "[Content_Types].xml"));
+
+        // La última diapositiva dice de dónde salió cada imagen, como piden las licencias.
+        var credits = Part(document, $"ppt/slides/slide{PresentationPlan.From("Energías renovables", Illustrated).Count + 1}.xml");
+        Assert.Contains("Créditos de imágenes", credits);
+        Assert.Contains("de TitiNicola (CC BY-SA 4.0)", credits);
+
+        using var archive = new ZipArchive(new MemoryStream(document), ZipArchiveMode.Read);
+        Assert.NotNull(archive.GetEntry("ppt/media/image1.jpg"));
+    }
+
+    [Fact]
+    public void Presentation_WithoutTheImages_IsTheSameDeckWithoutPhotos()
+    {
+        var document = PresentationDocumentBuilder.BuildFromMarkdown("Energías renovables", Illustrated);
+
+        AllPartsWellFormed(document);
+        Assert.DoesNotContain("<a:blip", Part(document, "ppt/slides/slide1.xml"));
+        using var archive = new ZipArchive(new MemoryStream(document), ZipArchiveMode.Read);
+        Assert.DoesNotContain(archive.Entries, entry => entry.FullName.StartsWith("ppt/media/"));
+    }
+
     [Fact]
     public void Spreadsheet_ANumericTable_GetsItsChartNextToIt()
     {

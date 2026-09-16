@@ -138,6 +138,16 @@ public sealed class ShellPreferences
     public bool ShowSystemModule { get; set; } = true;
 
     /// <summary>
+    /// 2026-09-15 — buscar imágenes de licencia libre en Wikimedia Commons cuando una respuesta las
+    /// pide («Imagen: …») y se guarda como presentación. Llega apagado y Sakura lo pregunta la primera
+    /// vez: salir a internet con lo que el modelo escribió no es algo que deba pasar sin avisar.
+    /// </summary>
+    public bool PresentationImages { get; set; }
+
+    /// <summary>Si ya se preguntó, para no volver a hacerlo cada vez que se guarda una presentación.</summary>
+    public bool PresentationImagesAsked { get; set; }
+
+    /// <summary>
     /// Diseño D27 — llevar el ratón al borde donde está acoplada Kohana la hace aparecer.
     /// Llega activado porque una función que hay que descubrir en Ajustes para saber que existe no
     /// la usa nadie; y se puede apagar aquí mismo porque un borde de pantalla también es donde vive

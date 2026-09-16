@@ -369,6 +369,9 @@ public partial class MainWindow : Window
     /// </summary>
     private readonly IAiApiKeyStore _apiKeyStore = new DpapiAiApiKeyStore();
     private readonly WindowsDocumentDropService _documentDropService = new();
+
+    // 2026-09-15 — imágenes de licencia libre para las presentaciones, solo si se autoriza.
+    private readonly WikimediaImageService _presentationImageSource = new();
     private UpdateFlowCoordinator? _updateFlow;
 
     /// <summary>Diseño D27 — el borde de la pantalla como forma de llamar a Sakura.</summary>
@@ -868,6 +871,14 @@ public partial class MainWindow : Window
         _settingsView.PeekOptionChanged += (option, enabled) =>
         {
             ApplyPeekOption(option, enabled);
+            SavePreferences();
+        };
+
+        _settingsView.PresentationImagesChanged += enabled =>
+        {
+            _preferences.PresentationImages = enabled;
+            // Cambiarlo aquí también cuenta como respuesta: no hay que volver a preguntar.
+            _preferences.PresentationImagesAsked = true;
             SavePreferences();
         };
 
@@ -5290,7 +5301,7 @@ public partial class MainWindow : Window
     /// estructura se guarda como un único bloque en vez de rechazarse: que no tenga apartados no la
     /// hace menos digna de conservarse.
     /// </summary>
-    private void AssistantView_DocumentSaveRequested(object? sender, DocumentSaveEventArgs e)
+    private async void AssistantView_DocumentSaveRequested(object? sender, DocumentSaveEventArgs e)
     {
         var sections = AnswerSections.Parse(e.Answer);
         if (sections.Count == 0)
@@ -5305,10 +5316,14 @@ public partial class MainWindow : Window
         }
 
         // 2026-09-15 — con el formato de la respuesta, en Word, Excel o PowerPoint.
+        var images = e.Format == DocumentSaveFormat.PowerPoint
+            ? await ResolvePresentationImagesAsync(title, e.Answer)
+            : null;
+
         var (extension, bytes) = e.Format switch
         {
             DocumentSaveFormat.Excel => (".xlsx", SpreadsheetDocumentBuilder.BuildFromMarkdown(title, e.Answer)),
-            DocumentSaveFormat.PowerPoint => (".pptx", PresentationDocumentBuilder.BuildFromMarkdown(title, e.Answer)),
+            DocumentSaveFormat.PowerPoint => (".pptx", PresentationDocumentBuilder.BuildFromMarkdown(title, e.Answer, images)),
             _ => (".docx", WordDocumentBuilder.BuildFromMarkdown(title, e.Answer))
         };
         var target = DocumentDestination.Resolve(DocumentFolder.Desktop, title, extension);
@@ -5335,6 +5350,63 @@ public partial class MainWindow : Window
         _homeView.AddRecentAction(
             "Documento guardado", Path.GetFileName(result.FullPath));
     }
+
+    /// <summary>
+    /// 2026-09-15 — las imágenes de una presentación que las pide con «Imagen: …».
+    ///
+    /// La primera vez se pregunta, porque buscarlas es salir a internet con lo que escribió el modelo;
+    /// después se recuerda la respuesta, que se puede cambiar en Ajustes. Si una búsqueda falla o no
+    /// hay nada aprovechable, esa diapositiva sale sin foto: el documento no se pierde por eso.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, PresentationImage>?> ResolvePresentationImagesAsync(string title, string answer)
+    {
+        var queries = PresentationPlan.ImageQueries(title, answer);
+        if (queries.Count == 0)
+        {
+            return null;
+        }
+
+        if (!_preferences.PresentationImagesAsked)
+        {
+            var consent = new ImageSearchConsentWindow(queries) { Owner = this };
+            consent.ShowDialog();
+            _preferences.PresentationImages = consent.Search;
+            _preferences.PresentationImagesAsked = true;
+            SavePreferences();
+            _settingsView.SetPresentationImages(_preferences.PresentationImages);
+        }
+
+        if (!_preferences.PresentationImages)
+        {
+            return null;
+        }
+
+        _capsuleWindow.ShowMessage(
+            CapsuleKind.Processing,
+            "Buscando imágenes",
+            queries.Count == 1 ? "Una imagen para la presentación." : $"{queries.Count} imágenes para la presentación.",
+            _preferences.Position);
+
+        var images = new Dictionary<string, PresentationImage>(StringComparer.OrdinalIgnoreCase);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        foreach (var query in queries.Take(MaximumPresentationImages))
+        {
+            if (timeout.IsCancellationRequested)
+            {
+                break;
+            }
+
+            if (await _presentationImageSource.FindAsync(query, timeout.Token) is { } image)
+            {
+                images[query] = image;
+            }
+        }
+
+        return images;
+    }
+
+    /// <summary>Un tope para que una respuesta con muchas «Imagen: …» no tarde una eternidad en guardarse.</summary>
+    private const int MaximumPresentationImages = 8;
 
     // ---------- Actualizaciones (Diseño D65) ----------
 

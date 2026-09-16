@@ -37,6 +37,7 @@ public partial class SettingsView : UserControl
     public event Action<string, bool>? ModuleVisibilityChanged;
     public event Action<string, bool>? PeekOptionChanged;
     public event Action<bool>? ConversationHistoryChanged;
+    public event Action<bool>? PresentationImagesChanged;
     public event Action<bool>? VoiceResponsesChanged;
     public event Action<int>? VoiceInputDeviceChanged;
     public event Action<bool>? WakeWordEnabledChanged;
@@ -138,6 +139,7 @@ public partial class SettingsView : UserControl
         PeekDiskCheckBox.IsChecked = preferences.ShowDiskInPeek;
         PeekTopProcessCheckBox.IsChecked = preferences.ShowTopProcessInPeek;
         SaveConversationHistoryCheckBox.IsChecked = preferences.SaveConversationHistory;
+        PresentationImagesCheckBox.IsChecked = preferences.PresentationImages;
         SpeakVoiceResponsesCheckBox.IsChecked = preferences.SpeakVoiceResponses;
         VoiceInputDeviceComboBox.SelectedValue = preferences.VoiceInputDeviceNumber;
         WakeWordEnabledCheckBox.IsChecked = preferences.WakeWordEnabled;
@@ -339,6 +341,24 @@ public partial class SettingsView : UserControl
         {
             AnimationsChanged?.Invoke(AnimationsCheckBox.IsChecked == true);
         }
+    }
+
+    /// <summary>Marca la casilla desde fuera, cuando la respuesta se dio en el aviso de la primera vez.</summary>
+    public void SetPresentationImages(bool enabled)
+    {
+        _isApplyingPreferences = true;
+        PresentationImagesCheckBox.IsChecked = enabled;
+        _isApplyingPreferences = false;
+    }
+
+    private void PresentationImagesCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_isApplyingPreferences)
+        {
+            return;
+        }
+
+        PresentationImagesChanged?.Invoke(PresentationImagesCheckBox.IsChecked == true);
     }
 
     private void ModuleCheckBox_Changed(object sender, RoutedEventArgs e)
