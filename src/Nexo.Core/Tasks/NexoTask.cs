@@ -24,6 +24,12 @@ public sealed class NexoTask
 
     public TaskPriority Priority { get; set; } = TaskPriority.Normal;
 
+    /// <summary>
+    /// 2026-09-16 — «Soltar»: la tarea deja de pedir atención sin borrarse. Sigue en el archivo, pero
+    /// no sale en ninguna lista ni avisa.
+    /// </summary>
+    public DateTimeOffset? ArchivedAt { get; set; }
+
     [JsonIgnore]
     public bool IsCompleted => CompletedAt.HasValue;
 
@@ -41,6 +47,7 @@ public sealed class NexoTask
         ReminderEnabled = ReminderEnabled,
         ReminderDeliveredAt = ReminderDeliveredAt,
         CompletedAt = CompletedAt,
-        Priority = Priority
+        Priority = Priority,
+        ArchivedAt = ArchivedAt
     };
 }

@@ -229,7 +229,8 @@
                               Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed" Tag="Home" />
                     <CheckBox x:Name="TasksModuleCheckBox" Content="Hoy"
                               Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed" Tag="Tasks" />
-                    <CheckBox x:Name="FocusModuleCheckBox" Content="Enfoque"
+                    <!-- 2026-09-16 — Enfoque ya no va en el riel: se abre desde Hoy, Inicio y la paleta. -->
+                    <CheckBox x:Name="FocusModuleCheckBox" Content="Enfoque" Visibility="Collapsed"
                               Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed" Tag="Focus" />
                     <CheckBox x:Name="RoutinesModuleCheckBox" Content="Rutinas"
                               Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed" Tag="Routines" />

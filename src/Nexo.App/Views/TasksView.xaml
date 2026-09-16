@@ -1,6 +1,74 @@
 <UserControl x:Class="Nexo.App.Views.TasksView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        2026-09-16 — Hoy como centro del día, con la calma de la dirección A.
+
+        Sin contadores ni filtros: una caja para apuntar en una línea y, debajo, lo del día por
+        secciones. Las acciones de cada fila aparecen al pasar el ratón o al llegar con el teclado,
+        para que la lista se lea como una lista y no como una botonera.
+    -->
+    <UserControl.Resources>
+        <Style x:Key="CheckCircleStyle" TargetType="Button">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="0,1,11,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="Transparent">
+                            <Ellipse x:Name="Ring" Stroke="{DynamicResource BrushTextTertiary}" StrokeThickness="1.6" />
+                            <Ellipse x:Name="Fill" Margin="4" Fill="{DynamicResource BrushAccent}" Opacity="0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource BrushAccent}" />
+                                <Setter TargetName="Fill" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource BrushAccent}" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Done">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource BrushAccent}" />
+                                <Setter TargetName="Fill" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="RowActionStyle" TargetType="Button" BasedOn="{StaticResource SoftChipButtonStyle}">
+            <Setter Property="Margin" Value="5,0,0,0" />
+            <Setter Property="Padding" Value="9,3" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+        </Style>
+
+        <Style x:Key="SectionHeaderStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Back" Background="Transparent" CornerRadius="8" Padding="2,4">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Back" Property="Background" Value="{DynamicResource BrushSurfaceHover}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -10,47 +78,85 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!-- El día que se ve: hoy, o el que se tocó en el calendario -->
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Tareas y recordatorios guardados únicamente en este equipo."
-                           TextWrapping="Wrap"
+            <StackPanel>
+                <TextBlock x:Name="DayTitleText"
+                           Text="Hoy"
+                           FontSize="{DynamicResource FontSizeTitle3}"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="DaySubtitleText"
+                           Margin="0,2,0,0"
                            Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
-            <Button Grid.Column="1"
-                    Content="Nueva"
-                    Style="{StaticResource PrimaryButtonStyle}"
-                    Padding="14,8"
-                    AutomationProperties.Name="Nueva tarea"
-                    Click="NewTaskButton_Click" />
+            <Button x:Name="BackToTodayButton"
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Content="Volver a hoy"
+                    Visibility="Collapsed"
+                    Style="{StaticResource SoftChipButtonStyle}"
+                    Click="BackToTodayButton_Click" />
         </Grid>
 
-        <UniformGrid Grid.Row="1" Columns="3" Margin="-3,12,-3,10">
-            <Border Style="{StaticResource SubtleCardStyle}" Margin="3" Padding="10">
-                <StackPanel>
-                    <TextBlock Text="HOY" Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="TodayCountText" Text="0" FontSize="{DynamicResource FontSizeTitle2}" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-            <Border Style="{StaticResource SubtleCardStyle}" Margin="3" Padding="10">
-                <StackPanel>
-                    <TextBlock Text="PENDIENTES" Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="PendingCountText" Text="0" FontSize="{DynamicResource FontSizeTitle2}" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-            <Border Style="{StaticResource SubtleCardStyle}" Margin="3" Padding="10">
-                <StackPanel>
-                    <TextBlock Text="VENCIDAS" Style="{StaticResource MutedTextStyle}" />
-                    <TextBlock x:Name="OverdueCountText" Text="0" FontSize="{DynamicResource FontSizeTitle2}" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-        </UniformGrid>
+        <!-- Apuntar en una línea -->
+        <StackPanel Grid.Row="1" Margin="0,12,0,8">
+            <Grid>
+                <TextBox x:Name="CaptureTextBox"
+                         Style="{StaticResource CompactTextBoxStyle}"
+                         Padding="12,0,40,0"
+                         AutomationProperties.Name="Apuntar una tarea"
+                         AutomationProperties.HelpText="Escribe la tarea como la dirías, por ejemplo: entregar el ensayo el viernes a las 5. Enter para guardar."
+                         TextChanged="CaptureTextBox_TextChanged"
+                         KeyDown="CaptureTextBox_KeyDown" />
+                <TextBlock x:Name="CapturePlaceholder"
+                           Margin="13,0,0,0"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           Text="Apunta algo… «entregar el ensayo el viernes a las 5»"
+                           Style="{StaticResource MutedTextStyle}" />
+                <Button HorizontalAlignment="Right"
+                        Margin="0,0,4,0"
+                        Width="30"
+                        Height="30"
+                        FontSize="15"
+                        Content="+"
+                        Background="Transparent"
+                        Style="{StaticResource IconButtonStyle}"
+                        ToolTip="Más detalles: notas, hora exacta y recordatorio"
+                        AutomationProperties.Name="Nueva tarea con detalles"
+                        Click="NewTaskButton_Click" />
+            </Grid>
+            <TextBlock x:Name="CapturePreviewText"
+                       Margin="12,5,0,0"
+                       FontSize="{DynamicResource FontSizeCaption}"
+                       Foreground="{DynamicResource BrushAccent}"
+                       Visibility="Collapsed" />
+        </StackPanel>
+
+        <!-- Deshacer «Soltar» -->
+        <Border x:Name="UndoBar"
+                Grid.Row="2"
+                Margin="0,0,0,8"
+                Padding="12,6"
+                CornerRadius="12"
+                Background="{DynamicResource BrushSurfaceRaised}"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="UndoText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{StaticResource MutedTextStyle}" />
+                <Button Grid.Column="1" Content="Deshacer" Style="{StaticResource SoftChipButtonStyle}" Click="UndoButton_Click" />
+            </Grid>
+        </Border>
 
         <Border x:Name="EditorBorder"
-                Grid.Row="2"
+                Grid.Row="3"
                 Style="{StaticResource SubtleCardStyle}"
                 Margin="0,0,0,10"
                 Visibility="Collapsed">
@@ -87,8 +193,8 @@
                              Grid.Column="1"
                              Margin="7,0,0,0"
                              Style="{StaticResource CompactTextBoxStyle}"
-                             Text="09:00"
-                             ToolTip="Hora en formato HH:mm" />
+                             Text=""
+                             ToolTip="Hora en formato HH:mm; vacía si no tiene hora" />
                     <ComboBox x:Name="PriorityComboBox"
                               AutomationProperties.Name="Prioridad de la tarea"
                               Grid.Column="2"
@@ -99,7 +205,7 @@
                               ToolTip="Prioridad">
                         <ComboBoxItem Content="Baja" Tag="Low" />
                         <ComboBoxItem Content="Normal" Tag="Normal" />
-                        <ComboBoxItem Content="Alta" Tag="High" />
+                        <ComboBoxItem Content="Importante" Tag="High" />
                     </ComboBox>
                 </Grid>
 
@@ -111,159 +217,175 @@
                            Foreground="{DynamicResource BrushWarning}"
                            TextWrapping="Wrap"
                            Visibility="Collapsed" />
-                <StackPanel Margin="0,9,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Cancelar"
+                <Grid Margin="0,9,0,0">
+                    <Button x:Name="DeleteTaskButton"
+                            HorizontalAlignment="Left"
+                            Content="Eliminar"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Padding="13,8"
-                            Click="CancelEditorButton_Click" />
-                    <Button Margin="7,0,0,0"
-                            Content="Guardar"
-                            Style="{StaticResource PrimaryButtonStyle}"
-                            Padding="13,8"
-                            Click="SaveTaskButton_Click" />
-                </StackPanel>
+                            AutomationProperties.Name="Eliminar tarea"
+                            Click="DeleteTaskButton_Click" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Cancelar"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Padding="13,8"
+                                Click="CancelEditorButton_Click" />
+                        <Button Margin="7,0,0,0"
+                                Content="Guardar"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Padding="13,8"
+                                Click="SaveTaskButton_Click" />
+                    </StackPanel>
+                </Grid>
             </StackPanel>
         </Border>
-
-<!--
-            Diseño D58 — los filtros se miden por su texto, no por el ancho disponible.
-
-            Estaban en un UniformGrid de tres columnas, así que cada uno ocupaba un tercio del panel
-            dijera lo que dijera: «Hoy» salía con el mismo ancho que «Pendientes» y quedaba como una
-            barra larga con tres letras en medio. Una píldora tiene que abrazar su palabra; si no,
-            deja de leerse como algo pulsable y pasa a leerse como una fila de la lista.
-        -->
-        <StackPanel Grid.Row="3"
-                    Orientation="Horizontal"
-                    Margin="0,0,0,9">
-            <Button x:Name="TodayFilterButton"
-                    Content="Hoy"
-                    Tag="Today"
-                    MinWidth="0"
-                    Padding="16,8"
-                    Margin="0,0,8,0"
-                    Style="{StaticResource NavButtonStyle}"
-                    Click="FilterButton_Click" />
-            <Button x:Name="PendingFilterButton"
-                    Content="Pendientes"
-                    Tag="Pending"
-                    MinWidth="0"
-                    Padding="16,8"
-                    Margin="0,0,8,0"
-                    Style="{StaticResource NavButtonStyle}"
-                    Click="FilterButton_Click" />
-            <Button x:Name="CompletedFilterButton"
-                    Content="Hechas"
-                    Tag="Completed"
-                    MinWidth="0"
-                    Padding="16,8"
-                    Style="{StaticResource NavButtonStyle}"
-                    Click="FilterButton_Click" />
-        </StackPanel>
 
         <Grid Grid.Row="4">
             <ScrollViewer VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl x:Name="TasksItemsControl">
+                <ItemsControl x:Name="SectionsItemsControl" Focusable="False">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Style="{StaticResource SubtleCardStyle}" Margin="0,0,0,8" Padding="14">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Title}"
-                                                       FontWeight="SemiBold"
-                                                       TextWrapping="Wrap"
-                                                       TextDecorations="{Binding TextDecorations}" />
-                                            <Border Margin="7,0,0,0"
-                                                    Padding="6,1"
-                                                    Background="{DynamicResource BrushAccentSoft}"
-                                                    CornerRadius="7">
-                                                <TextBlock Text="{Binding PriorityLabel}"
-                                                           FontSize="{DynamicResource FontSizeCaption}"
-                                                           Foreground="{DynamicResource BrushTextSecondary}" />
+                            <StackPanel Margin="0,0,0,10">
+                                <Button Tag="{Binding Key}"
+                                        Style="{StaticResource SectionHeaderStyle}"
+                                        IsEnabled="{Binding IsCollapsible}"
+                                        AutomationProperties.Name="{Binding AccessibleName}"
+                                        Click="SectionHeader_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="{DynamicResource FontSizeCaption}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{Binding TitleBrush}" />
+                                        <TextBlock Grid.Column="1"
+                                                   Margin="7,0,0,0"
+                                                   Text="{Binding CountText}"
+                                                   FontSize="{DynamicResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding Chevron}"
+                                                   FontSize="{DynamicResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                    </Grid>
+                                </Button>
+
+                                <ItemsControl ItemsSource="{Binding Items}"
+                                              Visibility="{Binding ItemsVisibility}"
+                                              Focusable="False"
+                                              Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="Row"
+                                                    Margin="0,0,0,2"
+                                                    Padding="10,9"
+                                                    CornerRadius="14"
+                                                    Background="Transparent">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button Tag="{Binding CheckTag}"
+                                                            CommandParameter="{Binding Id}"
+                                                            Style="{StaticResource CheckCircleStyle}"
+                                                            ToolTip="{Binding CheckName}"
+                                                            AutomationProperties.Name="{Binding CheckName}"
+                                                            Click="CheckButton_Click" />
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   TextWrapping="Wrap"
+                                                                   Foreground="{Binding TitleBrush}"
+                                                                   TextDecorations="{Binding TextDecorations}" />
+                                                        <TextBlock Margin="0,2,0,0"
+                                                                   Text="{Binding When}"
+                                                                   Foreground="{Binding WhenBrush}"
+                                                                   FontSize="{DynamicResource FontSizeCaption}" />
+                                                    </StackPanel>
+                                                    <!-- Las acciones flotan sobre el final del texto: reservarles sitio partía los títulos en dos líneas. -->
+                                                    <StackPanel x:Name="Actions"
+                                                                Grid.Column="1"
+                                                                Grid.ColumnSpan="2"
+                                                                HorizontalAlignment="Right"
+                                                                Orientation="Horizontal"
+                                                                VerticalAlignment="Center"
+                                                                Background="{DynamicResource BrushSurfaceRaised}"
+                                                                IsHitTestVisible="False"
+                                                                Opacity="0">
+                                                        <Button Content="▶"
+                                                                CommandParameter="{Binding Id}"
+                                                                Visibility="{Binding PendingVisibility}"
+                                                                Style="{StaticResource RowActionStyle}"
+                                                                ToolTip="Enfocarme en esta tarea"
+                                                                AutomationProperties.Name="Enfocarme en esta tarea"
+                                                                Click="FocusTaskButton_Click" />
+                                                        <Button Content="Mañana"
+                                                                CommandParameter="{Binding Id}"
+                                                                Visibility="{Binding PendingVisibility}"
+                                                                Style="{StaticResource RowActionStyle}"
+                                                                ToolTip="Pasarla a mañana"
+                                                                AutomationProperties.Name="Dejar para mañana"
+                                                                Click="PostponeTaskButton_Click" />
+                                                        <Button Content="Soltar"
+                                                                CommandParameter="{Binding Id}"
+                                                                Visibility="{Binding PendingVisibility}"
+                                                                Style="{StaticResource RowActionStyle}"
+                                                                ToolTip="Dejar de verla sin borrarla"
+                                                                AutomationProperties.Name="Soltar tarea"
+                                                                Click="ReleaseTaskButton_Click" />
+                                                        <Button Content="✎"
+                                                                CommandParameter="{Binding Id}"
+                                                                Style="{StaticResource RowActionStyle}"
+                                                                ToolTip="Editar"
+                                                                AutomationProperties.Name="Editar tarea"
+                                                                Click="EditTaskButton_Click" />
+                                                    </StackPanel>
+                                                </Grid>
                                             </Border>
-                                        </StackPanel>
-                                        <TextBlock Margin="0,4,0,0"
-                                                   Text="{Binding ScheduleText}"
-                                                   Foreground="{Binding ScheduleBrush}"
-                                                   FontSize="{DynamicResource FontSizeFootnote}" />
-                                        <TextBlock Margin="0,4,0,0"
-                                                   Text="{Binding Notes}"
-                                                   TextWrapping="Wrap"
-                                                   Style="{StaticResource MutedTextStyle}"
-                                                   Visibility="{Binding NotesVisibility}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                        <Button Content="✓"
-                                                Width="29"
-                                                Height="27"
-                                                Padding="0"
-                                                Tag="{Binding Id}"
-                                                Style="{StaticResource SecondaryButtonStyle}"
-                                                Visibility="{Binding CompleteVisibility}"
-                                                ToolTip="Marcar como completada"
-                                                AutomationProperties.Name="Marcar como completada"
-                                                Click="CompleteTaskButton_Click" />
-                                        <Button Content="↺"
-                                                Width="29"
-                                                Height="27"
-                                                Padding="0"
-                                                Tag="{Binding Id}"
-                                                Style="{StaticResource SecondaryButtonStyle}"
-                                                Visibility="{Binding ReopenVisibility}"
-                                                ToolTip="Reabrir tarea"
-                                                AutomationProperties.Name="Reabrir tarea"
-                                                Click="ReopenTaskButton_Click" />
-                                        <Button Content="◎"
-                                                Width="29"
-                                                Height="27"
-                                                Margin="0,5,0,0"
-                                                Padding="0"
-                                                Tag="{Binding Id}"
-                                                Style="{StaticResource SecondaryButtonStyle}"
-                                                Visibility="{Binding FocusVisibility}"
-                                                ToolTip="Enfocarme en esta tarea"
-                                                AutomationProperties.Name="Enfocarme en esta tarea"
-                                                Click="FocusTaskButton_Click" />
-                                        <Button Content="✎"
-                                                Width="29"
-                                                Height="27"
-                                                Margin="0,5,0,0"
-                                                Padding="0"
-                                                Tag="{Binding Id}"
-                                                Style="{StaticResource SecondaryButtonStyle}"
-                                                ToolTip="Editar"
-                                                AutomationProperties.Name="Editar tarea"
-                                                Click="EditTaskButton_Click" />
-                                        <Button Content="×"
-                                                Width="29"
-                                                Height="27"
-                                                Margin="0,5,0,0"
-                                                Padding="0"
-                                                Tag="{Binding Id}"
-                                                Style="{StaticResource SecondaryButtonStyle}"
-                                                ToolTip="Eliminar"
-                                                AutomationProperties.Name="Eliminar tarea"
-                                                Click="DeleteTaskButton_Click" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource BrushSurfaceRaised}" />
+                                                    <Setter TargetName="Actions" Property="Opacity" Value="1" />
+                                                    <Setter TargetName="Actions" Property="IsHitTestVisible" Value="True" />
+                                                </Trigger>
+                                                <Trigger SourceName="Row" Property="IsKeyboardFocusWithin" Value="True">
+                                                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource BrushSurfaceRaised}" />
+                                                    <Setter TargetName="Actions" Property="Opacity" Value="1" />
+                                                    <Setter TargetName="Actions" Property="IsHitTestVisible" Value="True" />
+                                                </Trigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
 
-            <TextBlock x:Name="EmptyStateText"
-                       Text="No hay tareas en esta vista."
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
-                       TextAlignment="Center"
-                       Style="{StaticResource MutedTextStyle}" />
+            <StackPanel x:Name="EmptyStatePanel"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MaxWidth="300"
+                        Visibility="Collapsed">
+                <TextBlock x:Name="EmptyStateTitle"
+                           Text="Hoy está libre"
+                           HorizontalAlignment="Center"
+                           FontSize="{DynamicResource FontSizeBody}"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="EmptyStateText"
+                           Margin="0,6,0,0"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Style="{StaticResource MutedTextStyle}"
+                           Text="Apunta arriba lo que tengas que hacer, como lo dirías: «llamar al dentista mañana a las 10» o «importante: estudiar para el parcial el jueves»." />
+            </StackPanel>
         </Grid>
     </Grid>
 </UserControl>

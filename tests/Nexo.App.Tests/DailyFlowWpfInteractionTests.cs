@@ -89,7 +89,7 @@ public sealed class DailyFlowWpfInteractionTests
             host.Show();
             host.UpdateLayout();
 
-            InvokeFilterButton(view, "Completed");
+            InvokeFilterButton(view, TodaySectionKind.Done);
             host.UpdateLayout();
             var reopenButton = FindButtonByAutomationName(view, "Reabrir tarea");
             Assert.NotNull(reopenButton);
@@ -115,9 +115,8 @@ public sealed class DailyFlowWpfInteractionTests
             host.Show();
             host.UpdateLayout();
 
-            // La tarea no tiene vencimiento, así que el filtro "Hoy" (por defecto) no la muestra;
-            // "Pendientes" sí, sin importar la fecha.
-            InvokeFilterButton(view, "Pending");
+            // Sin fecha no es de hoy: está en «Luego», que empieza plegada.
+            InvokeFilterButton(view, TodaySectionKind.Later);
             host.UpdateLayout();
 
             TaskFocusRequestedEventArgs? received = null;
@@ -147,13 +146,81 @@ public sealed class DailyFlowWpfInteractionTests
             host.Show();
             host.UpdateLayout();
 
-            InvokeFilterButton(view, "Pending");
+            InvokeFilterButton(view, TodaySectionKind.Later);
             host.UpdateLayout();
 
-            foreach (var name in new[] { "Marcar como completada", "Editar tarea", "Eliminar tarea", "Enfocarme en esta tarea" })
+            foreach (var name in new[] { "Marcar como completada", "Editar tarea", "Enfocarme en esta tarea", "Dejar para mañana", "Soltar tarea" })
             {
                 Assert.NotNull(FindButtonByAutomationName(view, name));
             }
+        });
+    }
+
+    [Fact]
+    public void TasksView_TypingALine_CreatesATaskForToday()
+    {
+        _fixture.Invoke(() =>
+        {
+            var manager = new TaskManager(new FakeTaskStore());
+            manager.Load();
+            var view = new TasksView(manager);
+            using var host = CreateOffscreenHost(view);
+            host.Show();
+            host.UpdateLayout();
+
+            var box = (TextBox)view.FindName("CaptureTextBox")!;
+            box.Text = "Comprar tinta !";
+            box.RaiseEvent(new System.Windows.Input.KeyEventArgs(
+                System.Windows.Input.Keyboard.PrimaryDevice,
+                PresentationSource.FromVisual(box)!,
+                0,
+                System.Windows.Input.Key.Enter) { RoutedEvent = System.Windows.Input.Keyboard.KeyDownEvent });
+
+            var task = Assert.Single(manager.GetAll());
+            Assert.Equal("Comprar tinta", task.Title);
+            Assert.Equal(TaskPriority.High, task.Priority);
+            Assert.Equal(DateTime.Today, task.DueAt!.Value.Date);
+            Assert.Equal(string.Empty, box.Text);
+        });
+    }
+
+    [Fact]
+    public void TasksView_Release_HidesTheTaskAndCanBeUndone()
+    {
+        _fixture.Invoke(() =>
+        {
+            var manager = new TaskManager(new FakeTaskStore());
+            manager.Load();
+            manager.Create("Leer capítulo 3", dueAt: DateTimeOffset.Now);
+            var view = new TasksView(manager);
+            using var host = CreateOffscreenHost(view);
+            host.Show();
+            host.UpdateLayout();
+
+            FindButtonByAutomationName(view, "Soltar tarea")!
+                .RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Assert.Empty(manager.GetAll());
+            Assert.Equal(Visibility.Visible, ((FrameworkElement)view.FindName("UndoBar")!).Visibility);
+
+            InvokeButtonByContent(view, "Deshacer");
+            Assert.Single(manager.GetAll());
+        });
+    }
+
+    [Fact]
+    public void TasksView_AnEmptyDay_InvitesToWriteSomething()
+    {
+        _fixture.Invoke(() =>
+        {
+            var manager = new TaskManager(new FakeTaskStore());
+            manager.Load();
+            var view = new TasksView(manager);
+            using var host = CreateOffscreenHost(view);
+            host.Show();
+            host.UpdateLayout();
+
+            Assert.Equal(Visibility.Visible, ((FrameworkElement)view.FindName("EmptyStatePanel")!).Visibility);
+            Assert.Equal("Hoy está libre", ((TextBlock)view.FindName("EmptyStateTitle")!).Text);
         });
     }
 
@@ -939,9 +1006,9 @@ public sealed class DailyFlowWpfInteractionTests
 
     // ---------- Ayudantes ----------
 
-    private static void InvokeFilterButton(TasksView view, string tag)
+    private static void InvokeFilterButton(TasksView view, TodaySectionKind section)
     {
-        var button = FindDescendants<Button>(view).First(candidate => (candidate.Tag as string) == tag);
+        var button = FindDescendants<Button>(view).First(candidate => candidate.Tag is TodaySectionKind kind && kind == section);
         button.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
     }
 

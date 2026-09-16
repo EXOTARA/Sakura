@@ -693,6 +693,8 @@ public partial class MainWindow : Window
         _topRevealWatcher.RevealRequested += HandleTopRevealRequested;
         _dashboardWindow.View.PanelImagePickRequested += (_, _) => PickPanelImage();
         _dashboardWindow.View.SetPanelImage(_preferences.PanelImagePath);
+        _dashboardWindow.View.DayRequested += DashboardView_DayRequested;
+        RefreshCalendarDays();
 
         _dashboardWindow.Dismissed += (_, _) => _topRevealWatcher.SuppressBriefly();
         _dashboardWindow.CoverageChanged += (_, coverage) =>
@@ -4352,9 +4354,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 2026-09-16 — «Mañana» desde la burbuja «Ahora»: la tarea pasa al día siguiente a la misma hora,
-    /// o a las 9:00 si no tenía hora. Sin preguntar ni reprochar: dejar algo para mañana es una
-    /// decisión, no un fallo.
+    /// 2026-09-16 — «Mañana» desde la burbuja «Ahora»: la regla vive en <see cref="TaskManager.Postpone"/>,
+    /// la misma que usa Hoy.
     /// </summary>
     private void HomeView_PostponeTaskRequested(object? sender, TaskFocusRequestedEventArgs e)
     {
@@ -4364,16 +4365,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var updated = task.Copy();
-        var tomorrow = DateTimeOffset.Now.Date.AddDays(1);
-        var time = task.DueAt is { } due && due.TimeOfDay != TimeSpan.Zero ? due.TimeOfDay : TimeSpan.FromHours(9);
-        updated.DueAt = new DateTimeOffset(tomorrow + time, DateTimeOffset.Now.Offset);
-        updated.ReminderDeliveredAt = null;
-        updated.UpdatedAt = DateTimeOffset.Now;
-
-        var result = _taskManager.Update(updated);
+        var result = _taskManager.Postpone(task.Id, DateTimeOffset.Now);
         RefreshHomeView();
         _tasksView.Refresh();
+        RefreshCalendarDays();
 
         if (result.Success)
         {
@@ -4389,8 +4384,10 @@ public partial class MainWindow : Window
 
     private void HomeView_NewTaskRequested(object? sender, EventArgs e)
     {
+        // 2026-09-16 — se apunta en la caja de una línea, no en el formulario.
         NavigateTo(ShellNavigationPolicy.Tasks, animate: true);
-        _tasksView.OpenNewEditor();
+        _tasksView.ShowDay(DateOnly.FromDateTime(DateTime.Today));
+        _tasksView.FocusPrimaryControl();
     }
 
     private void HomeView_StartFocusRequested(object? sender, EventArgs e)
@@ -4400,16 +4397,28 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Diseño D3 — "Enfocarme" desde una tarea en Hoy. Prepara la asociación en FocusView (la
-    /// próxima sesión que se inicie ahí quedará asociada) y navega; no inicia la sesión por sí
-    /// solo, para que la persona elija la duración como con cualquier otra sesión.
+    /// 2026-09-16 — «▶» desde una tarea en Hoy: la sesión empieza ya, como desde Inicio, y se
+    /// enseña el reloj. Antes había que elegir una duración primero, y empezar es lo difícil.
     /// </summary>
     private void TasksView_FocusRequested(object? sender, TaskFocusRequestedEventArgs e)
     {
-        _focusView.PrepareTaskAssociation(e.TaskId, e.TaskTitle);
+        HomeView_StartTaskFocusRequested(sender, e);
         NavigateTo(ShellNavigationPolicy.Focus, animate: true);
-        _focusView.FocusPrimaryControl();
     }
+
+    /// <summary>El calendario del panel de arriba abre Hoy en el día que se toque.</summary>
+    private void DashboardView_DayRequested(object? sender, DateOnly day)
+    {
+        _dashboardWindow.HideImmediately();
+        _openedByHover = false;
+        ShowAnimated();
+        NavigateTo(ShellNavigationPolicy.Tasks, animate: true);
+        _tasksView.ShowDay(day);
+    }
+
+    /// <summary>Los puntos del calendario: días con algo pendiente.</summary>
+    private void RefreshCalendarDays() =>
+        _dashboardWindow.View.SetBusyDays(TodayPlan.BusyDays(_taskManager.GetAll()));
 
     /// <summary>
     /// Diseño D3 — el usuario confirmó explícitamente que quiere marcar como completada la tarea
@@ -8250,6 +8259,7 @@ public partial class MainWindow : Window
     {
         CheckTaskReminders();
         RefreshHomeView();
+        RefreshCalendarDays();
         _dailyFlowHub.RaiseTasksChanged();
     }
 
@@ -9194,7 +9204,8 @@ public partial class MainWindow : Window
     {
         HomeNavButton.Visibility = Show(_preferences.ShowHomeModule);
         TasksNavButton.Visibility = Show(_preferences.ShowTasksModule);
-        FocusNavButton.Visibility = Show(_preferences.ShowFocusModule);
+        // 2026-09-16 — Enfoque sale del riel: se empieza desde una tarea (Hoy, Inicio) o desde la paleta.
+        FocusNavButton.Visibility = Visibility.Collapsed;
         RoutinesNavButton.Visibility = Show(_preferences.ShowRoutinesModule);
         AudioNavButton.Visibility = Show(_preferences.ShowAudioModule);
         CaptureNavButton.Visibility = Show(_preferences.ShowCaptureModule);

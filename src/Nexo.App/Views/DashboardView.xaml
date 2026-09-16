@@ -536,17 +536,46 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Margin="2"
-                                                    Height="30"
-                                                    CornerRadius="11"
-                                                    Background="{Binding Background}">
-                                                <TextBlock Text="{Binding Day}"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           FontSize="{DynamicResource FontSizeFootnote}"
-                                                           FontWeight="{Binding Weight}"
-                                                           Foreground="{Binding Foreground}" />
-                                            </Border>
+                                            <Button Click="CalendarDay_Click"
+                                                    Cursor="Hand"
+                                                    FocusVisualStyle="{x:Null}"
+                                                    ToolTip="Abrir este día en Hoy"
+                                                    AutomationProperties.Name="{Binding}">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Grid Margin="2" Height="30">
+                                                            <Border x:Name="Cell"
+                                                                    CornerRadius="11"
+                                                                    Background="{Binding Background}" />
+                                                            <Border x:Name="Hover"
+                                                                    CornerRadius="11"
+                                                                    Background="{DynamicResource BrushSurfaceHover}"
+                                                                    Opacity="0" />
+                                                            <TextBlock Text="{Binding Day}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="{DynamicResource FontSizeFootnote}"
+                                                                       FontWeight="{Binding Weight}"
+                                                                       Foreground="{Binding Foreground}" />
+                                                            <Ellipse Width="4"
+                                                                     Height="4"
+                                                                     Margin="0,0,0,3"
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Bottom"
+                                                                     Fill="{Binding DotBrush}"
+                                                                     Visibility="{Binding DotVisibility}" />
+                                                        </Grid>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Hover" Property="Opacity" Value="0.6" />
+                                                            </Trigger>
+                                                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                                                <Setter TargetName="Hover" Property="Opacity" Value="0.6" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

@@ -110,6 +110,14 @@ public static class HomeNowBuilder
         {
             current = new HomeNow(HomeNowKind.Task, next.Title, Describe(next, now), next.Id);
         }
+        else if (tasks.Count == 0)
+        {
+            // Instalación nueva: nada que resumir ni recordar todavía. Se invita con un ejemplo.
+            current = new HomeNow(
+                HomeNowKind.Empty,
+                "Tu día empieza aquí",
+                "Toca y apunta algo, como «entregar el ensayo el viernes»");
+        }
         else
         {
             current = new HomeNow(
