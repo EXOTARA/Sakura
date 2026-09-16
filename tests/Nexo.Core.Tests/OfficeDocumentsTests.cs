@@ -255,7 +255,7 @@ public sealed class OfficeDocumentsTests
     [Fact]
     public void Presentation_WithImages_EmbedsThemAndCreditsThem()
     {
-        var images = new Dictionary<string, PresentationImage>(StringComparer.OrdinalIgnoreCase)
+        var images = new Dictionary<string, DocumentImage>(StringComparer.OrdinalIgnoreCase)
         {
             ["parque solar fotovoltaico"] = new([1, 2, 3], "jpg", 1600, 1000, "Parque solar", "TitiNicola", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Parque.jpg")
         };
@@ -287,6 +287,58 @@ public sealed class OfficeDocumentsTests
         Assert.DoesNotContain("<a:blip", Part(document, "ppt/slides/slide1.xml"));
         using var archive = new ZipArchive(new MemoryStream(document), ZipArchiveMode.Read);
         Assert.DoesNotContain(archive.Entries, entry => entry.FullName.StartsWith("ppt/media/"));
+    }
+
+    [Fact]
+    public void Word_WithAnImageAndFigures_PlacesThemWithTheirCredit()
+    {
+        var images = new Dictionary<string, DocumentImage>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["parque solar fotovoltaico"] = new([1, 2, 3], "jpg", 1600, 1000, "Parque solar", "TitiNicola", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Parque.jpg")
+        };
+
+        var document = WordDocumentBuilder.BuildFromMarkdown("Energías renovables", Illustrated, images);
+        AllPartsWellFormed(document);
+
+        var body = Part(document, "word/document.xml");
+        Assert.Contains("<a:blip r:embed=\"image1\"/>", body);
+        Assert.Contains("Figura 1. Parque solar — TitiNicola · CC BY-SA 4.0", body);
+        // La línea «Imagen: …» no se imprime como texto.
+        Assert.DoesNotContain("Imagen: parque solar", body);
+        Assert.Contains("media/image1.jpg", Part(document, "word/_rels/document.xml.rels"));
+
+        using var archive = new ZipArchive(new MemoryStream(document), ZipArchiveMode.Read);
+        Assert.NotNull(archive.GetEntry("word/media/image1.jpg"));
+    }
+
+    [Fact]
+    public void Word_ANumericTable_KeepsTheDataAndAddsItsChart()
+    {
+        var document = WordDocumentBuilder.BuildFromMarkdown("Energías renovables", Illustrated);
+        AllPartsWellFormed(document);
+
+        var body = Part(document, "word/document.xml");
+        // La tabla se queda: la gráfica la acompaña, no la sustituye.
+        Assert.Contains("<w:tbl>", body);
+        Assert.Contains("r:id=\"chart1\"", body);
+        Assert.Contains("<c:barChart>", Part(document, "word/charts/chart1.xml"));
+
+        using var archive = new ZipArchive(new MemoryStream(document), ZipArchiveMode.Read);
+        Assert.NotNull(archive.GetEntry("word/embeddings/Microsoft_Excel_Worksheet1.xlsx"));
+    }
+
+    [Fact]
+    public void EveryDocument_SaysThatItWasWrittenWithAi()
+    {
+        var word = WordDocumentBuilder.BuildFromMarkdown("Informe", Illustrated);
+        Assert.Contains(DocumentDisclosure.Short, Part(word, "word/footer1.xml"));
+        Assert.Contains("footerReference", Part(word, "word/document.xml"));
+
+        Assert.Contains(DocumentDisclosure.Short, Part(SpreadsheetDocumentBuilder.BuildFromMarkdown("Informe", Illustrated), "xl/worksheets/sheet1.xml"));
+
+        var deck = PresentationDocumentBuilder.BuildFromMarkdown("Informe", Illustrated);
+        var slides = PresentationPlan.From("Informe", Illustrated).Count;
+        Assert.Contains(DocumentDisclosure.Long, Part(deck, $"ppt/slides/slide{slides}.xml"));
     }
 
     [Fact]

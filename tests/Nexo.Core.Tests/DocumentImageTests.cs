@@ -2,9 +2,9 @@ using Nexo.Core.Documents;
 
 namespace Nexo.Core.Tests;
 
-public sealed class PresentationImageTests
+public sealed class DocumentImageTests
 {
-    private static PresentationImageCandidate Candidate(
+    private static DocumentImageCandidate Candidate(
         string title = "File:Ejemplo.jpg",
         string mime = "image/jpeg",
         int width = 1600,
@@ -76,7 +76,7 @@ public sealed class PresentationImageTests
     [Fact]
     public void CreditLine_NamesTheAuthorTheLicenseAndThePage()
     {
-        var line = WikimediaImagePolicy.CreditLine(new PresentationImage(
+        var line = WikimediaImagePolicy.CreditLine(new DocumentImage(
             [1], "jpg", 1600, 1000, "Parque solar", "TitiNicola", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Parque.jpg"));
 
         Assert.Equal("Parque solar, de TitiNicola (CC BY-SA 4.0). Wikimedia Commons: https://commons.wikimedia.org/wiki/File:Parque.jpg", line);

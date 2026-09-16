@@ -39,15 +39,15 @@ public static class PresentationDocumentBuilder
     /// Las imágenes ya descargadas, por el texto que las pedía. Sin ellas la presentación sale igual,
     /// solo que sin fotos: una búsqueda que falle no puede costar el documento entero.
     /// </param>
-    public static byte[] BuildFromMarkdown(string title, string markdown, IReadOnlyDictionary<string, PresentationImage>? images = null)
+    public static byte[] BuildFromMarkdown(string title, string markdown, IReadOnlyDictionary<string, DocumentImage>? images = null)
     {
         var slides = PresentationPlan.From(title, markdown).ToList();
         var documentTitle = slides[0].Title;
         var charts = new List<(ChartSpec Spec, AnswerTable Table)>();
 
         // Solo las imágenes que de verdad se van a ver, en el orden en que salen.
-        var used = new List<PresentationImage>();
-        var perSlide = new Dictionary<int, PresentationImage>();
+        var used = new List<DocumentImage>();
+        var perSlide = new Dictionary<int, DocumentImage>();
         for (var i = 0; i < slides.Count; i++)
         {
             if (Find(images, slides[i].ImageQuery) is { } image && PresentationPlan.AcceptsImage(slides[i].Layout))
@@ -145,7 +145,7 @@ public static class PresentationDocumentBuilder
 
     private const string EmbeddedSheet = "Hoja1";
 
-    private static PresentationImage? Find(IReadOnlyDictionary<string, PresentationImage>? images, string? query)
+    private static DocumentImage? Find(IReadOnlyDictionary<string, DocumentImage>? images, string? query)
     {
         if (images is null || string.IsNullOrWhiteSpace(query))
         {
@@ -160,7 +160,7 @@ public static class PresentationDocumentBuilder
         return images.FirstOrDefault(pair => string.Equals(pair.Key, query, StringComparison.OrdinalIgnoreCase)).Value;
     }
 
-    private sealed class SlideWriter(int number, int total, string documentTitle, List<(ChartSpec Spec, AnswerTable Table)> charts, (PresentationImage Image, int Number)? picture)
+    private sealed class SlideWriter(int number, int total, string documentTitle, List<(ChartSpec Spec, AnswerTable Table)> charts, (DocumentImage Image, int Number)? picture)
     {
         private readonly List<string> _links = [];
         private readonly List<int> _charts = [];
@@ -482,10 +482,16 @@ public static class PresentationDocumentBuilder
         {
             var color = _dark ? "9FB3C8" : "8C959F";
             var right = narrow ? (SlideWidth / 2) - Margin : SlideWidth - Margin - 1828800;
-            return TextBox(Margin, SlideHeight - 548640, (SlideWidth / 2) - Margin - (narrow ? 1828800 : 0), 320040, "ctr",
-                       "<a:p>" + PlainRun(documentTitle, 1100, color) + "</a:p>") +
-                   TextBox(right, SlideHeight - 548640, 1828800, 320040, "ctr",
-                       "<a:p><a:pPr algn=\"r\"/>" + PlainRun($"{number} / {total}", 1100, color) + "</a:p>");
+            var footer = TextBox(Margin, SlideHeight - 548640, (SlideWidth / 2) - Margin - (narrow ? 1828800 : 0), 320040, "ctr",
+                             "<a:p>" + PlainRun(documentTitle, 1100, color) + "</a:p>") +
+                         TextBox(right, SlideHeight - 548640, 1828800, 320040, "ctr",
+                             "<a:p><a:pPr algn=\"r\"/>" + PlainRun($"{number} / {total}", 1100, color) + "</a:p>");
+
+            // 2026-09-16 — la última diapositiva declara el uso de IA (DocumentDisclosure).
+            return number == total
+                ? footer + TextBox(Margin, SlideHeight - 868680, SlideWidth - (2 * Margin), 274320, "b",
+                      "<a:p>" + PlainRun(DocumentDisclosure.Long, 900, color) + "</a:p>")
+                : footer;
         }
 
         /// <summary>El crédito corto que acompaña a la foto en la propia diapositiva.</summary>
@@ -809,7 +815,7 @@ public static class PresentationDocumentBuilder
         return builder.Append("</Relationships>").ToString();
     }
 
-    private static string ContentTypes(int slideCount, int chartCount, IReadOnlyList<int> notes, IReadOnlyList<PresentationImage> images)
+    private static string ContentTypes(int slideCount, int chartCount, IReadOnlyList<int> notes, IReadOnlyList<DocumentImage> images)
     {
         var builder = new StringBuilder(XmlDeclaration)
             .Append("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">")

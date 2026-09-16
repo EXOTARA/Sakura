@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.30.12-beta]
+
+### Nuevo
+
+- **Los documentos de Word también llevan imágenes y gráficas.** Una línea «Imagen: …» coloca ahí la foto, centrada y con su pie («Figura 1. Título — Autor · Licencia»), y una tabla de cifras se queda tal cual con su gráfica debajo, editable desde Word porque lleva sus datos dentro.
+- **Nota de uso de IA en todo lo que Sakura escribe**: en el pie de cada página del Word, en el pie de impresión de las hojas de Excel y en la última diapositiva. Sakura deja borradores para trabajar encima, no trabajos terminados, y eso queda dicho en el propio archivo.
+
+### Cambiado
+
+- La pregunta de las imágenes y su casilla en Ajustes hablan de «documentos», porque ahora valen para Word y para PowerPoint.
+
 ## [0.30.11-beta]
 
 ### Nuevo

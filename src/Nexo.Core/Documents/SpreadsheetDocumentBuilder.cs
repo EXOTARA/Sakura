@@ -255,7 +255,9 @@ public static partial class SpreadsheetDocumentBuilder
             builder.Append("<autoFilter ref=\"A1:").Append(ColumnName(columns - 1)).Append(sheet.Rows.Count).Append("\"/>");
         }
 
-        builder.Append("<pageMargins left=\"0.6\" right=\"0.6\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/>");
+        builder.Append("<pageMargins left=\"0.6\" right=\"0.6\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/>")
+            // 2026-09-16 — al imprimir, el pie declara que el contenido se hizo con ayuda de IA.
+            .Append("<headerFooter><oddFooter>&amp;C&amp;8").Append(Escape(DocumentDisclosure.Short)).Append("</oddFooter></headerFooter>");
         if (sheet.Chart is not null)
         {
             builder.Append("<drawing r:id=\"rId1\"/>");

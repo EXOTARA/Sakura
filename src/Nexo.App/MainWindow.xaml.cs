@@ -874,11 +874,11 @@ public partial class MainWindow : Window
             SavePreferences();
         };
 
-        _settingsView.PresentationImagesChanged += enabled =>
+        _settingsView.DocumentImagesChanged += enabled =>
         {
-            _preferences.PresentationImages = enabled;
+            _preferences.DocumentImages = enabled;
             // Cambiarlo aquí también cuenta como respuesta: no hay que volver a preguntar.
-            _preferences.PresentationImagesAsked = true;
+            _preferences.DocumentImagesAsked = true;
             SavePreferences();
         };
 
@@ -5316,15 +5316,16 @@ public partial class MainWindow : Window
         }
 
         // 2026-09-15 — con el formato de la respuesta, en Word, Excel o PowerPoint.
-        var images = e.Format == DocumentSaveFormat.PowerPoint
-            ? await ResolvePresentationImagesAsync(title, e.Answer)
+        // 2026-09-16 — las fotos también en Word, donde van entre el texto con su pie.
+        var images = e.Format is DocumentSaveFormat.PowerPoint or DocumentSaveFormat.Word
+            ? await ResolveDocumentImagesAsync(title, e.Answer, e.Format)
             : null;
 
         var (extension, bytes) = e.Format switch
         {
             DocumentSaveFormat.Excel => (".xlsx", SpreadsheetDocumentBuilder.BuildFromMarkdown(title, e.Answer)),
             DocumentSaveFormat.PowerPoint => (".pptx", PresentationDocumentBuilder.BuildFromMarkdown(title, e.Answer, images)),
-            _ => (".docx", WordDocumentBuilder.BuildFromMarkdown(title, e.Answer))
+            _ => (".docx", WordDocumentBuilder.BuildFromMarkdown(title, e.Answer, images))
         };
         var target = DocumentDestination.Resolve(DocumentFolder.Desktop, title, extension);
         var result = _documentDropService.Save(target, bytes);
@@ -5352,31 +5353,35 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 2026-09-15 — las imágenes de una presentación que las pide con «Imagen: …».
+    /// 2026-09-15 — las imágenes de un documento que las pide con «Imagen: …».
     ///
     /// La primera vez se pregunta, porque buscarlas es salir a internet con lo que escribió el modelo;
     /// después se recuerda la respuesta, que se puede cambiar en Ajustes. Si una búsqueda falla o no
     /// hay nada aprovechable, esa diapositiva sale sin foto: el documento no se pierde por eso.
     /// </summary>
-    private async Task<IReadOnlyDictionary<string, PresentationImage>?> ResolvePresentationImagesAsync(string title, string answer)
+    private async Task<IReadOnlyDictionary<string, DocumentImage>?> ResolveDocumentImagesAsync(string title, string answer, DocumentSaveFormat format)
     {
-        var queries = PresentationPlan.ImageQueries(title, answer);
+        // En una presentación solo se buscan las que caben en una diapositiva; en Word, todas, porque
+        // cada una va entre el texto donde se pidió.
+        var queries = format == DocumentSaveFormat.PowerPoint
+            ? PresentationPlan.ImageQueries(title, answer)
+            : ImageDirective.Queries(answer);
         if (queries.Count == 0)
         {
             return null;
         }
 
-        if (!_preferences.PresentationImagesAsked)
+        if (!_preferences.DocumentImagesAsked)
         {
             var consent = new ImageSearchConsentWindow(queries) { Owner = this };
             consent.ShowDialog();
-            _preferences.PresentationImages = consent.Search;
-            _preferences.PresentationImagesAsked = true;
+            _preferences.DocumentImages = consent.Search;
+            _preferences.DocumentImagesAsked = true;
             SavePreferences();
-            _settingsView.SetPresentationImages(_preferences.PresentationImages);
+            _settingsView.SetDocumentImages(_preferences.DocumentImages);
         }
 
-        if (!_preferences.PresentationImages)
+        if (!_preferences.DocumentImages)
         {
             return null;
         }
@@ -5384,12 +5389,12 @@ public partial class MainWindow : Window
         _capsuleWindow.ShowMessage(
             CapsuleKind.Processing,
             "Buscando imágenes",
-            queries.Count == 1 ? "Una imagen para la presentación." : $"{queries.Count} imágenes para la presentación.",
+            queries.Count == 1 ? "Una imagen para el documento." : $"{queries.Count} imágenes para el documento.",
             _preferences.Position);
 
-        var images = new Dictionary<string, PresentationImage>(StringComparer.OrdinalIgnoreCase);
+        var images = new Dictionary<string, DocumentImage>(StringComparer.OrdinalIgnoreCase);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        foreach (var query in queries.Take(MaximumPresentationImages))
+        foreach (var query in queries.Take(MaximumDocumentImages))
         {
             if (timeout.IsCancellationRequested)
             {
@@ -5406,7 +5411,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Un tope para que una respuesta con muchas «Imagen: …» no tarde una eternidad en guardarse.</summary>
-    private const int MaximumPresentationImages = 8;
+    private const int MaximumDocumentImages = 8;
 
     // ---------- Actualizaciones (Diseño D65) ----------
 

@@ -415,11 +415,8 @@ public static partial class PresentationPlan
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
     /// <summary>El término de un párrafo que pide imagen («Imagen: …»), o nulo si no lo es.</summary>
-    private static string? ImageText(IReadOnlyList<AnswerSpan> spans)
-    {
-        var match = ImagePrefix().Match(AnswerMarkdown.ToPlainText(spans).Trim());
-        return match.Success && match.Groups["text"].Value.Trim() is { Length: > 0 } text ? text : null;
-    }
+    private static string? ImageText(IReadOnlyList<AnswerSpan> spans) =>
+        ImageDirective.Query(AnswerMarkdown.ToPlainText(spans));
 
     /// <summary>El texto de un párrafo de notas del orador («Notas: …»), o nulo si no lo es.</summary>
     private static string? NotesText(IReadOnlyList<AnswerSpan> spans)
@@ -427,9 +424,6 @@ public static partial class PresentationPlan
         var match = NotesPrefix().Match(AnswerMarkdown.ToPlainText(spans).Trim());
         return match.Success && match.Groups["text"].Value.Trim() is { Length: > 0 } text ? text : null;
     }
-
-    [GeneratedRegex(@"^(imagen|foto|fotograf[ií]a|ilustraci[oó]n)\s*:\s*(?<text>.+)$", RegexOptions.IgnoreCase)]
-    private static partial Regex ImagePrefix();
 
     [GeneratedRegex(@"^(notas?( (del|para el) (orador|presentador|ponente))?|gui[oó]n( del orador)?)\s*:\s*(?<text>[\s\S]+)$", RegexOptions.IgnoreCase)]
     private static partial Regex NotesPrefix();
