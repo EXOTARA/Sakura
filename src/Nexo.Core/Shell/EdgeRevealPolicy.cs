@@ -62,6 +62,30 @@ public static class EdgeRevealPolicy
     /// </summary>
     public static readonly TimeSpan CooldownAfterHide = TimeSpan.FromMilliseconds(900);
 
+    /// <summary>
+    /// 2026-09-16 — cuánto tiene que apartarse el ratón para que el borde vuelva a poder abrir algo.
+    ///
+    /// Encontrado con Adler: el panel de volumen «tendía a no quitarse». Usaba un navegador con las
+    /// pestañas en vertical, pegadas al borde izquierdo, justo el borde del panel. Cada vez que iba a
+    /// una pestaña el panel salía, se iba a los cuatro segundos, y como el ratón seguía ahí volvía a
+    /// salir casi enseguida. Desde fuera: un panel que no se quita.
+    ///
+    /// La regla es una aparición por visita al borde. Tras abrir algo, el borde no vuelve a abrir nada
+    /// hasta que el ratón se aparta de verdad —fuera de esta franja, más ancha que la sensible para que
+    /// temblar en la frontera no cuente como irse y volver—.
+    /// </summary>
+    public const double RearmDistance = HotZoneWidth * 3;
+
+    /// <summary>Si el ratón está lo bastante lejos del borde como para que la próxima llegada cuente como nueva.</summary>
+    public static bool HasLeftEdge(EdgeRevealProbe probe)
+    {
+        ArgumentNullException.ThrowIfNull(probe);
+
+        return probe.Side == SidebarPosition.Left
+            ? probe.CursorX > probe.WorkAreaLeft + RearmDistance
+            : probe.CursorX < probe.WorkAreaRight - RearmDistance;
+    }
+
     public static bool IsInHotZone(EdgeRevealProbe probe)
     {
         ArgumentNullException.ThrowIfNull(probe);

@@ -36,6 +36,13 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
     private bool _enabled;
     private bool _disposed;
 
+    /// <summary>
+    /// 2026-09-16 — si el borde puede abrir algo. Se apaga al disparar y solo se vuelve a encender
+    /// cuando el ratón se ha apartado (<see cref="EdgeRevealPolicy.HasLeftEdge"/>): una aparición por
+    /// visita, no una cada vez que el panel se cierra con el ratón todavía ahí.
+    /// </summary>
+    private bool _armed = true;
+
     public WindowsEdgeRevealWatcher()
     {
         _timer = new System.Timers.Timer(PollInterval.TotalMilliseconds)
@@ -126,8 +133,18 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
             return false;
         }
 
-        if (!TryReadProbe(_side, out var probe) ||
-            !EdgeRevealPolicy.IsInHotZone(probe))
+        if (!TryReadProbe(_side, out var probe))
+        {
+            _insideSince = null;
+            return false;
+        }
+
+        if (EdgeRevealPolicy.HasLeftEdge(probe))
+        {
+            _armed = true;
+        }
+
+        if (!_armed || !EdgeRevealPolicy.IsInHotZone(probe))
         {
             _insideSince = null;
             return false;
@@ -144,6 +161,7 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
         // apertura en cada vuelta del temporizador, diez veces por segundo.
         _insideSince = null;
         _suppressedUntil = now + EdgeRevealPolicy.CooldownAfterHide;
+        _armed = false;
         return true;
     }
 
