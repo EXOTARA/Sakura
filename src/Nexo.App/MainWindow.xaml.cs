@@ -1554,7 +1554,7 @@ public partial class MainWindow : Window
             // Con algo a pantalla completa —un juego, un vídeo, una presentación— el shell no se
             // asoma solo. Es la misma condición que ya silencia el resto de avisos pasajeros, y
             // aparecer encima de una partida por rozar el borde sería el peor momento posible.
-            if (_resourceDecision.SuppressTransientOverlays)
+            if (OverlaysSuppressed())
             {
                 return;
             }
@@ -1692,7 +1692,7 @@ public partial class MainWindow : Window
             }
 
             // Misma condición que para el shell: con algo a pantalla completa, nada se asoma solo.
-            if (_resourceDecision.SuppressTransientOverlays)
+            if (OverlaysSuppressed())
             {
                 return;
             }
@@ -9170,14 +9170,18 @@ public partial class MainWindow : Window
 
         try
         {
+            // Con tope de tiempo, como la lectura del reproductor: leer el equipo es WMI y
+            // contadores de rendimiento, que a veces no vuelven. Sin este corte, ese ciclo se quedaba
+            // a medias con su cerrojo tomado y Sakura no volvía a mirar el equipo en toda la sesión.
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
             var ownHandle = new WindowInteropHelper(this).Handle.ToInt64();
             var preferredExternalWindow = _lastExternalWindowHandle;
-            var snapshot = await Task.Run(_metricsService.ReadSnapshot);
+            var snapshot = await Task.Run(_metricsService.ReadSnapshot).WaitAsync(deadline.Token);
             var decision = _preferences.ResourceGovernorEnabled
                 ? await Task.Run(() => _resourceGovernorService.Evaluate(
                     snapshot,
                     preferredExternalWindow,
-                    ownHandle))
+                    ownHandle)).WaitAsync(deadline.Token)
                 : ResourceGovernorDecision.Normal;
 
             if (_isClosed)
@@ -9188,7 +9192,12 @@ public partial class MainWindow : Window
             _latestSnapshot = snapshot;
             UpdateMetricControls(snapshot);
             await RefreshMediaAsync();
-            await ApplyResourceGovernorDecisionAsync(decision);
+            await ApplyResourceGovernorDecisionAsync(decision).WaitAsync(deadline.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Esta vuelta tardó demasiado. Se suelta el turno y se vuelve a intentar a los dos
+            // segundos; lo que importa es que el ciclo siga girando.
         }
         catch (Exception)
         {
@@ -9253,6 +9262,16 @@ public partial class MainWindow : Window
         _systemView.UpdateAdaptiveEnginePlan(plan, descriptors);
     }
 
+    /// <summary>
+    /// Si ahora mismo hay que callarse. Una decisión que nadie ha refrescado no manda
+    /// (<see cref="ResourceGovernorFreshness"/>): con el ciclo de métricas parado, el cajón y el mando
+    /// de volumen se quedaban mudos para siempre y no había forma de saber por qué.
+    /// </summary>
+    private bool OverlaysSuppressed() =>
+        Nexo.Core.Resources.ResourceGovernorFreshness.SuppressesOverlays(
+            _resourceDecision,
+            DateTimeOffset.Now - _latestSnapshot.CapturedAt);
+
     private async Task<ResourceGovernorDecision> EnsureFreshResourceDecisionAsync()
     {
         if (!_preferences.ResourceGovernorEnabled)
@@ -9313,7 +9332,13 @@ public partial class MainWindow : Window
             }
         }
 
-        await _resourceGovernorDecisionGate.WaitAsync();
+        // Si la vuelta anterior sigue dentro —el motor de voz ocupado, por ejemplo—, esta se salta
+        // en lugar de hacer cola: encolarlas era lo que congelaba el ciclo entero.
+        if (!await _resourceGovernorDecisionGate.WaitAsync(TimeSpan.FromSeconds(2)))
+        {
+            return;
+        }
+
         try
         {
             var shouldPauseWakeWord =
@@ -9440,7 +9465,7 @@ public partial class MainWindow : Window
             // pantalla completa queda por encima, así que el cajón bajaba **sin verse** y aun así
             // se quedaba con los clics de la zona. Desde el juego eso se siente como que el ratón
             // deja de responder en una franja de la pantalla, sin nada que explique por qué.
-            if (_resourceDecision.SuppressTransientOverlays)
+            if (OverlaysSuppressed())
             {
                 return;
             }

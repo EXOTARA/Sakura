@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.30.15-beta]
+
+### Corregido
+
+- **El cajón de arriba y el mando de volumen dejaban de salir**, aunque no hubiera nada a pantalla completa (Adler, en la 0.30.12; ocurría de vez en cuando y no se podía reproducir). Los dos solo aparecen al rozar el borde, y ese camino se calla mientras Sakura cree que hay un juego delante. Si el ciclo que lee el equipo se quedaba colgado —una lectura del sistema que no vuelve, el motor de voz ocupado—, esa creencia se congelaba y ya no volvía a comprobarse.
+  - Una decisión que nadie ha refrescado en quince segundos deja de mandar: se vuelve al comportamiento normal en vez de quedarse mudo.
+  - La lectura del equipo tiene tope de tiempo, como ya lo tenía la del reproductor, así que el ciclo no puede quedarse a medias con su cerrojo tomado.
+  - Si una vuelta sigue dentro, la siguiente se salta en lugar de hacer cola.
+
 ## [0.30.14-beta]
 
 ### Nuevo
