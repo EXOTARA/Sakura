@@ -571,9 +571,11 @@ public sealed class CompositionInvariantTests
 
         // La rama del governor que pausa Vosk lo hace a través del método de MainWindow
         // que adquiere el ámbito de wake word, no tocando el servicio directamente.
+        // 2026-09-16 — el cerrojo se toma con tope de tiempo: una vuelta que se quede dentro se salta
+        // en lugar de encolarse, que era lo que congelaba el ciclo de métricas entero.
         var body = ExtractMethodBody(
             content,
-            "await _resourceGovernorDecisionGate.WaitAsync();",
+            "if (!await _resourceGovernorDecisionGate.WaitAsync(TimeSpan.FromSeconds(2)))",
             "private void UpdateResourceModeIndicator(");
         Assert.Contains("await PauseWakeWordAsync();", body, StringComparison.Ordinal);
         Assert.Contains("await ResumeWakeWordIfEnabledAsync();", body, StringComparison.Ordinal);
