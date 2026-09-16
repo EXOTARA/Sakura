@@ -123,6 +123,7 @@ public partial class SettingsView : UserControl
         OpacityValueText.Text = $"{preferences.Opacity:P0}";
         AnimationsCheckBox.IsChecked = preferences.AnimationsEnabled;
         EdgeRevealCheckBox.IsChecked = preferences.EdgeRevealEnabled;
+        EdgeQuickControlsCheckBox.IsChecked = preferences.EdgeQuickControlsEnabled;
         AutomaticUpdateCheckBox.IsChecked = preferences.AutomaticUpdateCheckEnabled;
         ApplyAccentSourceToControls(preferences.AccentSource);
         HighlightSelectedTheme(preferences.AccentColor);
@@ -326,6 +327,16 @@ public partial class SettingsView : UserControl
         if (!_isApplyingPreferences)
         {
             EdgeRevealChanged?.Invoke(EdgeRevealCheckBox.IsChecked == true);
+        }
+    }
+
+    public event Action<bool>? EdgeQuickControlsChanged;
+
+    private void EdgeQuickControlsCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_isApplyingPreferences)
+        {
+            EdgeQuickControlsChanged?.Invoke(EdgeQuickControlsCheckBox.IsChecked == true);
         }
     }
 

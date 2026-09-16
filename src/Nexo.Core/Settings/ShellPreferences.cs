@@ -23,7 +23,7 @@ public sealed class ShellPreferences
     /// número suelto repetido en el último rung y en una veintena de pruebas, y un número repetido es
     /// un número que se olvida de actualizar en algún sitio.
     /// </summary>
-    public const int CurrentSchemaVersion = 31;
+    public const int CurrentSchemaVersion = 32;
 
     /// <summary>
     /// Modelos que un proveedor ha apagado, y por cuál se sustituyen. La clave es el identificador
@@ -123,9 +123,11 @@ public sealed class ShellPreferences
     /// bastante como para quererlos a un clic. Lo que se retira es su derecho a ocupar espacio
     /// permanente antes de haberlo demostrado.
     /// </summary>
-    public bool ShowHomeModule { get; set; }
+    // 2026-09-16 — visibles de fábrica: una instalación nueva empieza en el esquema actual y no pasa
+    // por la migración 31, así que el valor por omisión es el que cuenta.
+    public bool ShowHomeModule { get; set; } = true;
 
-    public bool ShowTasksModule { get; set; }
+    public bool ShowTasksModule { get; set; } = true;
 
     public bool ShowFocusModule { get; set; }
 
@@ -174,7 +176,15 @@ public sealed class ShellPreferences
     /// </summary>
     public bool EdgeRevealEnabled { get; set; } = true;
 
-    public bool PeekEnabled { get; set; } = true;
+    /// <summary>
+    /// 2026-09-16 — el panel de volumen y brillo del borde contrario. Llega apagado en una instalación
+    /// nueva (decidido con Adler: aparecía sin que nadie supiera por qué y costaba quitarlo); quien
+    /// ya lo tenía lo conserva (migración 32).
+    /// </summary>
+    public bool EdgeQuickControlsEnabled { get; set; }
+
+    /// <summary>2026-09-16 — Peek llega apagado en una instalación nueva; las existentes conservan su valor.</summary>
+    public bool PeekEnabled { get; set; }
 
     public bool ShowCpuInPeek { get; set; } = true;
 
@@ -617,6 +627,14 @@ public sealed class ShellPreferences
             // instalación nueva dejaba la parte diaria de Sakura sin puerta de entrada.
             ShowHomeModule = true;
             ShowTasksModule = true;
+            SchemaVersion = 31;
+        }
+
+        if (SchemaVersion < 32)
+        {
+            // 2026-09-16 — el panel de volumen y brillo pasa a tener su propia casilla, apagada en
+            // instalaciones nuevas. Quien actualiza lo tenía funcionando: se le conserva.
+            EdgeQuickControlsEnabled = true;
             SchemaVersion = CurrentSchemaVersion;
         }
 

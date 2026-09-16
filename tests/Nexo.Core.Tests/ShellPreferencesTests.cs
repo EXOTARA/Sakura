@@ -115,7 +115,8 @@ public sealed class ShellPreferencesTests
 
         preferences.Normalize();
 
-        Assert.True(preferences.PeekEnabled);
+        // 2026-09-16 — Peek llega apagado; si se enciende, enseña CPU, memoria y GPU.
+        Assert.False(preferences.PeekEnabled);
         Assert.True(preferences.ShowCpuInPeek);
         Assert.True(preferences.ShowMemoryInPeek);
         Assert.True(preferences.ShowGpuInPeek);
