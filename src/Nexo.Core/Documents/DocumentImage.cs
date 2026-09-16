@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Nexo.Core.Documents;
 
 /// <summary>Una imagen ya descargada, lista para entrar en la presentación, con su autoría.</summary>
-public sealed record PresentationImage(
+public sealed record DocumentImage(
     byte[] Bytes,
     string Extension,
     int Width,
@@ -16,7 +16,7 @@ public sealed record PresentationImage(
     string SourceUrl);
 
 /// <summary>Una imagen que Wikimedia Commons ofrece para una búsqueda, antes de elegir y descargar.</summary>
-public sealed record PresentationImageCandidate(
+public sealed record DocumentImageCandidate(
     string Title,
     string Mime,
     int Width,
@@ -27,12 +27,38 @@ public sealed record PresentationImageCandidate(
     string Restrictions,
     string PageUrl);
 
-/// <summary>Busca una imagen de licencia libre para una diapositiva.</summary>
-public interface IPresentationImageSource
+/// <summary>
+/// 2026-09-16 — «Imagen: …» es como una respuesta pide una foto para esa parte del documento. Vive
+/// aquí y no en el plan de la presentación porque ahora también lo usa el Word.
+/// </summary>
+public static partial class ImageDirective
+{
+    /// <summary>El término de un párrafo que pide imagen, o nulo si el párrafo no lo es.</summary>
+    public static string? Query(string text)
+    {
+        var match = Prefix().Match(text.Trim());
+        return match.Success && match.Groups["text"].Value.Trim() is { Length: > 0 } query ? query : null;
+    }
+
+    /// <summary>Todo lo que una respuesta pide, por orden y sin repetir.</summary>
+    public static IReadOnlyList<string> Queries(string markdown) =>
+        Assistant.AnswerMarkdown.Parse(markdown)
+            .OfType<Assistant.AnswerParagraph>()
+            .Select(paragraph => Query(Assistant.AnswerMarkdown.ToPlainText(paragraph.Spans)))
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    [GeneratedRegex(@"^(imagen|foto|fotograf[ií]a|ilustraci[oó]n)\s*:\s*(?<text>.+)$", RegexOptions.IgnoreCase)]
+    private static partial Regex Prefix();
+}
+
+/// <summary>Busca una imagen de licencia libre para un documento.</summary>
+public interface IDocumentImageSource
 {
     /// <param name="query">Lo que hay que buscar, tal como lo escribió el modelo.</param>
     /// <returns>La imagen elegida, o nulo si no hay ninguna que valga.</returns>
-    Task<PresentationImage?> FindAsync(string query, CancellationToken cancellationToken = default);
+    Task<DocumentImage?> FindAsync(string query, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -97,7 +123,7 @@ public static partial class WikimediaImagePolicy
     /// La primera imagen aprovechable, respetando el orden de la búsqueda: quien busca «turbinas
     /// eólicas» espera la que Commons considera más relevante, no la más grande.
     /// </summary>
-    public static PresentationImageCandidate? Choose(IEnumerable<PresentationImageCandidate> candidates)
+    public static DocumentImageCandidate? Choose(IEnumerable<DocumentImageCandidate> candidates)
     {
         var usable = candidates.Where(candidate =>
             Extension(candidate.Mime) is not null &&
@@ -112,7 +138,7 @@ public static partial class WikimediaImagePolicy
                ?? usable.FirstOrDefault();
     }
 
-    private static double Ratio(PresentationImageCandidate candidate) =>
+    private static double Ratio(DocumentImageCandidate candidate) =>
         candidate.Height == 0 ? 0 : (double)candidate.Width / candidate.Height;
 
     /// <summary>
@@ -193,7 +219,7 @@ public static partial class WikimediaImagePolicy
     }
 
     /// <summary>La ficha para la diapositiva de créditos.</summary>
-    public static string CreditLine(PresentationImage image)
+    public static string CreditLine(DocumentImage image)
     {
         var builder = new StringBuilder(image.Title);
         if (image.Author.Length > 0)

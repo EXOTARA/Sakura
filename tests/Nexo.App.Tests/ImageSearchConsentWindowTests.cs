@@ -43,7 +43,7 @@ public sealed class ImageSearchConsentWindowTests(StaWpfFixture wpf)
             var window = new ImageSearchConsentWindow(["parque solar"]);
             try
             {
-                Assert.Equal("La presentación pide una imagen: «parque solar».", ((TextBlock)window.FindName("DetailText")).Text);
+                Assert.Equal("El documento pide una imagen: «parque solar».", ((TextBlock)window.FindName("DetailText")).Text);
             }
             finally
             {

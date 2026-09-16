@@ -25,7 +25,11 @@ namespace Nexo.Core.Documents;
 public static class WordDocumentBuilder
 {
     /// <summary>Construye el documento a partir de la respuesta tal como la escribió el modelo.</summary>
-    public static byte[] BuildFromMarkdown(string title, string markdown)
+    /// <param name="images">
+    /// Las fotos ya descargadas, por el texto que las pedía («Imagen: …»). Sin ellas el documento sale
+    /// igual, sin fotos.
+    /// </param>
+    public static byte[] BuildFromMarkdown(string title, string markdown, IReadOnlyDictionary<string, DocumentImage>? images = null)
     {
         var writer = new DocumentWriter();
         var blocks = AnswerMarkdown.Parse(markdown);
@@ -36,6 +40,7 @@ public static class WordDocumentBuilder
         }
 
         var headingLevels = blocks.OfType<AnswerHeading>().Select(heading => heading.Level).Distinct().Order().ToList();
+        var lastHeading = title;
         var first = true;
         foreach (var block in blocks)
         {
@@ -52,6 +57,7 @@ public static class WordDocumentBuilder
             {
                 case AnswerHeading heading:
                     var rank = Math.Min(3, headingLevels.IndexOf(heading.Level) + 1);
+                    lastHeading = AnswerMarkdown.ToPlainText(heading.Spans).Trim();
                     writer.EndList();
                     writer.Paragraph("Heading" + rank.ToString(CultureInfo.InvariantCulture), heading.Spans);
                     break;
@@ -61,6 +67,12 @@ public static class WordDocumentBuilder
                 case AnswerTable table:
                     writer.EndList();
                     writer.Table(table);
+                    // 2026-09-16 — una tabla de cifras se entiende mejor con su gráfica al lado de los datos.
+                    if (ChartPlan.From(table, lastHeading) is { } chart)
+                    {
+                        writer.Chart(chart, table);
+                    }
+
                     break;
                 case AnswerCode code:
                     writer.EndList();
@@ -74,6 +86,15 @@ public static class WordDocumentBuilder
                     writer.EndList();
                     writer.Paragraph("Quote", quote.Spans);
                     break;
+                // «Imagen: …» no es texto del documento: es la foto que se pidió para esa parte.
+                case AnswerParagraph paragraph when ImageDirective.Query(AnswerMarkdown.ToPlainText(paragraph.Spans)) is { } query:
+                    writer.EndList();
+                    if (Find(images, query) is { } image)
+                    {
+                        writer.Picture(image);
+                    }
+
+                    break;
                 case AnswerParagraph paragraph:
                     writer.EndList();
                     foreach (var line in SplitLines(paragraph.Spans))
@@ -86,6 +107,18 @@ public static class WordDocumentBuilder
         }
 
         return Package(title, writer);
+    }
+
+    private static DocumentImage? Find(IReadOnlyDictionary<string, DocumentImage>? images, string query)
+    {
+        if (images is null)
+        {
+            return null;
+        }
+
+        return images.TryGetValue(query, out var exact)
+            ? exact
+            : images.FirstOrDefault(pair => string.Equals(pair.Key, query, StringComparison.OrdinalIgnoreCase)).Value;
     }
 
     /// <summary>
@@ -159,16 +192,44 @@ public static class WordDocumentBuilder
         // Sin leaveOpen, el ZIP cierra el flujo al liberarse y el array sale vacío.
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
         {
-            Write(archive, "[Content_Types].xml", ContentTypes);
+            Write(archive, "[Content_Types].xml", ContentTypes(writer));
             Write(archive, "_rels/.rels", RootRelationships);
             Write(archive, "docProps/core.xml", CoreProperties(title));
             Write(archive, "word/_rels/document.xml.rels", writer.Relationships());
             Write(archive, "word/styles.xml", Styles);
             Write(archive, "word/numbering.xml", writer.Numbering());
+            Write(archive, "word/footer1.xml", Footer);
             Write(archive, "word/document.xml", writer.Document());
+
+            for (var i = 0; i < writer.Images.Count; i++)
+            {
+                WriteBytes(archive, $"word/media/image{i + 1}.{writer.Images[i].Extension}", writer.Images[i].Bytes);
+            }
+
+            for (var i = 0; i < writer.Charts.Count; i++)
+            {
+                var number = i + 1;
+                Write(archive, $"word/charts/chart{number}.xml", ChartXml.Build(writer.Charts[i].Spec, EmbeddedSheet, 1000, "rId1"));
+                Write(archive, $"word/charts/_rels/chart{number}.xml.rels",
+                    XmlDeclaration +
+                    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+                    "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/package\" " +
+                    $"Target=\"../embeddings/Microsoft_Excel_Worksheet{number}.xlsx\"/></Relationships>");
+                WriteBytes(archive, $"word/embeddings/Microsoft_Excel_Worksheet{number}.xlsx",
+                    SpreadsheetDocumentBuilder.BuildTableWorkbook(EmbeddedSheet, writer.Charts[i].Table));
+            }
         }
 
         return buffer.ToArray();
+    }
+
+    private const string EmbeddedSheet = "Hoja1";
+
+    private static void WriteBytes(ZipArchive archive, string path, byte[] content)
+    {
+        var entry = archive.CreateEntry(path, CompressionLevel.Optimal);
+        using var stream = entry.Open();
+        stream.Write(content);
     }
 
     private static void Write(ZipArchive archive, string path, string content)
@@ -191,6 +252,13 @@ public static class WordDocumentBuilder
 
         private readonly StringBuilder _body = new();
         private readonly List<string> _hyperlinks = [];
+        private readonly List<DocumentImage> _images = [];
+        private readonly List<(ChartSpec Spec, AnswerTable Table)> _charts = [];
+        private int _drawings;
+
+        public IReadOnlyList<DocumentImage> Images => _images;
+
+        public IReadOnlyList<(ChartSpec Spec, AnswerTable Table)> Charts => _charts;
         private readonly List<int> _numberedInstances = [];
         private int? _currentNumbered;
         private bool _inList;
@@ -239,6 +307,59 @@ public static class WordDocumentBuilder
                 .Append(level).Append("\"/><w:numId w:val=\"").Append(numId).Append("\"/></w:numPr></w:pPr>");
             Runs(item.Spans);
             _body.Append("</w:p>");
+        }
+
+        /// <summary>
+        /// La foto, centrada y del ancho de la caja de texto, con su pie: número de figura, qué es,
+        /// quién la hizo y con qué licencia. Sin el pie no se podría entregar: las licencias libres
+        /// piden el crédito.
+        /// </summary>
+        public void Picture(DocumentImage image)
+        {
+            _images.Add(image);
+            var (width, height) = Fit(image);
+            var name = "Imagen " + _images.Count.ToString(CultureInfo.InvariantCulture);
+
+            _body.Append("<w:p><w:pPr><w:jc w:val=\"center\"/><w:spacing w:before=\"200\" w:after=\"40\"/></w:pPr><w:r><w:drawing>")
+                .Append("<wp:inline xmlns:wp=\"").Append(DrawingNamespace).Append("\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">")
+                .Append("<wp:extent cx=\"").Append(width).Append("\" cy=\"").Append(height).Append("\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>")
+                .Append("<wp:docPr id=\"").Append(++_drawings).Append("\" name=\"").Append(EscapeAttribute(name))
+                .Append("\" descr=\"").Append(EscapeAttribute(image.Title)).Append("\"/>")
+                .Append("<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a=\"").Append(DrawingMain).Append("\" noChangeAspect=\"1\"/></wp:cNvGraphicFramePr>")
+                .Append("<a:graphic xmlns:a=\"").Append(DrawingMain).Append("\"><a:graphicData uri=\"").Append(PictureNamespace).Append("\">")
+                .Append("<pic:pic xmlns:pic=\"").Append(PictureNamespace).Append("\"><pic:nvPicPr><pic:cNvPr id=\"").Append(_drawings)
+                .Append("\" name=\"").Append(EscapeAttribute(name)).Append("\"/><pic:cNvPicPr/></pic:nvPicPr>")
+                .Append("<pic:blipFill><a:blip r:embed=\"image").Append(_images.Count).Append("\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>")
+                .Append("<pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"").Append(width).Append("\" cy=\"").Append(height).Append("\"/></a:xfrm>")
+                .Append("<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
+
+            var caption = $"Figura {_images.Count}. {image.Title} — {WikimediaImagePolicy.Credit(image.Author, image.License)}";
+            Paragraph("Caption", [new AnswerSpan(caption, AnswerSpanStyle.None)]);
+        }
+
+        /// <summary>La gráfica de una tabla, editable desde Word porque lleva su hoja de datos dentro.</summary>
+        public void Chart(ChartSpec spec, AnswerTable table)
+        {
+            _charts.Add((spec, table));
+            _body.Append("<w:p><w:pPr><w:jc w:val=\"center\"/><w:spacing w:before=\"120\" w:after=\"160\"/></w:pPr><w:r><w:drawing>")
+                .Append("<wp:inline xmlns:wp=\"").Append(DrawingNamespace).Append("\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">")
+                .Append("<wp:extent cx=\"5486400\" cy=\"3200400\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>")
+                .Append("<wp:docPr id=\"").Append(++_drawings).Append("\" name=\"Gráfica ").Append(_charts.Count).Append("\"/><wp:cNvGraphicFramePr/>")
+                .Append("<a:graphic xmlns:a=\"").Append(DrawingMain).Append("\"><a:graphicData uri=\"").Append(ChartXml.Namespace).Append("\">")
+                .Append("<c:chart xmlns:c=\"").Append(ChartXml.Namespace)
+                .Append("\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" r:id=\"chart")
+                .Append(_charts.Count).Append("\"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
+        }
+
+        /// <summary>Del tamaño de la caja de texto, sin deformar y sin comerse la página entera.</summary>
+        private static (long Width, long Height) Fit(DocumentImage image)
+        {
+            const long maximumWidth = 5486400;
+            const long maximumHeight = 3200400;
+            var width = Math.Max(1, image.Width) * 9525L;
+            var height = Math.Max(1, image.Height) * 9525L;
+            var scale = Math.Min(1d, Math.Min((double)maximumWidth / width, (double)maximumHeight / height));
+            return ((long)(width * scale), (long)(height * scale));
         }
 
         public void Table(AnswerTable table)
@@ -355,7 +476,20 @@ public static class WordDocumentBuilder
             var builder = new StringBuilder(XmlDeclaration)
                 .Append("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">")
                 .Append("<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>")
-                .Append("<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering\" Target=\"numbering.xml\"/>");
+                .Append("<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering\" Target=\"numbering.xml\"/>")
+                .Append("<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/>");
+            for (var i = 0; i < _images.Count; i++)
+            {
+                builder.Append("<Relationship Id=\"image").Append(i + 1)
+                    .Append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/image")
+                    .Append(i + 1).Append(".").Append(_images[i].Extension).Append("\"/>");
+            }
+
+            for (var i = 0; i < _charts.Count; i++)
+            {
+                builder.Append("<Relationship Id=\"chart").Append(i + 1).Append("\" Type=\"").Append(ChartXml.RelationshipType)
+                    .Append("\" Target=\"charts/chart").Append(i + 1).Append(".xml\"/>");
+            }
             for (var i = 0; i < _hyperlinks.Count; i++)
             {
                 builder.Append("<Relationship Id=\"link").Append(i + 1)
@@ -452,20 +586,57 @@ public static class WordDocumentBuilder
     private const string XmlDeclaration =
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>";
 
+    private const string DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+    private const string DrawingMain = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private const string PictureNamespace = "http://schemas.openxmlformats.org/drawingml/2006/picture";
+
+    /// <summary>El pie de todas las páginas, con la nota de uso de IA (<see cref="DocumentDisclosure"/>).</summary>
+    private const string Footer =
+        XmlDeclaration +
+        "<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p>" +
+        "<w:pPr><w:jc w:val=\"center\"/><w:spacing w:after=\"0\"/></w:pPr>" +
+        "<w:r><w:rPr><w:sz w:val=\"16\"/><w:szCs w:val=\"16\"/><w:color w:val=\"8C959F\"/><w:i/></w:rPr>" +
+        "<w:t xml:space=\"preserve\">" + DocumentDisclosure.Short + "</w:t></w:r></w:p></w:ftr>";
+
     private const string SectionProperties =
-        "<w:sectPr><w:pgSz w:w=\"11906\" w:h=\"16838\"/>" +
+        "<w:sectPr><w:footerReference w:type=\"default\" r:id=\"rId3\"/><w:pgSz w:w=\"11906\" w:h=\"16838\"/>" +
         "<w:pgMar w:top=\"1418\" w:right=\"1304\" w:bottom=\"1418\" w:left=\"1304\" w:header=\"709\" w:footer=\"709\"/></w:sectPr>";
 
-    private const string ContentTypes =
+    private static string ContentTypes(DocumentWriter writer)
+    {
+        var builder = new StringBuilder(ContentTypesHead);
+        if (writer.Images.Any(image => image.Extension == "jpg"))
+        {
+            builder.Append("<Default Extension=\"jpg\" ContentType=\"image/jpeg\"/>");
+        }
+
+        if (writer.Images.Any(image => image.Extension == "png"))
+        {
+            builder.Append("<Default Extension=\"png\" ContentType=\"image/png\"/>");
+        }
+
+        if (writer.Charts.Count > 0)
+        {
+            builder.Append("<Default Extension=\"xlsx\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"/>");
+            for (var i = 0; i < writer.Charts.Count; i++)
+            {
+                builder.Append("<Override PartName=\"/word/charts/chart").Append(i + 1).Append(".xml\" ContentType=\"").Append(ChartXml.ContentType).Append("\"/>");
+            }
+        }
+
+        return builder.Append("</Types>").ToString();
+    }
+
+    private const string ContentTypesHead =
         XmlDeclaration +
         "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">" +
         "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>" +
         "<Default Extension=\"xml\" ContentType=\"application/xml\"/>" +
+        "<Override PartName=\"/word/footer1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml\"/>" +
         "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>" +
         "<Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>" +
         "<Override PartName=\"/word/numbering.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/>" +
-        "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>" +
-        "</Types>";
+        "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>";
 
     private const string RootRelationships =
         XmlDeclaration +
@@ -487,6 +658,9 @@ public static class WordDocumentBuilder
         "<w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/><w:color w:val=\"24292F\"/><w:lang w:val=\"es-ES\"/></w:rPr></w:rPrDefault>" +
         "<w:pPrDefault><w:pPr><w:spacing w:after=\"140\" w:line=\"288\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults>" +
         "<w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/><w:qFormat/></w:style>" +
+        "<w:style w:type=\"paragraph\" w:styleId=\"Caption\"><w:name w:val=\"caption\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/>" +
+        "<w:pPr><w:jc w:val=\"center\"/><w:spacing w:after=\"240\"/></w:pPr>" +
+        "<w:rPr><w:i/><w:color w:val=\"57606A\"/><w:sz w:val=\"18\"/></w:rPr></w:style>" +
         "<w:style w:type=\"paragraph\" w:styleId=\"Title\"><w:name w:val=\"Title\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/>" +
         "<w:pPr><w:pBdr><w:bottom w:val=\"single\" w:sz=\"8\" w:space=\"6\" w:color=\"8E3B62\"/></w:pBdr><w:spacing w:after=\"320\"/></w:pPr>" +
         "<w:rPr><w:rFonts w:ascii=\"Calibri Light\" w:hAnsi=\"Calibri Light\"/><w:b/><w:color w:val=\"1F3A5F\"/><w:sz w:val=\"48\"/></w:rPr></w:style>" +

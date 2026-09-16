@@ -4,8 +4,8 @@ using Nexo.App.Motion;
 namespace Nexo.App;
 
 /// <summary>
-/// 2026-09-15 — la primera vez que una respuesta pide imágenes para una presentación, Sakura pregunta
-/// si puede buscarlas.
+/// 2026-09-15 — la primera vez que una respuesta pide imágenes para un documento, Sakura pregunta si
+/// puede buscarlas.
 ///
 /// Se pregunta porque buscar imágenes es salir a internet con lo que el modelo escribió, y eso no debe
 /// pasar sin que se sepa. Se pregunta una sola vez: la respuesta queda en Ajustes, donde se cambia.
@@ -16,8 +16,8 @@ public partial class ImageSearchConsentWindow : Window
     {
         InitializeComponent();
         DetailText.Text = queries.Count == 1
-            ? $"La presentación pide una imagen: «{queries[0]}»."
-            : $"La presentación pide {queries.Count} imágenes: {string.Join(", ", queries.Take(3).Select(query => $"«{query}»"))}{(queries.Count > 3 ? "…" : ".")}";
+            ? $"El documento pide una imagen: «{queries[0]}»."
+            : $"El documento pide {queries.Count} imágenes: {string.Join(", ", queries.Take(3).Select(query => $"«{query}»"))}{(queries.Count > 3 ? "…" : ".")}";
 
         ContentRendered += (_, _) =>
         {

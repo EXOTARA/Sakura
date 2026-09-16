@@ -15,7 +15,7 @@ namespace Nexo.Windows.Documents;
 /// Lo que sale del equipo es el término de búsqueda, no la respuesta ni el documento. Se manda la
 /// identificación que pide la API de Wikimedia para saber quién consulta.
 /// </summary>
-public sealed class WikimediaImageService : IPresentationImageSource, IDisposable
+public sealed class WikimediaImageService : IDocumentImageSource, IDisposable
 {
     private const string Endpoint = "https://commons.wikimedia.org/w/api.php";
     private const int MaximumBytes = 8 * 1024 * 1024;
@@ -35,7 +35,7 @@ public sealed class WikimediaImageService : IPresentationImageSource, IDisposabl
         }
     }
 
-    public async Task<PresentationImage?> FindAsync(string query, CancellationToken cancellationToken = default)
+    public async Task<DocumentImage?> FindAsync(string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -44,7 +44,7 @@ public sealed class WikimediaImageService : IPresentationImageSource, IDisposabl
 
         try
         {
-            PresentationImageCandidate? chosen = null;
+            DocumentImageCandidate? chosen = null;
             foreach (var attempt in WikimediaImagePolicy.SearchTerms(query))
             {
                 chosen = WikimediaImagePolicy.Choose(await SearchAsync(attempt, cancellationToken));
@@ -75,7 +75,7 @@ public sealed class WikimediaImageService : IPresentationImageSource, IDisposabl
                 return null;
             }
 
-            return new PresentationImage(
+            return new DocumentImage(
                 buffer.ToArray(),
                 extension,
                 chosen.Width,
@@ -92,7 +92,7 @@ public sealed class WikimediaImageService : IPresentationImageSource, IDisposabl
         }
     }
 
-    private async Task<IReadOnlyList<PresentationImageCandidate>> SearchAsync(string query, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<DocumentImageCandidate>> SearchAsync(string query, CancellationToken cancellationToken)
     {
         // «filetype:bitmap» deja fuera los SVG y los PDF, que en una diapositiva no son una foto.
         var address = Endpoint +
@@ -113,7 +113,7 @@ public sealed class WikimediaImageService : IPresentationImageSource, IDisposabl
             return [];
         }
 
-        var candidates = new List<(int Order, PresentationImageCandidate Candidate)>();
+        var candidates = new List<(int Order, DocumentImageCandidate Candidate)>();
         foreach (var page in pages.EnumerateArray())
         {
             if (!page.TryGetProperty("imageinfo", out var infos) || infos.ValueKind != JsonValueKind.Array)
@@ -131,7 +131,7 @@ public sealed class WikimediaImageService : IPresentationImageSource, IDisposabl
                 }
 
                 var metadata = info.TryGetProperty("extmetadata", out var extra) ? extra : default;
-                candidates.Add((Number(page, "index"), new PresentationImageCandidate(
+                candidates.Add((Number(page, "index"), new DocumentImageCandidate(
                     Text(page, "title"),
                     mime,
                     Number(info, "width"),
