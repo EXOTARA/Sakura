@@ -53,10 +53,15 @@ public partial class QuickControlsWindow : Window
         Views.Controls.PopupKeyboardAccess.Attach(this, System.Windows.Input.Key.F9, () => Dismiss());
 
         _idleTimer = new DispatcherTimer { Interval = IdleDismiss };
-        _idleTimer.Tick += (_, _) => { if (!IsKeyboardFocusWithin) Dismiss(); };
+        _idleTimer.Tick += (_, _) => DismissIfIdle();
 
         SourceInitialized += OnSourceInitialized;
-        MouseEnter += (_, _) => _idleTimer.Stop();
+
+        // 2026-09-16 — pasar por encima cuenta como uso y reinicia la espera, pero ya no la
+        // detiene: antes, si Windows no llegaba a avisar de que el ratón se había ido —en una ventana
+        // que no se activa, a veces no avisa—, el panel se quedaba para siempre. Ahora, al cumplirse
+        // la espera, se mira dónde está el ratón de verdad.
+        MouseEnter += (_, _) => RestartIdle();
         MouseLeave += (_, _) => RestartIdle();
         MouseLeftButtonUp += (_, _) => EndDrag();
         MouseMove += OnMouseMove;
@@ -415,6 +420,48 @@ public partial class QuickControlsWindow : Window
         _lastHardwareWrite = DateTime.UtcNow;
         ControlChanged?.Invoke(this, new QuickControlChangedEventArgs(pending.Kind, pending.Percent));
     }
+
+    /// <summary>
+    /// Se va si nadie lo está usando: ni arrastrando una barra, ni con el ratón encima, ni con el
+    /// teclado dentro. Si alguien lo usa, se espera otra vuelta.
+    /// </summary>
+    private void DismissIfIdle()
+    {
+        if (_dragging is not null || IsKeyboardFocusWithin || IsCursorOverPanel())
+        {
+            return;
+        }
+
+        Dismiss();
+    }
+
+    /// <summary>
+    /// Dónde está el ratón según Windows, no según los eventos de WPF, que en una ventana que no se
+    /// activa pueden no llegar.
+    /// </summary>
+    private bool IsCursorOverPanel()
+    {
+        if (!IsVisible || PanelBorder.ActualWidth <= 0 || !GetCursorPos(out var cursor))
+        {
+            return false;
+        }
+
+        var topLeft = PanelBorder.PointToScreen(new Point(0, 0));
+        var bottomRight = PanelBorder.PointToScreen(new Point(PanelBorder.ActualWidth, PanelBorder.ActualHeight));
+        return cursor.X >= topLeft.X && cursor.X <= bottomRight.X &&
+               cursor.Y >= topLeft.Y && cursor.Y <= bottomRight.Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CursorPoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out CursorPoint point);
 
     private void RestartIdle()
     {

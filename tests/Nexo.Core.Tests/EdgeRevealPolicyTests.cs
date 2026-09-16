@@ -115,6 +115,23 @@ public sealed class EdgeRevealPolicyTests
     }
 
     [Fact]
+    public void AfterOpening_TheEdgeOnlyRearmsOnceTheMouseTrulyLeaves()
+    {
+        // 2026-09-16 — con las pestañas del navegador pegadas al borde, el panel de volumen volvía a
+        // salir en cuanto se cerraba. Temblar dentro de la franja no cuenta como irse.
+        Assert.False(EdgeRevealPolicy.HasLeftEdge(At(Left + 5, 500, SidebarPosition.Left)));
+        Assert.False(EdgeRevealPolicy.HasLeftEdge(At(Left + EdgeRevealPolicy.HotZoneWidth + 10, 500, SidebarPosition.Left)));
+        Assert.True(EdgeRevealPolicy.HasLeftEdge(At(Left + EdgeRevealPolicy.RearmDistance + 1, 500, SidebarPosition.Left)));
+
+        Assert.False(EdgeRevealPolicy.HasLeftEdge(At(Right - 30, 500, SidebarPosition.Right)));
+        Assert.True(EdgeRevealPolicy.HasLeftEdge(At(Right - EdgeRevealPolicy.RearmDistance - 1, 500, SidebarPosition.Right)));
+    }
+
+    [Fact]
+    public void TheRearmDistance_IsWiderThanTheHotZone() =>
+        Assert.True(EdgeRevealPolicy.RearmDistance > EdgeRevealPolicy.HotZoneWidth);
+
+    [Fact]
     public void TheCooldownOutlastsTheDwell()
     {
         // Si la pausa tras ocultar fuera más corta que la permanencia necesaria, cerrar Sakura con
