@@ -18,6 +18,17 @@ public sealed class QuickControlsPolicyTests
         Assert.Equal(expected, QuickControlsPolicy.ControlsEdgeFor(kohana));
     }
 
+    [Theory]
+    [InlineData(true, false, false, 5, true)]   // arrastrando una barra
+    [InlineData(false, true, false, 5, true)]   // con el teclado dentro y la ventana delante
+    [InlineData(false, false, true, 0, true)]   // el ratón acaba de moverse encima
+    [InlineData(false, false, true, 1, true)]
+    [InlineData(false, false, true, 2, false)]  // el ratón se quedó parado en el borde
+    [InlineData(false, false, false, 0, false)] // nadie lo usa
+    public void ThePanelStaysOnlyWhileSomeoneIsUsingIt(
+        bool dragging, bool keyboard, bool cursorOver, int stillTicks, bool expected) =>
+        Assert.Equal(expected, QuickControlsPolicy.ShouldStay(dragging, keyboard, cursorOver, stillTicks));
+
     [Fact]
     public void MovingSakuraMovesTheControlsWithIt()
     {

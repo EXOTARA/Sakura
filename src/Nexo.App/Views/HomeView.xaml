@@ -1,39 +1,64 @@
 <UserControl x:Class="Nexo.App.Views.HomeView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:pill="clr-namespace:Nexo.App.Views.Controls"
              Background="Transparent">
+    <!--
+        2026-09-16 — Inicio nuevo, dirección «Burbujas» con la calma de «Calma» (elegida por Adler).
+
+        Inicio responde una pregunta: ¿qué hago ahora? Por eso ya no hay cuatro tarjetas que solo
+        informan ni tres botones de accesos: hay una burbuja «Ahora» que, al tocarla, se parte en sus
+        dos opciones; dos cifras pequeñas; el resumen de ayer, que se ignora sin esfuerzo, y un rastro
+        de lo que acaba de pasar. Cada bloque es un objeto aparte que entra escalonado.
+    -->
     <UserControl.Resources>
-        <Style x:Key="BentoCardButtonStyle" TargetType="Button">
+        <!--
+            Una burbuja: esquinas muy redondas, fondo tonal y una capa de brillo opcional (Tag). Al
+            pulsarla se encoge al instante —la respuesta llega al apretar, no al soltar—.
+        -->
+        <Style x:Key="BubbleButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}" />
             <Setter Property="Background" Value="#C8161D29" />
-            <Setter Property="BorderBrush" Value="#2EFFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="18,14" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Stretch" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface"
-                                Padding="17"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="20">
-                            <ContentPresenter />
-                        </Border>
+                        <Grid x:Name="Root" RenderTransformOrigin="0.5,0.5">
+                            <Border x:Name="Surface"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="#1FFFFFFF"
+                                    BorderThickness="1"
+                                    CornerRadius="26" />
+                            <Border x:Name="Glow"
+                                    Background="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                    CornerRadius="26"
+                                    IsHitTestVisible="False" />
+                            <Border x:Name="Hover"
+                                    Background="#0FFFFFFF"
+                                    CornerRadius="26"
+                                    Opacity="0"
+                                    IsHitTestVisible="False" />
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" />
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="{DynamicResource BrushSurfaceHover}" />
+                                <Setter TargetName="Hover" Property="Opacity" Value="1" />
                                 <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Surface" Property="Opacity" Value="0.72" />
+                                <Setter TargetName="Root" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.975" ScaleY="0.975" />
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -41,29 +66,18 @@
             </Setter>
         </Style>
 
-        <Style x:Key="BentoIconSurfaceStyle" TargetType="Border">
-            <Setter Property="Width" Value="40" />
-            <Setter Property="Height" Value="40" />
-            <Setter Property="Background" Value="{DynamicResource BrushAccentSoft}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="13" />
+        <Style x:Key="BubbleLabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextTertiary}" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   Padding="2">
-        <Grid Margin="2,1,4,4">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-
-            <Grid Grid.Row="0" Margin="2,0,2,20">
+        <StackPanel Margin="2,1,4,8">
+            <Grid x:Name="HeaderBlock" Margin="2,0,2,18">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -73,10 +87,11 @@
                     <TextBlock x:Name="GreetingText"
                                Text="Hola"
                                FontSize="{DynamicResource FontSizeTitle1}"
-                               FontWeight="SemiBold" />
-                    <TextBlock x:Name="GreetingDetailText"
-                               Margin="0,5,0,0"
-                               Text="Tu espacio está listo."
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap" />
+                    <TextBlock x:Name="DateText"
+                               Margin="0,4,0,0"
+                               Text="hoy"
                                Foreground="{DynamicResource BrushTextSecondary}"
                                FontSize="{DynamicResource FontSizeCallout}" />
                 </StackPanel>
@@ -97,354 +112,210 @@
                 </Button>
             </Grid>
 
-            <Grid Grid.Row="1" Margin="0,0,0,12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Button Grid.Column="0"
-                        Margin="0,0,6,0"
-                        MinHeight="152"
-                        Style="{StaticResource BentoCardButtonStyle}"
-                        AutomationProperties.Name="Pendientes. Ir a Hoy"
-                        Click="TasksCard_Click">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource BentoIconSurfaceStyle}">
-                                <Path Width="19"
-                                      Height="19"
-                                      Stretch="Uniform"
-                                      Stroke="{DynamicResource BrushAccent}"
-                                      StrokeThickness="2"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      Data="M3,10 L7.2,14.2 L17,4.5" />
-                            </Border>
-                            <TextBlock Grid.Column="1"
-                                       Margin="11,0,0,0"
-                                       VerticalAlignment="Center"
-                                       Text="Pendientes"
-                                       FontSize="{DynamicResource FontSizeBody}"
-                                       FontWeight="SemiBold" />
-
-                            <!--
-                                Diseño D51 — la cuenta es una insignia junto al nombre, no una cifra
-                                enorme en el centro de la tarjeta.
-
-                                Es la nota del PDF: «Pendientes más discreto, al estilo de la
-                                notificación de Discord». Y la parte que hace que funcione no es el
-                                tamaño, es que **cuando no hay nada la insignia no existe**. Un «0»
-                                gigante ocupaba un cuarto de la pantalla de Inicio para decir que no
-                                pasa nada; una insignia ausente dice lo mismo sin pedir nada a
-                                cambio.
-                            -->
-                            <Border x:Name="TaskCountBadge"
-                                    Grid.Column="2"
-                                    MinWidth="24"
-                                    Padding="8,3"
-                                    VerticalAlignment="Center"
-                                    Background="{DynamicResource BrushAccent}"
-                                    pill:PillCorner.IsPill="True"
-                                    Visibility="Collapsed">
-                                <TextBlock x:Name="TaskCountText"
-                                           Text="0"
-                                           HorizontalAlignment="Center"
-                                           Foreground="White"
-                                           FontSize="{DynamicResource FontSizeCaption}"
-                                           FontWeight="SemiBold" />
-                            </Border>
-                        </Grid>
-
-                        <!--
-                            Lo que ocupa el sitio que dejó la cifra es la tarea siguiente, en tamaño
-                            de lectura. Es el dato por el que uno mira esta tarjeta; el número solo
-                            decía cuántas hay.
-                        -->
-                        <TextBlock Grid.Row="1"
-                                   x:Name="TaskDetailText"
-                                   Margin="0,16,0,0"
-                                   VerticalAlignment="Top"
-                                   Text="Nada urgente por ahora"
-                                   Foreground="{DynamicResource BrushTextPrimary}"
-                                   FontSize="{DynamicResource FontSizeCallout}"
-                                   TextWrapping="Wrap"
-                                   TextTrimming="CharacterEllipsis" />
-                    </Grid>
-                </Button>
-
-                <Grid Grid.Column="1" Margin="6,0,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Button Grid.Row="0"
-                            MinHeight="152"
-                            Style="{StaticResource BentoCardButtonStyle}"
-                            AutomationProperties.Name="Enfoque. Ir a Enfoque"
-                            Click="FocusCard_Click">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource BentoIconSurfaceStyle}">
-                                    <Grid>
-                                        <Ellipse Width="19"
-                                                 Height="19"
-                                                 Stroke="{DynamicResource BrushAccent}"
-                                                 StrokeThickness="2" />
-                                        <Ellipse Width="6"
-                                                 Height="6"
-                                                 Fill="{DynamicResource BrushAccent}" />
-                                    </Grid>
-                                </Border>
-                                <TextBlock Grid.Column="1"
-                                           Margin="11,0,0,0"
-                                           VerticalAlignment="Center"
-                                           Text="Enfoque"
-                                           FontSize="{DynamicResource FontSizeBody}"
-                                           FontWeight="SemiBold" />
-                            </Grid>
-                            <TextBlock Grid.Row="1"
-                                       x:Name="FocusValueText"
-                                       Margin="0,18,0,0"
-                                       Text="25 min"
-                                       FontSize="{DynamicResource FontSizeTitle1}"
-                                       FontWeight="SemiBold" />
-                            <TextBlock Grid.Row="2"
-                                       x:Name="FocusDetailText"
-                                       Margin="0,8,0,0"
-                                       Text="Listo para empezar"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                       FontSize="{DynamicResource FontSizeFootnote}"
-                                       TextWrapping="Wrap" />
-                        </Grid>
-                    </Button>
-
-                    <!--
-                        Diseño D3.1 — acción rápida contextual (Pausar/Continuar), hermana del
-                        botón de arriba (no anidada) para que ambos reciban clics de forma
-                        independiente y sean alcanzables por Tab por separado. Solo visible cuando
-                        hay una sesión de enfoque activa o en pausa.
-                    -->
-                    <Button Grid.Row="1"
-                            x:Name="FocusQuickActionButton"
-                            AutomationProperties.Name="Empezar o detener el enfoque"
-                            Margin="0,8,0,0"
-                            Padding="0,7"
-                            Style="{StaticResource SecondaryButtonStyle}"
-                            Visibility="Collapsed"
-                            Click="FocusQuickActionButton_Click" />
-                </Grid>
-            </Grid>
-
-            <Grid Grid.Row="2" Margin="0,0,0,12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Button Grid.Column="0"
-                        Margin="0,0,6,0"
-                        MinHeight="120"
-                        Style="{StaticResource BentoCardButtonStyle}"
-                        AutomationProperties.Name="Rutinas. Ir a Rutinas"
-                        Click="RoutinesCard_Click">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource BentoIconSurfaceStyle}">
-                                <Path Width="19"
-                                      Height="19"
-                                      Stretch="Uniform"
-                                      Stroke="{DynamicResource BrushAccent}"
-                                      StrokeThickness="1.8"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      Data="M3.5,2.5 C6,0.3 9.6,0.4 12,2.8 L13.4,4.2 M13.4,4.2 L13.4,1 M13.4,4.2 L10.2,4.2 M11,15 C8.5,17.2 4.9,17.1 2.5,14.7 L1.1,13.3 M1.1,13.3 L1.1,16.5 M1.1,13.3 L4.3,13.3" />
-                            </Border>
-                            <TextBlock Grid.Column="1"
-                                       Margin="11,0,0,0"
-                                       VerticalAlignment="Center"
-                                       Text="Rutinas"
-                                       FontSize="{DynamicResource FontSizeBody}"
-                                       FontWeight="SemiBold" />
-                        </Grid>
-                        <TextBlock Grid.Row="1"
-                                   x:Name="RoutineCountText"
-                                   Margin="0,14,0,0"
-                                   Text="0"
-                                   FontSize="{DynamicResource FontSizeTitle1}"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Grid.Row="2"
-                                   x:Name="RoutineDetailText"
+            <!-- Ahora -->
+            <StackPanel x:Name="NowBlock">
+                <Button x:Name="NowBubble"
+                        Padding="20,18,20,18"
+                        Style="{StaticResource BubbleButtonStyle}"
+                        AutomationProperties.Name="Ahora"
+                        Click="NowBubble_Click">
+                    <StackPanel>
+                        <TextBlock x:Name="NowLabelText"
+                                   Text="AHORA · TOCA PARA DECIDIR"
+                                   Style="{StaticResource BubbleLabelStyle}" />
+                        <TextBlock x:Name="NowTitleText"
                                    Margin="0,6,0,0"
-                                   Text="No hay rutinas configuradas"
-                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                   FontSize="{DynamicResource FontSizeFootnote}"
-                                   TextWrapping="Wrap" />
-                    </Grid>
-                </Button>
-
-                <Button Grid.Column="1"
-                        Margin="6,0,0,0"
-                        MinHeight="120"
-                        Style="{StaticResource BentoCardButtonStyle}"
-                        AutomationProperties.Name="Mirar ahora. Contexto visual de la ventana activa"
-                        Click="ContextCard_Click">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource BentoIconSurfaceStyle}">
-                                <Path Width="19"
-                                      Height="19"
-                                      Stretch="Uniform"
-                                      Stroke="{DynamicResource BrushAccent}"
-                                      StrokeThickness="1.8"
-                                      Data="M2.5,4 L17.5,4 L17.5,15 L2.5,15 Z M6.5,18 L13.5,18" />
-                            </Border>
-                            <TextBlock Grid.Column="1"
-                                       Margin="11,0,0,0"
-                                       VerticalAlignment="Center"
-                                       Text="Mirar ahora"
-                                       FontSize="{DynamicResource FontSizeBody}"
-                                       FontWeight="SemiBold" />
-                        </Grid>
-                        <TextBlock Grid.Row="1"
-                                   x:Name="ContextTitleText"
-                                   Margin="0,14,0,0"
-                                   Text="Ctrl + Shift + Espacio"
-                                   FontSize="{DynamicResource FontSizeBody}"
+                                   Text="Nada importante para hoy"
+                                   FontSize="{DynamicResource FontSizeTitle2}"
                                    FontWeight="SemiBold"
                                    TextWrapping="Wrap" />
-                        <TextBlock Grid.Row="2"
-                                   x:Name="ContextDetailText"
-                                   Margin="0,6,0,0"
-                                   Text="Se procesa en memoria y se elimina automáticamente."
+                        <TextBlock x:Name="NowDetailText"
+                                   Margin="0,4,0,0"
+                                   Text="Toca para añadir una tarea"
                                    Foreground="{DynamicResource BrushTextSecondary}"
                                    FontSize="{DynamicResource FontSizeFootnote}"
                                    TextWrapping="Wrap" />
-                    </Grid>
+                    </StackPanel>
+                </Button>
+
+                <!--
+                    La burbuja se parte en sus dos opciones. Empieza cerrada (alto 0) y se abre con un
+                    muelle; los botones se inflan un poco después, como si salieran de ella.
+                -->
+                <Grid x:Name="NowActions"
+                      Height="0"
+                      ClipToBounds="True"
+                      Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="NowPrimaryButton"
+                            Margin="0,8,4,0"
+                            Padding="0,9"
+                            Content="Empezar"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            RenderTransformOrigin="0.5,0.5"
+                            Click="NowPrimaryButton_Click" />
+                    <Button x:Name="NowSecondaryButton"
+                            Grid.Column="1"
+                            Margin="4,8,0,0"
+                            Padding="0,9"
+                            Content="Mañana"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            RenderTransformOrigin="0.5,0.5"
+                            Click="NowSecondaryButton_Click" />
+                </Grid>
+            </StackPanel>
+
+            <!-- Las dos cifras del día -->
+            <Grid x:Name="CountsBlock" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Button x:Name="DoneBubble"
+                        Margin="0,0,5,0"
+                        Style="{StaticResource BubbleButtonStyle}"
+                        AutomationProperties.Name="Hechas hoy. Ir a Hoy"
+                        Click="DoneBubble_Click">
+                    <StackPanel>
+                        <TextBlock Text="Hechas hoy" Style="{StaticResource BubbleLabelStyle}" />
+                        <TextBlock x:Name="DoneText"
+                                   Margin="0,3,0,0"
+                                   Text="0"
+                                   FontSize="{DynamicResource FontSizeTitle2}"
+                                   FontWeight="SemiBold"
+                                   Typography.NumeralAlignment="Tabular" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="FocusBubble"
+                        Grid.Column="1"
+                        Margin="5,0,0,0"
+                        Style="{StaticResource BubbleButtonStyle}"
+                        AutomationProperties.Name="Enfoque de hoy"
+                        Click="FocusBubble_Click">
+                    <StackPanel>
+                        <TextBlock Text="Enfoque" Style="{StaticResource BubbleLabelStyle}" />
+                        <TextBlock x:Name="FocusText"
+                                   Margin="0,3,0,0"
+                                   Text="0 min"
+                                   FontSize="{DynamicResource FontSizeTitle2}"
+                                   FontWeight="SemiBold"
+                                   Typography.NumeralAlignment="Tabular" />
+                    </StackPanel>
                 </Button>
             </Grid>
 
-            <UniformGrid Grid.Row="3" Columns="3" Margin="0,0,0,12">
-                <Button Content="Nueva tarea"
-                        Margin="0,0,4,0"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        AutomationProperties.Name="Nueva tarea"
-                        Click="NewTaskQuickAction_Click" />
-                <Button Content="Iniciar enfoque"
-                        Margin="4,0"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        AutomationProperties.Name="Iniciar enfoque"
-                        Click="StartFocusQuickAction_Click" />
-                <Button Content="Comandos · Ctrl + K"
-                        Margin="4,0,0,0"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        AutomationProperties.Name="Abrir centro de comandos"
-                        Click="CommandCenterQuickAction_Click" />
-            </UniformGrid>
-
-            <Border Grid.Row="4"
-                    Padding="17"
-                    Background="#A8121822"
-                    BorderBrush="#26FFFFFF"
-                    BorderThickness="1"
-                    CornerRadius="20">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+            <!-- Ayer, solo si ayer quedó algo -->
+            <StackPanel x:Name="YesterdayBlock" Margin="0,10,0,0" Visibility="Collapsed">
+                <Button x:Name="YesterdayBubble"
+                        Padding="18,12"
+                        Style="{StaticResource BubbleButtonStyle}"
+                        AutomationProperties.Name="Resumen de ayer"
+                        Click="YesterdayBubble_Click">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Actividad reciente"
-                                   FontSize="{DynamicResource FontSizeBody}"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Grid.Column="1"
-                                   Text="Solo esta sesión"
+                        <StackPanel>
+                            <TextBlock Text="¿Un resumen de ayer?"
+                                       FontSize="{DynamicResource FontSizeCallout}"
+                                       FontWeight="SemiBold" />
+                            <TextBlock x:Name="YesterdayHeadlineText"
+                                       Margin="0,2,0,0"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       FontSize="{DynamicResource FontSizeFootnote}" />
+                        </StackPanel>
+                        <TextBlock x:Name="YesterdayChevron"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   Text="›"
+                                   FontSize="20"
                                    Foreground="{DynamicResource BrushTextTertiary}"
-                                   FontSize="{DynamicResource FontSizeCaption}" />
+                                   RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform>
+                                <RotateTransform x:Name="YesterdayChevronRotation" Angle="0" />
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
                     </Grid>
-                    <Grid Grid.Row="1" Margin="0,13,0,0">
-                        <TextBlock x:Name="EmptyActivityText"
-                                   Text="Las acciones que ejecutes aparecerán aquí."
-                                   Foreground="{DynamicResource BrushTextSecondary}"
-                                   FontSize="{DynamicResource FontSizeFootnote}" />
-                        <ItemsControl x:Name="RecentItems">
+                </Button>
+
+                <!-- El hilo de ayer: lo que pasó, en orden, con su hora. -->
+                <Border x:Name="YesterdayPanel"
+                        Margin="14,10,4,2"
+                        Visibility="Collapsed">
+                    <Grid>
+                        <Border Width="2"
+                                HorizontalAlignment="Left"
+                                Margin="4,6,0,6"
+                                CornerRadius="1">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop x:Name="ThreadTop" Offset="0" Color="#E39AB4" />
+                                    <GradientStop Offset="1" Color="#26E39AB4" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <ItemsControl x:Name="YesterdayItems" Margin="0,0,0,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Border Width="8"
-                                                Height="8"
-                                                Margin="1,4,11,0"
-                                                VerticalAlignment="Top"
-                                                Background="{DynamicResource BrushSuccess}"
-                                                CornerRadius="4" />
+                                        <Ellipse Width="10"
+                                                 Height="10"
+                                                 Margin="0,3,12,0"
+                                                 VerticalAlignment="Top"
+                                                 Fill="{DynamicResource BrushSuccess}" />
                                         <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding Title}"
-                                                       FontSize="{DynamicResource FontSizeFootnote}"
-                                                       FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding Detail}"
-                                                       Margin="0,2,0,0"
-                                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                            <TextBlock Text="{Binding Time}"
+                                                       Foreground="{DynamicResource BrushTextTertiary}"
                                                        FontSize="{DynamicResource FontSizeCaption}"
+                                                       Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock Text="{Binding Text}"
+                                                       Margin="0,1,0,0"
+                                                       FontSize="{DynamicResource FontSizeFootnote}"
                                                        TextWrapping="Wrap" />
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2"
-                                                   Margin="12,0,0,0"
-                                                   Text="{Binding Time}"
-                                                   Foreground="{DynamicResource BrushTextTertiary}"
-                                                   FontSize="{DynamicResource FontSizeCaption}" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Grid>
-                </Grid>
-            </Border>
-        </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- El rastro de lo que acaba de pasar -->
+            <StackPanel x:Name="TrailBlock" Margin="4,18,2,0" Visibility="Collapsed">
+                <TextBlock Text="Hace un rato" Style="{StaticResource BubbleLabelStyle}" />
+                <ItemsControl x:Name="TrailItems" Margin="0,8,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,6,6"
+                                    Padding="10,5"
+                                    CornerRadius="12"
+                                    Background="#14FFFFFF"
+                                    ToolTip="{Binding Detail}">
+                                <TextBlock FontSize="{DynamicResource FontSizeCaption}"
+                                           Foreground="{DynamicResource BrushTextSecondary}">
+                                    <Run Text="{Binding Title, Mode=OneWay}" />
+                                    <Run Text=" · " Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <Run Text="{Binding Time, Mode=OneWay}" Foreground="{DynamicResource BrushTextTertiary}" />
+                                </TextBlock>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

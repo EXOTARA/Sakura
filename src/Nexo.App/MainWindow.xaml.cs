@@ -659,13 +659,12 @@ public partial class MainWindow : Window
         _homeView.CommandRequested += HomeView_CommandRequested;
         _homeView.TasksRequested += HomeView_TasksRequested;
         _homeView.FocusRequested += HomeView_FocusRequested;
-        _homeView.RoutinesRequested += HomeView_RoutinesRequested;
-        _homeView.ContextRequested += HomeView_ContextRequested;
         _homeView.NewTaskRequested += HomeView_NewTaskRequested;
-        _homeView.StartFocusRequested += HomeView_StartFocusRequested;
-        _homeView.PauseFocusRequested += (_, _) => { _focusManager.Pause(DateTimeOffset.Now); CheckFocusTimer(); };
-        _homeView.ResumeFocusRequested += (_, _) => { _focusManager.Resume(DateTimeOffset.Now); CheckFocusTimer(); };
-        _homeView.CommandCenterRequested += (_, _) => ShowCommandCenter();
+        _homeView.StartTaskFocusRequested += HomeView_StartTaskFocusRequested;
+        _homeView.PostponeTaskRequested += HomeView_PostponeTaskRequested;
+        _homeView.PauseFocusRequested += (_, _) => { _focusManager.Pause(DateTimeOffset.Now); CheckFocusTimer(); RefreshHomeView(); };
+        _homeView.ResumeFocusRequested += (_, _) => { _focusManager.Resume(DateTimeOffset.Now); CheckFocusTimer(); RefreshHomeView(); };
+        _homeView.FinishFocusRequested += (_, _) => { _focusManager.Finish(DateTimeOffset.Now); CheckFocusTimer(); RefreshHomeView(); };
         _systemView.RestartVoiceRequested += async (_, _) => await RestartWakeWordAsync();
         _systemView.DiagnosticsRequested += (_, _) => ShowDiagnostics();
         _systemView.HardwareCapabilityRefreshRequested += async (_, _) => await RefreshHardwareCapabilityAsync();
@@ -4330,9 +4329,62 @@ public partial class MainWindow : Window
         NavigateTo("Focus", animate: true);
     }
 
-    private void HomeView_RoutinesRequested(object? sender, EventArgs e)
+    /// <summary>
+    /// 2026-09-16 — «Empezar» desde la burbuja «Ahora»: la sesión arranca ya, asociada a la tarea.
+    /// Empezar es lo difícil (docs/research); pedir antes una duración es otro paso para no empezar.
+    /// </summary>
+    private void HomeView_StartTaskFocusRequested(object? sender, TaskFocusRequestedEventArgs e)
     {
-        NavigateTo(ShellNavigationPolicy.Routines, animate: true);
+        var result = _focusManager.Start(
+            TimeSpan.FromMinutes(25),
+            e.TaskTitle,
+            Nexo.Core.Focus.FocusSessionKind.Focus,
+            DateTimeOffset.Now,
+            e.TaskId);
+
+        CheckFocusTimer();
+        RefreshHomeView();
+        _capsuleWindow.ShowMessage(
+            result.Success ? CapsuleKind.Success : CapsuleKind.Warning,
+            result.Success ? "Enfoque en marcha" : "No pude empezar",
+            result.Success ? $"25 min en «{e.TaskTitle}»." : result.Message,
+            _preferences.Position);
+    }
+
+    /// <summary>
+    /// 2026-09-16 — «Mañana» desde la burbuja «Ahora»: la tarea pasa al día siguiente a la misma hora,
+    /// o a las 9:00 si no tenía hora. Sin preguntar ni reprochar: dejar algo para mañana es una
+    /// decisión, no un fallo.
+    /// </summary>
+    private void HomeView_PostponeTaskRequested(object? sender, TaskFocusRequestedEventArgs e)
+    {
+        var task = _taskManager.GetAll().FirstOrDefault(candidate => candidate.Id == e.TaskId);
+        if (task is null)
+        {
+            return;
+        }
+
+        var updated = task.Copy();
+        var tomorrow = DateTimeOffset.Now.Date.AddDays(1);
+        var time = task.DueAt is { } due && due.TimeOfDay != TimeSpan.Zero ? due.TimeOfDay : TimeSpan.FromHours(9);
+        updated.DueAt = new DateTimeOffset(tomorrow + time, DateTimeOffset.Now.Offset);
+        updated.ReminderDeliveredAt = null;
+        updated.UpdatedAt = DateTimeOffset.Now;
+
+        var result = _taskManager.Update(updated);
+        RefreshHomeView();
+        _tasksView.Refresh();
+
+        if (result.Success)
+        {
+            _homeView.AddRecentAction("Para mañana", task.Title);
+        }
+
+        _capsuleWindow.ShowMessage(
+            result.Success ? CapsuleKind.Success : CapsuleKind.Warning,
+            result.Success ? "Pasa a mañana" : "No pude moverla",
+            result.Success ? task.Title : result.Message,
+            _preferences.Position);
     }
 
     private void HomeView_NewTaskRequested(object? sender, EventArgs e)
@@ -8964,7 +9016,8 @@ public partial class MainWindow : Window
             _lastExternalWindowHandle != 0,
             DateTimeOffset.Now);
 
-        _homeView.Refresh(model);
+        // 2026-09-16 — Inicio tiene su propio cálculo; el cajón sigue con el resumen de siempre.
+        _homeView.Refresh(HomeNowBuilder.Build(_taskManager, _focusManager, name: null, DateTimeOffset.Now));
 
         // El mismo resumen alimenta el cajón. Sale del mismo cálculo y no de otro propio: dos
         // cuentas separadas acabarían discrepando, y ver «3 pendientes» arriba y «2» abajo hace

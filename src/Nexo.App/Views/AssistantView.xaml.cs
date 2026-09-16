@@ -441,54 +441,56 @@ public partial class AssistantView : UserControl
         (DocumentSaveFormat.PowerPoint, "PowerPoint")
     ];
 
+    /// <summary>
+    /// 2026-09-16 — las dos filas de botones bajo cada respuesta pesaban más que la respuesta (Adler).
+    /// Quedan detrás de un «+» pequeño: un clic abre el mismo menú con «Seguir» y «Guardar como».
+    /// </summary>
     private FrameworkElement CreateFollowUpChips()
     {
-        var panel = new WrapPanel { Margin = new Thickness(0, 9, 0, 2), MaxWidth = 440, HorizontalAlignment = HorizontalAlignment.Left };
-        System.Windows.Automation.AutomationProperties.SetName(panel, "Seguir con la respuesta");
+        var menu = new ContextMenu();
 
         foreach (var followUp in Nexo.Core.Assistant.AnswerFollowUps.All)
         {
-            var button = new Button
-            {
-                Content = followUp.Label,
-                ToolTip = followUp.Prompt,
-                Margin = new Thickness(0, 0, 6, 6),
-                Style = (Style)FindResource("SoftChipButtonStyle")
-            };
-            System.Windows.Automation.AutomationProperties.SetName(button, followUp.Label);
+            var item = new MenuItem { Header = followUp.Label, ToolTip = followUp.Prompt };
             var prompt = followUp.Prompt;
-            button.Click += (_, _) => PromptSubmitted?.Invoke(this, new PromptSubmittedEventArgs(prompt));
-            panel.Children.Add(button);
+            item.Click += (_, _) => PromptSubmitted?.Invoke(this, new PromptSubmittedEventArgs(prompt));
+            menu.Items.Add(item);
         }
 
-        // 2026-09-15 — guardar la última respuesta sin tener que descubrir el clic derecho.
-        var saveRow = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
-        saveRow.Children.Add(new TextBlock
-        {
-            Text = "Guardar como",
-            Margin = new Thickness(0, 0, 8, 6),
-            VerticalAlignment = VerticalAlignment.Center,
-            FontSize = 12,
-            Foreground = (Brush)FindResource("BrushTextTertiary")
-        });
+        menu.Items.Add(new Separator());
 
         var answer = _messages[^1].Text;
         foreach (var (format, label) in SaveFormats)
         {
-            var button = new Button
-            {
-                Content = label,
-                ToolTip = $"Guardar esta respuesta en el escritorio como {label}",
-                Margin = new Thickness(0, 0, 6, 6),
-                Style = (Style)FindResource("SoftChipButtonStyle")
-            };
-            System.Windows.Automation.AutomationProperties.SetName(button, $"Guardar como {label}");
+            var item = new MenuItem { Header = $"Guardar como {label}" };
             var chosen = format;
-            button.Click += (_, _) => DocumentSaveRequested?.Invoke(this, new DocumentSaveEventArgs(answer, chosen));
-            saveRow.Children.Add(button);
+            item.Click += (_, _) => DocumentSaveRequested?.Invoke(this, new DocumentSaveEventArgs(answer, chosen));
+            menu.Items.Add(item);
         }
 
-        return new StackPanel { Children = { panel, saveRow } };
+        var more = new Button
+        {
+            Content = "+",
+            Width = 28,
+            Height = 28,
+            FontSize = 15,
+            Margin = new Thickness(2, 6, 0, 2),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Foreground = (Brush)FindResource("BrushTextSecondary"),
+            Background = Brushes.Transparent,
+            Style = (Style)FindResource("IconButtonStyle"),
+            ToolTip = "Seguir con la respuesta o guardarla",
+            ContextMenu = menu
+        };
+        System.Windows.Automation.AutomationProperties.SetName(more, "Más opciones para la respuesta");
+        more.Click += (_, _) =>
+        {
+            menu.PlacementTarget = more;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            menu.IsOpen = true;
+        };
+
+        return more;
     }
 
     private void ShowConversationSurface()

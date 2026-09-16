@@ -27,6 +27,20 @@ public static class QuickControlsPolicy
             ? SidebarPosition.Left
             : SidebarPosition.Right;
 
+    /// <summary>Vueltas de espera seguidas con el ratón quieto encima antes de irse igualmente.</summary>
+    public const int MaximumStillTicks = 2;
+
+    /// <summary>
+    /// 2026-09-16 — si el panel sigue puesto al cumplirse la espera (Adler, en la 0.30.17: «sigue sin
+    /// desaparecer»). El panel vive en el borde, justo donde descansa el ratón que lo abrió, así que
+    /// «ratón encima» solo cuenta si el ratón se mueve: parado encima dos vueltas, se va. El teclado
+    /// solo cuenta si la ventana está de verdad delante; si no, el foco que WPF recuerda es viejo.
+    /// </summary>
+    public static bool ShouldStay(bool dragging, bool keyboardInsideForeground, bool cursorOver, int stillTicks) =>
+        dragging ||
+        keyboardInsideForeground ||
+        (cursorOver && stillTicks < MaximumStillTicks);
+
     /// <summary>
     /// Lleva un porcentaje al entero de 0 a 100 que esperan tanto el mezclador de audio como el
     /// protocolo del monitor. Existe como una sola función porque los dos mandos comparten el
