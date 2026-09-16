@@ -4291,7 +4291,7 @@ public partial class MainWindow : Window
             (ShellNavigationPolicy.Assistant, "Ir a Asistente", "IconSakuraAssistant", ["asistente", "chat", "conversación"]),
             (ShellNavigationPolicy.Tasks, "Ir a Hoy", "IconSakuraTasks", ["hoy", "tareas", "pendientes"]),
             (ShellNavigationPolicy.Focus, "Ir a Enfoque", "IconSakuraFocus", ["enfoque", "concentración"]),
-            (ShellNavigationPolicy.Routines, "Ir a Rutinas", "IconSakuraRoutines", ["rutinas", "automatización"]),
+            (ShellNavigationPolicy.Routines, "Ir a Atajos", "IconSakuraRoutines", ["atajos", "rutinas", "automatización"]),
             (ShellNavigationPolicy.Audio, "Ir a Audio", "IconSakuraAudio", ["audio", "volumen", "sonido"]),
             (ShellNavigationPolicy.Capture, "Ir a Captura", "IconSakuraCapture", ["captura", "pantalla", "screenshot"]),
             (ShellNavigationPolicy.System, "Ir a Sistema", "IconSakuraSystem", ["sistema", "estado", "diagnóstico", "hardware"]),
@@ -7573,10 +7573,10 @@ public partial class MainWindow : Window
                 _assistantView.AddSakuraMessage(
                     available.Length == 0
                         ? "No hay rutinas activas."
-                        : "Rutinas disponibles:" + Environment.NewLine + string.Join(Environment.NewLine, available));
+                        : "Atajos disponibles:" + Environment.NewLine + string.Join(Environment.NewLine, available));
                 _capsuleWindow.ShowMessage(
                     CapsuleKind.Information,
-                    "Rutinas disponibles",
+                    "Atajos disponibles",
                     available.Length == 0 ? "No hay rutinas activas." : $"{available.Length} rutinas activas.",
                     _preferences.Position);
                 return;
@@ -9110,7 +9110,7 @@ public partial class MainWindow : Window
             "Assistant" => ("Asistente", "Consulta, conversa o comparte contexto"),
             "Tasks" => ("Hoy", "Tareas, prioridades y recordatorios"),
             "Focus" => ("Enfoque", "Sesiones cortas sin perder el ritmo"),
-            "Routines" => ("Rutinas", "Acciones repetibles, claras y controladas"),
+            "Routines" => ("Atajos", "Varias acciones con una sola frase"),
             "Audio" => ("Audio", "Control local por aplicación"),
             "Capture" => ("Captura", "Captura y graba la pantalla"),
             "System" => ("Sistema", "Estado y diagnóstico del equipo"),

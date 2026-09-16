@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.30.21-beta]
+
+### Nuevo
+
+- **Alt+Shift+R: hacer algo con el texto seleccionado en cualquier aplicación.**
+  - Seleccionas un texto, pulsas el atajo y eliges: Más claro, Corregir, Más corto, Resumir, Al inglés o Al español.
+  - El resultado aparece conforme llega; **Reemplazar** lo pone en lugar de lo seleccionado y **Copiar** lo deja en el portapapeles.
+  - La selección se lee primero sin tocar el portapapeles; si hace falta copiarla, se devuelve lo que había. Si el portapapeles tiene una imagen o archivos, no se toca.
+  - No funciona en ventanas marcadas como sensibles.
+  - Necesita un modelo de IA, y el texto se le envía tal cual. Así consta ya en la política de privacidad.
+- **Plantillas en Atajos:** Estudiar, Programar y Descanso abren el editor ya rellenado.
+
+### Cambiado
+
+- **Enfoque más flexible:**
+  - Duraciones de un toque: «Solo 5 min para empezar», 15, 25 y la última que usaste, que Sakura recuerda.
+  - Al terminar, **Seguir 10 min más** continúa con la misma tarea sin volver a elegir.
+  - Ya no hay tipos de sesión (enfoque, descanso, temporizador): un rato es un rato.
+- **Rutinas ahora se llama Atajos.** Los atajos de texto del dictado pasan a llamarse **Textos rápidos**, para no confundirlos.
+
 ## [0.30.20-beta]
 
 ### Nuevo

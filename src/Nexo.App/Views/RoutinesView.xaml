@@ -22,19 +22,29 @@
                     Content="Nueva"
                     Padding="14,8"
                     Style="{StaticResource PrimaryButtonStyle}"
-                    AutomationProperties.Name="Nueva rutina"
+                    AutomationProperties.Name="Nuevo atajo"
                     Click="NewRoutineButton_Click" />
         </Grid>
 
         <Border Grid.Row="1"
                 Margin="0,12,0,10"
                 Style="{StaticResource SubtleCardStyle}">
+            <!-- 2026-09-16 — empezar desde una plantilla en vez de desde un formulario vacío. -->
             <StackPanel>
-                <TextBlock Text="Motor seguro"
+                <TextBlock Text="Empieza con una plantilla"
                            FontWeight="SemiBold" />
-                <TextBlock Margin="0,4,0,0"
-                           Text="Sakura solo ejecuta acciones de una lista permitida. Los pasos sensibles muestran una vista previa antes de comenzar."
+                <WrapPanel Margin="0,8,0,0">
+                    <Button Content="Estudiar" Tag="study" Margin="0,0,6,6" Style="{StaticResource SoftChipButtonStyle}"
+                            ToolTip="Silencia Discord, baja Spotify y empieza 25 min de enfoque" Click="TemplateButton_Click" />
+                    <Button Content="Programar" Tag="code" Margin="0,0,6,6" Style="{StaticResource SoftChipButtonStyle}"
+                            ToolTip="Abre VS Code y PowerShell, y empieza 50 min de enfoque" Click="TemplateButton_Click" />
+                    <Button Content="Descanso" Tag="rest" Margin="0,0,6,6" Style="{StaticResource SoftChipButtonStyle}"
+                            ToolTip="Activa el sonido de Discord y empieza 10 min de descanso" Click="TemplateButton_Click" />
+                </WrapPanel>
+                <TextBlock Margin="0,2,0,0"
+                           Text="Solo se ejecutan acciones de una lista permitida; las sensibles se muestran antes de empezar."
                            TextWrapping="Wrap"
+                           FontSize="{DynamicResource FontSizeCaption}"
                            Style="{StaticResource MutedTextStyle}" />
             </StackPanel>
         </Border>
@@ -124,7 +134,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock x:Name="EmptyStateText"
-                               Text="No hay rutinas disponibles."
+                               Text="Aún no hay atajos."
                                Margin="0,20,0,0"
                                HorizontalAlignment="Center"
                                Style="{StaticResource MutedTextStyle}" />
@@ -137,20 +147,20 @@
                           HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <TextBlock x:Name="EditorTitleText"
-                               Text="Nueva rutina"
+                               Text="Nuevo atajo"
                                Style="{StaticResource SectionTitleStyle}" />
 
                     <TextBlock Text="Nombre" Margin="0,12,0,5" FontWeight="SemiBold" />
                     <TextBox x:Name="NameTextBox"
-                             AutomationProperties.Name="Nombre de la rutina" Style="{StaticResource CompactTextBoxStyle}" />
+                             AutomationProperties.Name="Nombre del atajo" Style="{StaticResource CompactTextBoxStyle}" />
 
                     <TextBlock Text="Frase de activación" Margin="0,12,0,5" FontWeight="SemiBold" />
                     <TextBox x:Name="TriggerTextBox"
-                             AutomationProperties.Name="Frase que dispara la rutina" Style="{StaticResource CompactTextBoxStyle}" />
+                             AutomationProperties.Name="Frase que dispara el atajo" Style="{StaticResource CompactTextBoxStyle}" />
 
                     <CheckBox x:Name="EnabledCheckBox"
                               Margin="0,12,0,0"
-                              Content="Rutina activa"
+                              Content="Atajo activo"
                               IsChecked="True" />
                     <CheckBox x:Name="ConfirmationCheckBox"
                               Margin="0,8,0,0"
