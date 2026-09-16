@@ -148,6 +148,16 @@ public sealed class ShellPreferences
     public bool DocumentImagesAsked { get; set; }
 
     /// <summary>
+    /// 2026-09-16 — buscar fuentes reales sobre el tema del documento en catálogos académicos
+    /// abiertos, para dejarlas al final en APA 7 (Adler: «fuentes actuales, confiables, en español, y
+    /// no solo lo que yo le di»). Llega apagado y se pregunta la primera vez, como las imágenes.
+    /// </summary>
+    public bool DocumentSources { get; set; }
+
+    /// <summary>Si ya se preguntó por las fuentes.</summary>
+    public bool DocumentSourcesAsked { get; set; }
+
+    /// <summary>
     /// Diseño D27 — llevar el ratón al borde donde está acoplada Kohana la hace aparecer.
     /// Llega activado porque una función que hay que descubrir en Ajustes para saber que existe no
     /// la usa nadie; y se puede apagar aquí mismo porque un borde de pantalla también es donde vive

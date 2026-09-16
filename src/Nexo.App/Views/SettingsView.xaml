@@ -424,6 +424,16 @@
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
+                    <CheckBox x:Name="DocumentSourcesCheckBox"
+                              Margin="0,12,0,0"
+                              Content="Buscar fuentes para los documentos"
+                              Checked="DocumentSourcesCheckBox_Changed"
+                              Unchecked="DocumentSourcesCheckBox_Changed" />
+                    <TextBlock Margin="24,5,0,0"
+                               Text="Al guardar un borrador, Sakura busca en catálogos académicos abiertos (OpenAlex y Crossref) trabajos en español de los últimos años sobre el tema, y los deja al final en formato APA 7 para que los compruebes. Solo sale de tu equipo el tema a buscar."
+                               TextWrapping="Wrap"
+                               Style="{StaticResource MutedTextStyle}" />
+
                     <CheckBox x:Name="SaveConversationHistoryCheckBox"
                               Margin="0,12,0,0"
                               Content="Guardar el historial de conversación"

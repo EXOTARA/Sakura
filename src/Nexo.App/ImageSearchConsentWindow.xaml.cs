@@ -12,12 +12,34 @@ namespace Nexo.App;
 /// </summary>
 public partial class ImageSearchConsentWindow : Window
 {
-    public ImageSearchConsentWindow(IReadOnlyList<string> queries)
+    /// <param name="queries">Lo que hay que buscar en imágenes; vacío si no se piden.</param>
+    /// <param name="topic">El tema del que buscar fuentes, o nulo si no se piden.</param>
+    public ImageSearchConsentWindow(IReadOnlyList<string> queries, string? topic = null)
     {
         InitializeComponent();
-        DetailText.Text = queries.Count == 1
-            ? $"El documento pide una imagen: «{queries[0]}»."
-            : $"El documento pide {queries.Count} imágenes: {string.Join(", ", queries.Take(3).Select(query => $"«{query}»"))}{(queries.Count > 3 ? "…" : ".")}";
+
+        var wants = new List<string>();
+        if (queries.Count > 0)
+        {
+            wants.Add(queries.Count == 1
+                ? $"una imagen: «{queries[0]}»"
+                : $"{queries.Count} imágenes: {string.Join(", ", queries.Take(3).Select(query => $"«{query}»"))}{(queries.Count > 3 ? "…" : string.Empty)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(topic))
+        {
+            wants.Add($"fuentes sobre «{topic!.Trim()}»");
+        }
+
+        QuestionText.Text = wants.Count > 1
+            ? "¿Busco imágenes y fuentes para el documento?"
+            : queries.Count > 0
+                ? "¿Busco imágenes para el documento?"
+                : "¿Busco fuentes para el documento?";
+        DetailText.Text = "El documento pide " + string.Join(" y ", wants) + ".";
+        ExplanationText.Text = queries.Count > 0
+            ? "Las imágenes salen de Wikimedia Commons, de licencia libre, y las fuentes de catálogos académicos abiertos. Solo sale de tu equipo lo que hay que buscar. El documento incluye el autor y la licencia de cada imagen y la referencia de cada fuente. Puedes cambiarlo en Ajustes."
+            : "Las fuentes salen de catálogos académicos abiertos, en español y de los últimos años. Solo sale de tu equipo el tema a buscar, y cada referencia se escribe con los datos que devuelve el catálogo, sin inventar ninguna. Puedes cambiarlo en Ajustes.";
 
         ContentRendered += (_, _) =>
         {

@@ -51,7 +51,12 @@ public static class WordDocumentBuilder
     /// Las fotos ya descargadas, por el texto que las pedía («Imagen: …»). Sin ellas el documento sale
     /// igual, sin fotos.
     /// </param>
-    public static byte[] BuildFromMarkdown(string title, string markdown, IReadOnlyDictionary<string, DocumentImage>? images = null)
+    /// <param name="sources">Las fuentes encontradas, que van al final en APA 7.</param>
+    public static byte[] BuildFromMarkdown(
+        string title,
+        string markdown,
+        IReadOnlyDictionary<string, DocumentImage>? images = null,
+        IReadOnlyList<DocumentSource>? sources = null)
     {
         var writer = new DocumentWriter();
         var blocks = AnswerMarkdown.Parse(markdown);
@@ -130,6 +135,22 @@ public static class WordDocumentBuilder
                     }
 
                     break;
+            }
+        }
+
+        // 2026-09-16 — las fuentes que Sakura encontró, al final y en APA 7. Se dice lo que son:
+        // puntos de partida para leer, no una bibliografía de lo que el borrador afirma.
+        if (sources is { Count: > 0 })
+        {
+            writer.EndList();
+            writer.Paragraph("Heading1", [new AnswerSpan("Fuentes para consultar", AnswerSpanStyle.None)]);
+            writer.Paragraph("Note", [new AnswerSpan(
+                "Sakura las encontró en catálogos académicos abiertos. Compruébalas antes de citarlas en tu trabajo.",
+                AnswerSpanStyle.None)]);
+
+            foreach (var source in sources)
+            {
+                writer.Reference(ApaReference.Format(source));
             }
         }
 
@@ -440,6 +461,14 @@ public static class WordDocumentBuilder
             _body.Append("</w:tr>");
         }
 
+        /// <summary>Una referencia en APA: con sangría francesa, que es como se escribe la lista.</summary>
+        public void Reference(string text)
+        {
+            _body.Append("<w:p><w:pPr><w:ind w:left=\"567\" w:hanging=\"567\"/><w:spacing w:after=\"100\"/></w:pPr>");
+            Runs([new AnswerSpan(text, AnswerSpanStyle.None)]);
+            _body.Append("</w:p>");
+        }
+
         /// <summary>Una fórmula sola en su renglón.</summary>
         public void Equation(string formula)
         {
@@ -701,6 +730,8 @@ public static class WordDocumentBuilder
         "<w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/><w:color w:val=\"24292F\"/><w:lang w:val=\"es-ES\"/></w:rPr></w:rPrDefault>" +
         "<w:pPrDefault><w:pPr><w:spacing w:after=\"140\" w:line=\"288\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults>" +
         "<w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/><w:qFormat/></w:style>" +
+        "<w:style w:type=\"paragraph\" w:styleId=\"Note\"><w:name w:val=\"Note\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/>" +
+        "<w:pPr><w:spacing w:after=\"200\"/></w:pPr><w:rPr><w:i/><w:color w:val=\"57606A\"/><w:sz w:val=\"18\"/></w:rPr></w:style>" +
         "<w:style w:type=\"paragraph\" w:styleId=\"Caption\"><w:name w:val=\"caption\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:qFormat/>" +
         "<w:pPr><w:jc w:val=\"center\"/><w:spacing w:after=\"240\"/></w:pPr>" +
         "<w:rPr><w:i/><w:color w:val=\"57606A\"/><w:sz w:val=\"18\"/></w:rPr></w:style>" +

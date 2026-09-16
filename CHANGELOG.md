@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.30.16-beta]
+
+### Nuevo
+
+- **Fuentes reales en los borradores.** Al guardar como Word o PowerPoint, Sakura busca trabajos en español y de los últimos ocho años sobre el tema en dos catálogos académicos abiertos, OpenAlex y Crossref, y los deja al final en «Fuentes para consultar», en formato APA 7 y con sangría francesa. Cada referencia se escribe con los datos que devuelve el catálogo: si falta el volumen o las páginas, va sin ellos; si un nombre no se puede separar con seguridad en apellidos y nombre, se deja como vino.
+- **Se pregunta una sola vez por lo que sale a internet**: las imágenes y las fuentes van en el mismo aviso, cada una guarda su respuesta y las dos se cambian en Ajustes.
+- Si no aparece ninguna fuente que valga, el documento sale sin la lista y Sakura lo dice, en vez de rellenarla a la fuerza.
+
 ## [0.30.15-beta]
 
 ### Corregido

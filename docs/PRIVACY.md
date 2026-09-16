@@ -111,13 +111,24 @@ Si está activado, lo único que sale del equipo es el término de búsqueda (po
 eólicas en el mar»); nunca la respuesta, el documento ni ningún dato del equipo. La presentación
 incluye el autor y la licencia de cada imagen, como piden esas licencias.
 
-### 5. Descarga de Ollama — solo si el usuario lo instala desde Sakura
+### 5. Fuentes de los borradores — solo si se autoriza
+
+Al guardar un borrador como Word o PowerPoint, Sakura puede buscar fuentes reales sobre su tema en
+dos catálogos académicos públicos: [OpenAlex](https://openalex.org/) y
+[Crossref](https://www.crossref.org/). No hacen falta cuenta ni clave. Llega desactivado y se
+pregunta la primera vez, junto con lo de las imágenes; la respuesta se guarda en Ajustes.
+
+Si está activado, lo único que sale del equipo es el tema a buscar —normalmente el título del
+documento—; nunca el contenido del borrador. Las referencias se escriben con los datos que devuelven
+esos catálogos, sin inventar ninguna.
+
+### 6. Descarga de Ollama — solo si el usuario lo instala desde Sakura
 
 Si se acepta que Sakura instale Ollama, consulta su versión publicada en
 `api.github.com/repos/ollama/ollama/releases/latest` y la descarga. Es una acción explícita del
 usuario, no ocurre sola.
 
-### 6. Órdenes de red que pida el usuario
+### 7. Órdenes de red que pida el usuario
 
 Algunas órdenes del equipo usan la red por definición. «Comprobar si hay conexión» ejecuta
 `ping -n 4 1.1.1.1`. Solo se ejecutan cuando se piden y con el permiso de «Actuar sobre el equipo».
@@ -162,9 +173,11 @@ Everything that leaves the machine is listed above. In short:
    DPAPI or read from a user environment variable. Providers and their privacy
    policies are listed above. The default local option is Ollama on `127.0.0.1`, which sends
    nothing anywhere.
-4. **Presentation images (opt-in only):** when an answer asks for a slide image and it is saved as a
+4. **Presentation and draft lookups (opt-in only):** when an answer asks for a slide image and it is saved as a
    PowerPoint file, Sakura can look it up on Wikimedia Commons. Sakura asks the first time; only the
    search term leaves the machine, and the deck credits each image's author and licence.
+   Sakura can also look up real sources for a draft on OpenAlex and Crossref; only the topic leaves
+   the machine, and every reference is written from what those catalogues return.
 5. **Ollama installation (on user action):** version lookup and download from GitHub.
 
 No advertising, no profiling, no sale or sharing of user data.

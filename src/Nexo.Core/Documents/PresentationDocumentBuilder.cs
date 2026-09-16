@@ -39,7 +39,12 @@ public static class PresentationDocumentBuilder
     /// Las imágenes ya descargadas, por el texto que las pedía. Sin ellas la presentación sale igual,
     /// solo que sin fotos: una búsqueda que falle no puede costar el documento entero.
     /// </param>
-    public static byte[] BuildFromMarkdown(string title, string markdown, IReadOnlyDictionary<string, DocumentImage>? images = null)
+    /// <param name="sources">Las fuentes encontradas, que van en su propia diapositiva.</param>
+    public static byte[] BuildFromMarkdown(
+        string title,
+        string markdown,
+        IReadOnlyDictionary<string, DocumentImage>? images = null,
+        IReadOnlyList<DocumentSource>? sources = null)
     {
         var slides = PresentationPlan.From(title, markdown).ToList();
         var documentTitle = slides[0].Title;
@@ -58,6 +63,15 @@ public static class PresentationDocumentBuilder
                     used.Add(image);
                 }
             }
+        }
+
+        // 2026-09-16 — las fuentes, antes de los créditos de imágenes: una cosa es de dónde salió lo
+        // que se dice y otra de dónde salieron las fotos.
+        if (sources is { Count: > 0 })
+        {
+            slides.Add(new SlideSpec("Fuentes para consultar",
+                sources.Select(source => new SlideLine([new AnswerSpan(ApaReference.Format(source), AnswerSpanStyle.None)], 0, null, IsBullet: true)).ToList(),
+                SlideLayout.Credits));
         }
 
         if (used.Count > 0)
