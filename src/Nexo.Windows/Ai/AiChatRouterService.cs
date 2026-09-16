@@ -30,23 +30,23 @@ public sealed class AiChatRouterService : IAiChatService, IDisposable
     {
         if (!HasImages(request))
         {
-            return await Resolve(configuration).SendAsync(configuration, request, cancellationToken);
+            return await ShorterIfRejectedAsync(configuration, request, cancellationToken);
         }
 
         if (AiVisionModelPolicy.IsKnownTextOnly(configuration.Model) &&
             await VisionConfigurationAsync(configuration, cancellationToken) is { } borrowed)
         {
-            return await Resolve(borrowed).SendAsync(borrowed, request, cancellationToken);
+            return await ShorterIfRejectedAsync(borrowed, request, cancellationToken);
         }
 
         // Este camino no lanza: devuelve el fallo. Con imagen y fallo, se repite con el modelo de visión.
-        var result = await Resolve(configuration).SendAsync(configuration, request, cancellationToken);
+        var result = await ShorterIfRejectedAsync(configuration, request, cancellationToken);
         if (result.IsSuccess || await VisionConfigurationAsync(configuration, cancellationToken) is not { } fallback)
         {
             return result;
         }
 
-        return await Resolve(fallback).SendAsync(fallback, request, cancellationToken);
+        return await ShorterIfRejectedAsync(fallback, request, cancellationToken);
     }
 
     /// <summary>
@@ -71,6 +71,7 @@ public sealed class AiChatRouterService : IAiChatService, IDisposable
         var enumerator = Resolve(effective).StreamAsync(effective, request, cancellationToken).GetAsyncEnumerator(cancellationToken);
         var produced = false;
         AiProviderConfiguration? retry = null;
+        AiChatRequest? shorter = null;
         try
         {
             while (true)
@@ -84,6 +85,17 @@ public sealed class AiChatRouterService : IAiChatService, IDisposable
                     }
 
                     chunk = enumerator.Current;
+                }
+                catch (Exception exception) when (
+                    exception is not OperationCanceledException &&
+                    !produced &&
+                    request.MaxOutputTokens is null &&
+                    AiProviderLimits.OutputLimit(exception.Message) is not null)
+                {
+                    // El proveedor dijo cuánto admite: se repite con ese máximo, con el mismo modelo.
+                    shorter = request with { MaxOutputTokens = AiProviderLimits.OutputLimit(exception.Message) };
+                    retry = effective;
+                    break;
                 }
                 catch (Exception exception) when (
                     exception is not OperationCanceledException &&
@@ -109,13 +121,71 @@ public sealed class AiChatRouterService : IAiChatService, IDisposable
             await enumerator.DisposeAsync();
         }
 
-        if (retry is not null)
+        if (retry is null)
         {
-            await foreach (var chunk in Resolve(retry).StreamAsync(retry, request, cancellationToken))
+            yield break;
+        }
+
+        var second = Resolve(retry).StreamAsync(retry, shorter ?? request, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        try
+        {
+            while (true)
             {
+                string chunk;
+                try
+                {
+                    if (!await second.MoveNextAsync())
+                    {
+                        break;
+                    }
+
+                    chunk = second.Current;
+                }
+                catch (Exception exception) when (
+                    exception is not OperationCanceledException &&
+                    shorter is not null &&
+                    AiProviderLimits.IsOutputLimit(exception.Message))
+                {
+                    // Ni pidiendo menos cabe: se dice en español y con qué hacer.
+                    throw new AiChatStreamException(AiProviderLimits.Explain(shorter.MaxOutputTokens));
+                }
+
                 yield return chunk;
             }
         }
+        finally
+        {
+            await second.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// 2026-09-16 — si el proveedor rechaza la petición por el tamaño de la respuesta, se repite
+    /// pidiendo como mucho lo que él mismo dijo que admite (ver <see cref="AiProviderLimits"/>).
+    ///
+    /// Le pasaba a Adler en cada pregunta de seguimiento sobre una ventana: la imagen sigue en el
+    /// contexto, así que la pregunta va al modelo con visión, y ese modelo en su plan solo admite
+    /// 1000 tokens de respuesta por minuto. El chat enseñaba el error del proveedor, en inglés, en
+    /// lugar de contestar.
+    /// </summary>
+    private async Task<AiChatResult> ShorterIfRejectedAsync(
+        AiProviderConfiguration configuration,
+        AiChatRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await Resolve(configuration).SendAsync(configuration, request, cancellationToken);
+        if (result.IsSuccess || request.MaxOutputTokens is not null ||
+            AiProviderLimits.OutputLimit(result.Detail) is not { } limit)
+        {
+            return result;
+        }
+
+        var shorter = await Resolve(configuration).SendAsync(configuration, request with { MaxOutputTokens = limit }, cancellationToken);
+
+        // Si ni pidiendo menos cabe, se dice en español y con qué hacer, no con el error del proveedor.
+        return shorter.IsSuccess || !AiProviderLimits.IsOutputLimit(shorter.Detail)
+            ? shorter
+            : AiChatResult.Failed(AiProviderLimits.Explain(limit));
     }
 
     /// <summary>Nombre del último modelo prestado para leer una imagen, para poder decirlo.</summary>

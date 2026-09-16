@@ -115,7 +115,8 @@ public sealed class OpenAiCompatibleChatService : IAiChatService, IDisposable
         var payload = new ChatCompletionRequest(
             configuration.Model.Trim(),
             messages,
-            Stream: false);
+            Stream: false,
+            request.MaxOutputTokens);
 
         try
         {
@@ -190,7 +191,8 @@ public sealed class OpenAiCompatibleChatService : IAiChatService, IDisposable
         var payload = new ChatCompletionRequest(
             configuration.Model.Trim(),
             messages,
-            Stream: true);
+            Stream: true,
+            request.MaxOutputTokens);
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
@@ -713,7 +715,8 @@ public sealed class OpenAiCompatibleChatService : IAiChatService, IDisposable
     private sealed record ChatCompletionRequest(
         string Model,
         IReadOnlyList<ChatMessage> Messages,
-        bool Stream);
+        bool Stream,
+        [property: JsonPropertyName("max_tokens")] int? MaxTokens = null);
 
     private sealed record ChatMessage(string Role, object Content);
 

@@ -27,6 +27,18 @@ public static class AnswerFollowUps
     ];
 
     /// <summary>
+    /// 2026-09-16 — si una frase es la de uno de estos botones.
+    ///
+    /// Sirve para no reenviar la captura al pedir «más fácil» o «más corto»: esos botones trabajan
+    /// sobre la respuesta anterior, que ya está en la conversación, y la imagen solo obliga a usar el
+    /// modelo con visión —más caro, más lento y, en el plan de Adler, con un tope de respuesta tan
+    /// bajo que el proveedor rechazaba la petición entera—.
+    /// </summary>
+    public static bool IsFollowUp(string? prompt) =>
+        prompt is { Length: > 0 } &&
+        All.Any(followUp => string.Equals(followUp.Prompt, prompt.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
     /// Los botones que caben en la píldora de respuesta, que es estrecha: sin «Hazlo lista», que es el
     /// menos útil cuando la respuesta ya viene en puntos, como casi todas las de la píldora.
     /// </summary>
