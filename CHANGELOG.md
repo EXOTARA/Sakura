@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.30.22-beta]
+
+### Nuevo
+
+- **Exportar una conversación.** En el **+** de la última respuesta, o desde la paleta con «Exportar la conversación», el chat se guarda como archivo Markdown en `Documentos\Sakura\Conversaciones` y se abre la carpeta.
+- **«Apuntar una tarea» también está en la paleta.**
+- **Casilla propia para el panel de volumen y brillo** en Personalizar («Volumen y brillo en el borde contrario»).
+
+### Cambiado
+
+- **En una instalación nueva, Peek y el panel de volumen y brillo del borde vienen apagados.** Quien actualiza conserva lo que tenía.
+
+### Corregido
+
+- **En una instalación nueva, Inicio y Hoy no aparecían en el menú lateral** (0.30.19). El cambio solo se aplicaba al actualizar.
+
 ## [0.30.21-beta]
 
 ### Nuevo

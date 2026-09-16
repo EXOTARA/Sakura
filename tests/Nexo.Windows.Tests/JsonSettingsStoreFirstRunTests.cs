@@ -63,6 +63,25 @@ public sealed class JsonSettingsStoreFirstRunTests : IDisposable
     }
 
     [Fact]
+    public void FirstRun_ShowsInicioAndHoy_AndLeavesPeekAndEdgeControlsOff()
+    {
+        var preferences = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.True(preferences.ShowHomeModule);
+        Assert.True(preferences.ShowTasksModule);
+        Assert.False(preferences.PeekEnabled);
+        Assert.False(preferences.EdgeQuickControlsEnabled);
+    }
+
+    [Fact]
+    public void AnUpgrade_KeepsTheEdgeControls()
+    {
+        File.WriteAllText(SettingsPath, """{"SchemaVersion": 31, "HasCompletedOnboarding": true}""");
+
+        Assert.True(new JsonSettingsStore(SettingsPath).Load().EdgeQuickControlsEnabled);
+    }
+
+    [Fact]
     public void AnOldFile_StillGetsItsMigrationsApplied()
     {
         File.WriteAllText(SettingsPath, """{"SchemaVersion": 1}""");

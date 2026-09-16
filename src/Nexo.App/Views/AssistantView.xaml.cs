@@ -445,6 +445,9 @@ public partial class AssistantView : UserControl
     /// 2026-09-16 — las dos filas de botones bajo cada respuesta pesaban más que la respuesta (Adler).
     /// Quedan detrás de un «+» pequeño: un clic abre el mismo menú con «Seguir» y «Guardar como».
     /// </summary>
+    /// <summary>2026-09-16 — se pidió guardar la conversación como archivo.</summary>
+    public event EventHandler? ExportRequested;
+
     private FrameworkElement CreateFollowUpChips()
     {
         var menu = new ContextMenu();
@@ -467,6 +470,11 @@ public partial class AssistantView : UserControl
             item.Click += (_, _) => DocumentSaveRequested?.Invoke(this, new DocumentSaveEventArgs(answer, chosen));
             menu.Items.Add(item);
         }
+
+        menu.Items.Add(new Separator());
+        var export = new MenuItem { Header = "Exportar la conversación" };
+        export.Click += (_, _) => ExportRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(export);
 
         var more = new Button
         {

@@ -210,6 +210,11 @@
                                Text="Deja el ratón un instante contra el borde donde está Sakura y se abre sola. No reacciona en las esquinas —ahí están el menú Inicio y el reloj— ni cuando tienes algo a pantalla completa."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
+                    <CheckBox x:Name="EdgeQuickControlsCheckBox"
+                              Margin="0,0,0,10"
+                              Content="Volumen y brillo en el borde contrario"
+                              Checked="EdgeQuickControlsCheckBox_Changed"
+                              Unchecked="EdgeQuickControlsCheckBox_Changed" />
 
                     <CheckBox x:Name="AnimationsCheckBox"
                               Content="Usar animaciones"

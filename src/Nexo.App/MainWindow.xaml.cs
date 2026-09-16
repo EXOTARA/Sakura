@@ -601,6 +601,7 @@ public partial class MainWindow : Window
             () => Dispatcher.BeginInvoke(new Action(RequestExit)));
 
         _assistantView.PromptSubmitted += AssistantView_PromptSubmitted;
+        _assistantView.ExportRequested += (_, _) => ExportConversation();
         _assistantView.ConversationChanged += AssistantView_ConversationChanged;
         _assistantView.ConversationCleared += AssistantView_ConversationCleared;
         _assistantView.VoiceInputStarted += AssistantView_VoiceInputStarted;
@@ -867,6 +868,17 @@ public partial class MainWindow : Window
         {
             _preferences.AnimationsEnabled = enabled;
             SakuraMotion.AnimationsEnabled = ShellAnimationsAllowed;
+            SavePreferences();
+        };
+
+        _settingsView.EdgeQuickControlsChanged += enabled =>
+        {
+            _preferences.EdgeQuickControlsEnabled = enabled;
+            if (!enabled)
+            {
+                _quickControlsWindow.HideImmediately();
+            }
+
             SavePreferences();
         };
 
@@ -1718,7 +1730,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(() =>
         {
-            if (_quickControlsWindow.IsVisible || !_preferences.EdgeRevealEnabled)
+            if (_quickControlsWindow.IsVisible || !_preferences.EdgeRevealEnabled || !_preferences.EdgeQuickControlsEnabled)
             {
                 return;
             }
@@ -4314,6 +4326,33 @@ public partial class MainWindow : Window
                 keywords: keywords,
                 iconKey: icon);
         }
+
+        // 2026-09-16 — lo nuevo del día también se encuentra desde la paleta.
+        yield return new SakuraCommandDescriptor(
+            "tasks.quickcapture",
+            "Apuntar una tarea",
+            "Una línea, como la dirías (Alt+Shift+N).",
+            SakuraCommandCategory.Tasks,
+            _ =>
+            {
+                ShowQuickCapture();
+                return Task.FromResult(CommandExecutionResult.Success());
+            },
+            keywords: ["apuntar", "anotar", "tarea", "recordar", "captura rápida"],
+            iconKey: "IconSakuraTasks");
+
+        yield return new SakuraCommandDescriptor(
+            "assistant.export",
+            "Exportar la conversación",
+            "Guarda el chat actual como archivo en Documentos\\Sakura.",
+            SakuraCommandCategory.Shell,
+            _ =>
+            {
+                ExportConversation();
+                return Task.FromResult(CommandExecutionResult.Success());
+            },
+            keywords: ["exportar", "guardar", "conversación", "chat", "markdown"],
+            iconKey: "IconSakuraAssistant");
     }
 
     private async void CommandPaletteWindow_PromptSubmitted(
@@ -4435,6 +4474,37 @@ public partial class MainWindow : Window
         ShowAnimated();
         NavigateTo(ShellNavigationPolicy.Tasks, animate: true);
         _tasksView.ShowDay(day);
+    }
+
+    /// <summary>
+    /// 2026-09-16 — guarda la conversación en Documentos\Sakura\Conversaciones como Markdown y abre
+    /// la carpeta con el archivo marcado.
+    /// </summary>
+    private void ExportConversation()
+    {
+        var messages = _assistantView.GetConversationSnapshot();
+        if (messages.Count == 0)
+        {
+            _capsuleWindow.ShowMessage(CapsuleKind.Warning, "Exportar", "Todavía no hay nada que guardar.", _preferences.Position);
+            return;
+        }
+
+        try
+        {
+            var now = DateTimeOffset.Now;
+            var folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Sakura", "Conversaciones");
+            Directory.CreateDirectory(folder);
+            var path = Path.Combine(folder, ConversationExport.FileName(messages, now));
+            File.WriteAllText(path, ConversationExport.ToMarkdown(messages, now), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+            _capsuleWindow.ShowMessage(CapsuleKind.Success, "Conversación guardada", Path.GetFileName(path), _preferences.Position);
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or Win32Exception)
+        {
+            _capsuleWindow.ShowMessage(CapsuleKind.Warning, "No pude guardarla", exception.Message, _preferences.Position);
+        }
     }
 
     private void ShowQuickCapture()
