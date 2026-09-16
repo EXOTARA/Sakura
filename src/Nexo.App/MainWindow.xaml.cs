@@ -5348,6 +5348,16 @@ public partial class MainWindow : Window
             $"{Path.GetFileName(result.FullPath)} está en el escritorio.",
             _preferences.Position);
 
+        // 2026-09-16 — si alguna fórmula no se pudo convertir en ecuación, se dice cuál, no se esconde.
+        if (e.Format == DocumentSaveFormat.Word && WordDocumentBuilder.UnreadableFormulas(e.Answer) is { Count: > 0 } pending)
+        {
+            _capsuleWindow.ShowMessage(
+                CapsuleKind.Information,
+                pending.Count == 1 ? "Una fórmula quedó como texto" : $"{pending.Count} fórmulas quedaron como texto",
+                "No pude convertirlas en ecuación: " + string.Join(" · ", pending.Take(2)),
+                _preferences.Position);
+        }
+
         _homeView.AddRecentAction(
             "Documento guardado", Path.GetFileName(result.FullPath));
     }

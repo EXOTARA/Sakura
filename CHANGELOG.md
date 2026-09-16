@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.14-beta]
+
+### Nuevo
+
+- **Las fórmulas van al editor de ecuaciones de Word.** Escribe `$x^2 + 1$` dentro de una frase o `$$…$$` en su propio renglón, con notación de calculadora (`x^2`, `x_1`, `sqrt(x)`, `pi`, `<=`) o de LaTeX (`rac{a}{b}`, `\sqrt[3]{x}`, `\pi`, `\leq`), y en el documento sale una ecuación de verdad: fracciones con su raya, raíces, sumatorias, integrales, límites y letras griegas, editables desde Word.
+- **En el chat las fórmulas se leen en claro**, sin los signos de dólar ni las barras de LaTeX.
+- **Si alguna fórmula no se puede convertir**, el documento se guarda igual y Sakura dice cuál quedó como texto, en vez de dibujar algo incorrecto.
+
+### Cambiado
+
+- Sakura escribe las fórmulas con esa notación, para que se conviertan solas al guardar.
+- Lo común de las consultas a catálogos públicos —identificarse, cortar a tiempo, leer el JSON— deja de estar copiado en cada servicio.
+
 ## [0.30.13-beta]
 
 ### Corregido

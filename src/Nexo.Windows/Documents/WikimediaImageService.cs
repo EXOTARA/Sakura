@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Nexo.Core.Documents;
 
@@ -27,12 +26,7 @@ public sealed class WikimediaImageService : IDocumentImageSource, IDisposable
     {
         _httpClient = httpClient ?? new HttpClient();
         _ownsClient = httpClient is null;
-        if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
-        {
-            _httpClient.DefaultRequestHeaders.UserAgent.Add(
-                new ProductInfoHeaderValue("SakuraAssistant", typeof(WikimediaImageService).Assembly.GetName().Version?.ToString(3) ?? "1.0"));
-            _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("(https://github.com/EXOTARA/Sakura)"));
-        }
+        WebLookup.Identify(_httpClient);
     }
 
     public async Task<DocumentImage?> FindAsync(string query, CancellationToken cancellationToken = default)
@@ -59,7 +53,7 @@ public sealed class WikimediaImageService : IDocumentImageSource, IDisposable
                 return null;
             }
 
-            using var timeout = Timeout(cancellationToken, TimeSpan.FromSeconds(25));
+            using var timeout = WebLookup.Timeout(cancellationToken, TimeSpan.FromSeconds(25));
             using var response = await _httpClient.GetAsync(chosen.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             response.EnsureSuccessStatusCode();
             if (response.Content.Headers.ContentLength > MaximumBytes)
@@ -101,7 +95,7 @@ public sealed class WikimediaImageService : IDocumentImageSource, IDisposable
                       "&iiextmetadatafilter=Artist%7CLicenseShortName%7CRestrictions" +
                       "&gsrsearch=" + Uri.EscapeDataString("filetype:bitmap " + query.Trim());
 
-        using var timeout = Timeout(cancellationToken, TimeSpan.FromSeconds(15));
+        using var timeout = WebLookup.Timeout(cancellationToken, TimeSpan.FromSeconds(15));
         using var response = await _httpClient.GetAsync(address, timeout.Token);
         response.EnsureSuccessStatusCode();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
@@ -123,24 +117,24 @@ public sealed class WikimediaImageService : IDocumentImageSource, IDisposable
 
             foreach (var info in infos.EnumerateArray())
             {
-                var mime = Text(info, "mime");
-                var download = Text(info, "thumburl") is { Length: > 0 } thumb ? thumb : Text(info, "url");
+                var mime = WebLookup.Text(info, "mime");
+                var download = WebLookup.Text(info, "thumburl") is { Length: > 0 } thumb ? thumb : WebLookup.Text(info, "url");
                 if (mime.Length == 0 || download.Length == 0)
                 {
                     continue;
                 }
 
                 var metadata = info.TryGetProperty("extmetadata", out var extra) ? extra : default;
-                candidates.Add((Number(page, "index"), new DocumentImageCandidate(
-                    Text(page, "title"),
+                candidates.Add((WebLookup.Number(page, "index"), new DocumentImageCandidate(
+                    WebLookup.Text(page, "title"),
                     mime,
-                    Number(info, "width"),
-                    Number(info, "height"),
+                    WebLookup.Number(info, "width"),
+                    WebLookup.Number(info, "height"),
                     download,
                     Metadata(metadata, "Artist"),
                     Metadata(metadata, "LicenseShortName"),
                     Metadata(metadata, "Restrictions"),
-                    Text(info, "descriptionurl"))));
+                    WebLookup.Text(info, "descriptionurl"))));
                 break;
             }
         }
@@ -149,27 +143,12 @@ public sealed class WikimediaImageService : IDocumentImageSource, IDisposable
         return candidates.OrderBy(item => item.Order).Select(item => item.Candidate).ToList();
     }
 
-    private static string Text(JsonElement element, string name) =>
-        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? string.Empty
-            : string.Empty;
-
-    private static int Number(JsonElement element, string name) =>
-        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.TryGetInt32(out var number)
-            ? number
-            : 0;
 
     private static string Metadata(JsonElement metadata, string name) =>
         metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty(name, out var entry)
-            ? Text(entry, "value")
+            ? WebLookup.Text(entry, "value")
             : string.Empty;
 
-    private static CancellationTokenSource Timeout(CancellationToken cancellationToken, TimeSpan limit)
-    {
-        var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        source.CancelAfter(limit);
-        return source;
-    }
 
     public void Dispose()
     {

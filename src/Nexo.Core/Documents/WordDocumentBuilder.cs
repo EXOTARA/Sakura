@@ -24,6 +24,28 @@ namespace Nexo.Core.Documents;
 /// </summary>
 public static class WordDocumentBuilder
 {
+    /// <summary>
+    /// Las fórmulas de la respuesta que no se pudieron convertir del todo, para poder avisar de cuáles
+    /// hay que mirar. Las demás quedan como ecuaciones de Word.
+    /// </summary>
+    public static IReadOnlyList<string> UnreadableFormulas(string markdown) =>
+        AnswerMarkdown.Parse(markdown)
+            .SelectMany(block => block switch
+            {
+                AnswerMath math => [math.Formula],
+                AnswerParagraph paragraph => Formulas(paragraph.Spans),
+                AnswerListItem item => Formulas(item.Spans),
+                AnswerHeading heading => Formulas(heading.Spans),
+                AnswerQuote quote => Formulas(quote.Spans),
+                _ => (IEnumerable<string>)[]
+            })
+            .Where(formula => !OfficeMath.CanConvert(formula))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+    private static IEnumerable<string> Formulas(IReadOnlyList<AnswerSpan> spans) =>
+        spans.Where(span => span.Style.HasFlag(AnswerSpanStyle.Math)).Select(span => span.Text);
+
     /// <summary>Construye el documento a partir de la respuesta tal como la escribió el modelo.</summary>
     /// <param name="images">
     /// Las fotos ya descargadas, por el texto que las pedía («Imagen: …»). Sin ellas el documento sale
@@ -85,6 +107,11 @@ public static class WordDocumentBuilder
                 case AnswerQuote quote:
                     writer.EndList();
                     writer.Paragraph("Quote", quote.Spans);
+                    break;
+                // 2026-09-16 — la fórmula, centrada y en el editor de ecuaciones de Word.
+                case AnswerMath math:
+                    writer.EndList();
+                    writer.Equation(math.Formula);
                     break;
                 // «Imagen: …» no es texto del documento: es la foto que se pidió para esa parte.
                 case AnswerParagraph paragraph when ImageDirective.Query(AnswerMarkdown.ToPlainText(paragraph.Spans)) is { } query:
@@ -413,10 +440,25 @@ public static class WordDocumentBuilder
             _body.Append("</w:tr>");
         }
 
+        /// <summary>Una fórmula sola en su renglón.</summary>
+        public void Equation(string formula)
+        {
+            _body.Append("<w:p><w:pPr><w:spacing w:before=\"120\" w:after=\"120\"/></w:pPr>")
+                .Append(OfficeMath.Display(formula))
+                .Append("</w:p>");
+        }
+
         private void Runs(IReadOnlyList<AnswerSpan> spans)
         {
             foreach (var span in spans)
             {
+                // Una fórmula dentro de la frase se dibuja como ecuación, no como texto con símbolos.
+                if (span.Style.HasFlag(AnswerSpanStyle.Math))
+                {
+                    _body.Append(OfficeMath.Inline(span.Text));
+                    continue;
+                }
+
                 if (span.Url is { } url)
                 {
                     _hyperlinks.Add(url);
@@ -468,7 +510,8 @@ public static class WordDocumentBuilder
         public string Document() =>
             XmlDeclaration +
             "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" " +
-            "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
+            "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" " +
+            "xmlns:m=\"" + OfficeMath.Namespace + "\">" +
             "<w:body>" + _body + SectionProperties + "</w:body></w:document>";
 
         public string Relationships()
