@@ -372,6 +372,9 @@ public partial class MainWindow : Window
 
     // 2026-09-15 — imágenes de licencia libre para las presentaciones, solo si se autoriza.
     private readonly WikimediaImageService _presentationImageSource = new();
+
+    // 2026-09-16 — fuentes reales sobre el tema del documento, también solo si se autoriza.
+    private readonly ScholarSourceService _documentSourceSearch = new();
     private UpdateFlowCoordinator? _updateFlow;
 
     /// <summary>Diseño D27 — el borde de la pantalla como forma de llamar a Sakura.</summary>
@@ -879,6 +882,13 @@ public partial class MainWindow : Window
             _preferences.DocumentImages = enabled;
             // Cambiarlo aquí también cuenta como respuesta: no hay que volver a preguntar.
             _preferences.DocumentImagesAsked = true;
+            SavePreferences();
+        };
+
+        _settingsView.DocumentSourcesChanged += enabled =>
+        {
+            _preferences.DocumentSources = enabled;
+            _preferences.DocumentSourcesAsked = true;
             SavePreferences();
         };
 
@@ -5317,15 +5327,31 @@ public partial class MainWindow : Window
 
         // 2026-09-15 — con el formato de la respuesta, en Word, Excel o PowerPoint.
         // 2026-09-16 — las fotos también en Word, donde van entre el texto con su pie.
-        var images = e.Format is DocumentSaveFormat.PowerPoint or DocumentSaveFormat.Word
-            ? await ResolveDocumentImagesAsync(title, e.Answer, e.Format)
+        var wantsWeb = e.Format is DocumentSaveFormat.PowerPoint or DocumentSaveFormat.Word;
+        var queries = wantsWeb
+            ? (e.Format == DocumentSaveFormat.PowerPoint
+                ? PresentationPlan.ImageQueries(title, e.Answer)
+                : ImageDirective.Queries(e.Answer))
+            : [];
+
+        // 2026-09-16 — se pregunta una sola vez por las dos cosas que salen a internet.
+        if (wantsWeb)
+        {
+            await AskForWebLookupsAsync(queries, title);
+        }
+
+        var images = queries.Count > 0 && _preferences.DocumentImages
+            ? await ResolveDocumentImagesAsync(queries)
+            : null;
+        var sources = wantsWeb && _preferences.DocumentSources
+            ? await ResolveDocumentSourcesAsync(title)
             : null;
 
         var (extension, bytes) = e.Format switch
         {
             DocumentSaveFormat.Excel => (".xlsx", SpreadsheetDocumentBuilder.BuildFromMarkdown(title, e.Answer)),
-            DocumentSaveFormat.PowerPoint => (".pptx", PresentationDocumentBuilder.BuildFromMarkdown(title, e.Answer, images)),
-            _ => (".docx", WordDocumentBuilder.BuildFromMarkdown(title, e.Answer, images))
+            DocumentSaveFormat.PowerPoint => (".pptx", PresentationDocumentBuilder.BuildFromMarkdown(title, e.Answer, images, sources)),
+            _ => (".docx", WordDocumentBuilder.BuildFromMarkdown(title, e.Answer, images, sources))
         };
         var target = DocumentDestination.Resolve(DocumentFolder.Desktop, title, extension);
         var result = _documentDropService.Save(target, bytes);
@@ -5363,39 +5389,54 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 2026-09-15 — las imágenes de un documento que las pide con «Imagen: …».
+    /// 2026-09-16 — lo que sale a internet para un documento se pregunta una vez, junto: las imágenes
+    /// que la respuesta pide y las fuentes sobre su tema.
     ///
-    /// La primera vez se pregunta, porque buscarlas es salir a internet con lo que escribió el modelo;
-    /// después se recuerda la respuesta, que se puede cambiar en Ajustes. Si una búsqueda falla o no
-    /// hay nada aprovechable, esa diapositiva sale sin foto: el documento no se pierde por eso.
+    /// Se pregunta porque es salir a internet con lo que escribió el modelo, y no debe pasar sin que
+    /// se sepa. Cada cosa guarda su respuesta por separado, así que quien dijo que sí a las imágenes y
+    /// que no a las fuentes no vuelve a ver la pregunta de ninguna de las dos.
     /// </summary>
-    private async Task<IReadOnlyDictionary<string, DocumentImage>?> ResolveDocumentImagesAsync(string title, string answer, DocumentSaveFormat format)
+    private async Task AskForWebLookupsAsync(IReadOnlyList<string> queries, string topic)
     {
-        // En una presentación solo se buscan las que caben en una diapositiva; en Word, todas, porque
-        // cada una va entre el texto donde se pidió.
-        var queries = format == DocumentSaveFormat.PowerPoint
-            ? PresentationPlan.ImageQueries(title, answer)
-            : ImageDirective.Queries(answer);
-        if (queries.Count == 0)
+        var askImages = queries.Count > 0 && !_preferences.DocumentImagesAsked;
+        var askSources = !_preferences.DocumentSourcesAsked;
+        if (!askImages && !askSources)
         {
-            return null;
+            return;
         }
 
-        if (!_preferences.DocumentImagesAsked)
+        var consent = new ImageSearchConsentWindow(
+            askImages ? queries : [],
+            askSources ? topic : null)
         {
-            var consent = new ImageSearchConsentWindow(queries) { Owner = this };
-            consent.ShowDialog();
+            Owner = this
+        };
+        consent.ShowDialog();
+
+        if (askImages)
+        {
             _preferences.DocumentImages = consent.Search;
             _preferences.DocumentImagesAsked = true;
-            SavePreferences();
             _settingsView.SetDocumentImages(_preferences.DocumentImages);
         }
 
-        if (!_preferences.DocumentImages)
+        if (askSources)
         {
-            return null;
+            _preferences.DocumentSources = consent.Search;
+            _preferences.DocumentSourcesAsked = true;
+            _settingsView.SetDocumentSources(_preferences.DocumentSources);
         }
 
+        SavePreferences();
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Las imágenes que la respuesta pidió con «Imagen: …». Si una búsqueda falla o no hay nada
+    /// aprovechable, esa parte sale sin foto: el documento no se pierde por eso.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, DocumentImage>?> ResolveDocumentImagesAsync(IReadOnlyList<string> queries)
+    {
         _capsuleWindow.ShowMessage(
             CapsuleKind.Processing,
             "Buscando imágenes",
@@ -5418,6 +5459,36 @@ public partial class MainWindow : Window
         }
 
         return images;
+    }
+
+    /// <summary>
+    /// 2026-09-16 — las fuentes sobre el tema, para dejarlas al final en APA 7.
+    ///
+    /// Se buscan por el título del documento, que es de lo que trata. Si no aparece ninguna que valga
+    /// —tema muy escolar, sin literatura reciente en español—, el documento sale sin la lista en vez
+    /// de con referencias rellenadas a la fuerza.
+    /// </summary>
+    private async Task<IReadOnlyList<DocumentSource>?> ResolveDocumentSourcesAsync(string topic)
+    {
+        _capsuleWindow.ShowMessage(
+            CapsuleKind.Processing,
+            "Buscando fuentes",
+            $"Sobre «{topic}», en catálogos académicos.",
+            _preferences.Position);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        var sources = await _documentSourceSearch.FindAsync(topic, timeout.Token);
+        if (sources.Count == 0)
+        {
+            _capsuleWindow.ShowMessage(
+                CapsuleKind.Information,
+                "Sin fuentes que valgan",
+                "No encontré trabajos recientes en español sobre ese tema. El documento sale sin la lista.",
+                _preferences.Position);
+            return null;
+        }
+
+        return sources;
     }
 
     /// <summary>Un tope para que una respuesta con muchas «Imagen: …» no tarde una eternidad en guardarse.</summary>

@@ -38,6 +38,7 @@ public partial class SettingsView : UserControl
     public event Action<string, bool>? PeekOptionChanged;
     public event Action<bool>? ConversationHistoryChanged;
     public event Action<bool>? DocumentImagesChanged;
+    public event Action<bool>? DocumentSourcesChanged;
     public event Action<bool>? VoiceResponsesChanged;
     public event Action<int>? VoiceInputDeviceChanged;
     public event Action<bool>? WakeWordEnabledChanged;
@@ -140,6 +141,7 @@ public partial class SettingsView : UserControl
         PeekTopProcessCheckBox.IsChecked = preferences.ShowTopProcessInPeek;
         SaveConversationHistoryCheckBox.IsChecked = preferences.SaveConversationHistory;
         DocumentImagesCheckBox.IsChecked = preferences.DocumentImages;
+        DocumentSourcesCheckBox.IsChecked = preferences.DocumentSources;
         SpeakVoiceResponsesCheckBox.IsChecked = preferences.SpeakVoiceResponses;
         VoiceInputDeviceComboBox.SelectedValue = preferences.VoiceInputDeviceNumber;
         WakeWordEnabledCheckBox.IsChecked = preferences.WakeWordEnabled;
@@ -349,6 +351,24 @@ public partial class SettingsView : UserControl
         _isApplyingPreferences = true;
         DocumentImagesCheckBox.IsChecked = enabled;
         _isApplyingPreferences = false;
+    }
+
+    /// <summary>Marca la casilla desde fuera, cuando se respondió en el aviso de la primera vez.</summary>
+    public void SetDocumentSources(bool enabled)
+    {
+        _isApplyingPreferences = true;
+        DocumentSourcesCheckBox.IsChecked = enabled;
+        _isApplyingPreferences = false;
+    }
+
+    private void DocumentSourcesCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_isApplyingPreferences)
+        {
+            return;
+        }
+
+        DocumentSourcesChanged?.Invoke(DocumentSourcesCheckBox.IsChecked == true);
     }
 
     private void DocumentImagesCheckBox_Changed(object sender, RoutedEventArgs e)
