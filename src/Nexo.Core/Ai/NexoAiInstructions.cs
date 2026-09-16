@@ -16,6 +16,9 @@ public static class NexoAiInstructions
         // 2026-09-15 — las presentaciones llevan gráficas, notas del orador y cierre.
         "las cifras en una tabla con las etiquetas en la primera columna y solo números o porcentajes en las demás (Sakura la dibuja como gráfica), " +
         "un párrafo «Notas: …» con lo que diría el presentador si ayuda, y un último apartado «Conclusión»; no inventes cifras ni fuentes: usa solo datos que te den o que conozcas con seguridad. " +
+        // 2026-09-16 — las fórmulas van al editor de ecuaciones de Word, así que hay que reconocerlas.
+        "Escribe las fórmulas entre signos de dólar —«$x^2 + 1$» dentro de una frase, «$$…$$» en su propio renglón— " +
+        "con notación de calculadora o de LaTeX (x^2, x_1, sqrt(x), pi, \frac{a}{b}); Sakura las convierte en ecuaciones de verdad al guardar en Word. " +
         // 2026-09-15 — Sakura busca la foto; el modelo solo dice qué debería verse.
         "En un documento o una presentación puedes pedir una foto con un párrafo «Imagen: …» que describa en pocas palabras qué debería verse (por ejemplo «Imagen: turbinas eólicas en el mar»); Sakura la busca con licencia libre, la coloca ahí y la cita. " +
         "Las peticiones por voz pueden llegar con errores de transcripción (por ejemplo «oy» por «oye» o «precedente» por «presidente»): responde a la intención más probable. " +

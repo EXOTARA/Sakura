@@ -9,7 +9,13 @@ public enum AnswerSpanStyle
     None = 0,
     Bold = 1,
     Italic = 2,
-    Code = 4
+    Code = 4,
+
+    /// <summary>
+    /// 2026-09-16 — una fórmula. El texto del trozo es la fórmula tal como se escribió («x^2 + 1»);
+    /// en el chat se lee en claro y en Word se dibuja con el editor de ecuaciones.
+    /// </summary>
+    Math = 8
 }
 
 /// <summary>
@@ -38,6 +44,9 @@ public sealed record AnswerCode(string Text) : AnswerBlock;
 
 /// <summary>Una cita o un aviso destacado («> …»).</summary>
 public sealed record AnswerQuote(IReadOnlyList<AnswerSpan> Spans) : AnswerBlock;
+
+/// <summary>Una fórmula en su propio renglón, escrita entre «$$ … $$» o «\[ … \]».</summary>
+public sealed record AnswerMath(string Formula) : AnswerBlock;
 
 /// <summary>
 /// Lee el Markdown con el que escriben los modelos para que el chat lo dibuje y no lo enseñe crudo
@@ -103,6 +112,14 @@ public static partial class AnswerMarkdown
             if (HorizontalRule().IsMatch(trimmed))
             {
                 FlushParagraph();
+                continue;
+            }
+
+            // 2026-09-16 — una fórmula sola en su línea se dibuja centrada, como en un libro.
+            if (DisplayMath().Match(trimmed) is { Success: true } display)
+            {
+                FlushParagraph();
+                blocks.Add(new AnswerMath(display.Groups["math"].Value.Trim()));
                 continue;
             }
 
@@ -212,6 +229,19 @@ public static partial class AnswerMarkdown
 
         while (i < text.Length)
         {
+            // Una fórmula dentro de la frase: «$x^2$» o «\(x^2\)».
+            if (InlineMath().Match(text, i) is { Success: true } formula && formula.Index == i)
+            {
+                var body = formula.Groups["math"].Value.Trim();
+                if (body.Length > 0)
+                {
+                    FlushPlain();
+                    spans.Add(new AnswerSpan(body, AnswerSpanStyle.Math));
+                    i += formula.Length;
+                    continue;
+                }
+            }
+
             if (text[i] == '`')
             {
                 var close = text.IndexOf('`', i + 1);
@@ -315,7 +345,9 @@ public static partial class AnswerMarkdown
 
     /// <summary>El texto sin marcas, para leerlo en voz alta o copiarlo limpio.</summary>
     public static string ToPlainText(IReadOnlyList<AnswerSpan> spans) =>
-        string.Concat(spans.Select(span => span.Text));
+        string.Concat(spans.Select(span => span.Style.HasFlag(AnswerSpanStyle.Math)
+            ? Documents.MathNotation.ToPlainText(span.Text)
+            : span.Text));
 
     private static bool Starts(string text, int index, string marker) =>
         string.CompareOrdinal(text, index, marker, 0, marker.Length) == 0;
@@ -493,6 +525,12 @@ public static partial class AnswerMarkdown
 
     [GeneratedRegex(@"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")]
     private static partial Regex TableSeparator();
+
+    [GeneratedRegex(@"^(?:\$\$(?<math>[^$]+)\$\$|\\\[(?<math>.+?)\\\])$")]
+    private static partial Regex DisplayMath();
+
+    [GeneratedRegex(@"\$(?<math>[^$\n]+)\$|\\\((?<math>.+?)\\\)")]
+    private static partial Regex InlineMath();
 
     [GeneratedRegex(@"^(\*\s*){3,}$|^(-\s*){3,}$|^(_\s*){3,}$")]
     private static partial Regex HorizontalRule();

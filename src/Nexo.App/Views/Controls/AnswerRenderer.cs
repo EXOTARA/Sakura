@@ -203,7 +203,11 @@ public static class AnswerRenderer
     {
         foreach (var span in spans)
         {
-            var parts = span.Text.Split('\n');
+            // 2026-09-16 — una fórmula se enseña como se lee, no como se escribió: «x^2» → «x²».
+            var text = span.Style.HasFlag(AnswerSpanStyle.Math)
+                ? Nexo.Core.Documents.MathNotation.ToPlainText(span.Text)
+                : span.Text;
+            var parts = text.Split('\n');
             for (var i = 0; i < parts.Length; i++)
             {
                 if (i > 0)
@@ -237,6 +241,13 @@ public static class AnswerRenderer
                 {
                     run.FontFamily = new FontFamily("Cascadia Mono, Consolas");
                     run.Background = Resource<Brush>("BrushSurface");
+                }
+
+                // 2026-09-16 — una fórmula se lee en claro («x² + 1»), no con su notación a la vista.
+                if (span.Style.HasFlag(AnswerSpanStyle.Math))
+                {
+                    run.FontFamily = new FontFamily("Cambria Math, Georgia");
+                    run.FontStyle = FontStyles.Italic;
                 }
 
                 textBlock.Inlines.Add(run);
