@@ -622,6 +622,12 @@ public partial class MainWindow : Window
         _tasksView.FocusRequested += TasksView_FocusRequested;
         _focusView.FocusChanged += FocusView_FocusChanged;
         _focusView.CompleteAssociatedTaskRequested += FocusView_CompleteAssociatedTaskRequested;
+        _focusView.SetLastDuration(_preferences.LastFocusMinutes > 0 ? _preferences.LastFocusMinutes : 40);
+        _focusView.DurationChosen += (_, minutes) =>
+        {
+            _preferences.LastFocusMinutes = minutes;
+            SavePreferences();
+        };
         _routinesView.ExecuteRequested += RoutinesView_ExecuteRequested;
         // Los eventos de wake word se suscriben a través del coordinador (paso directo al
         // servicio subyacente): MainWindow ya no necesita una referencia al servicio.
@@ -4285,7 +4291,7 @@ public partial class MainWindow : Window
             (ShellNavigationPolicy.Assistant, "Ir a Asistente", "IconSakuraAssistant", ["asistente", "chat", "conversación"]),
             (ShellNavigationPolicy.Tasks, "Ir a Hoy", "IconSakuraTasks", ["hoy", "tareas", "pendientes"]),
             (ShellNavigationPolicy.Focus, "Ir a Enfoque", "IconSakuraFocus", ["enfoque", "concentración"]),
-            (ShellNavigationPolicy.Routines, "Ir a Rutinas", "IconSakuraRoutines", ["rutinas", "automatización"]),
+            (ShellNavigationPolicy.Routines, "Ir a Atajos", "IconSakuraRoutines", ["atajos", "rutinas", "automatización"]),
             (ShellNavigationPolicy.Audio, "Ir a Audio", "IconSakuraAudio", ["audio", "volumen", "sonido"]),
             (ShellNavigationPolicy.Capture, "Ir a Captura", "IconSakuraCapture", ["captura", "pantalla", "screenshot"]),
             (ShellNavigationPolicy.System, "Ir a Sistema", "IconSakuraSystem", ["sistema", "estado", "diagnóstico", "hardware"]),
@@ -4527,6 +4533,8 @@ public partial class MainWindow : Window
 
         RegisterCaptureHotkeys(windowHandle);
 
+        RegisterSelectionHotkey(windowHandle);
+
         if (!RegisterHotKey(windowHandle, QuickCaptureHotkeyId, ModAlt | ModShift, VirtualKeyN))
         {
             _assistantView.AddSakuraMessage(
@@ -4662,6 +4670,7 @@ public partial class MainWindow : Window
         _topRevealWatcher.Dispose();
         _dashboardWindow.Close();
         _quickCaptureWindow?.Close();
+        _selectionWindow?.Close();
         _quickControlsWatcher.RevealRequested -= HandleQuickControlsRequested;
         _quickControlsWatcher.Dispose();
         _brightnessService.Dispose();
@@ -4691,6 +4700,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(windowHandle, VoiceHotkeyId);
             UnregisterHotKey(windowHandle, TranslateHotkeyId);
             UnregisterHotKey(windowHandle, QuickCaptureHotkeyId);
+            UnregisterHotKey(windowHandle, SelectionHotkeyId);
             UnregisterHotKey(windowHandle, FlowHotkeyId);
             UnregisterCaptureHotkeys(windowHandle);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
@@ -4756,6 +4766,11 @@ public partial class MainWindow : Window
         else if (wParam.ToInt32() == QuickCaptureHotkeyId)
         {
             ShowQuickCapture();
+            handled = true;
+        }
+        else if (wParam.ToInt32() == SelectionHotkeyId)
+        {
+            _ = OnSelectionHotkeyAsync();
             handled = true;
         }
         else if (HandleCaptureHotkey(wParam.ToInt32()))
@@ -7558,10 +7573,10 @@ public partial class MainWindow : Window
                 _assistantView.AddSakuraMessage(
                     available.Length == 0
                         ? "No hay rutinas activas."
-                        : "Rutinas disponibles:" + Environment.NewLine + string.Join(Environment.NewLine, available));
+                        : "Atajos disponibles:" + Environment.NewLine + string.Join(Environment.NewLine, available));
                 _capsuleWindow.ShowMessage(
                     CapsuleKind.Information,
-                    "Rutinas disponibles",
+                    "Atajos disponibles",
                     available.Length == 0 ? "No hay rutinas activas." : $"{available.Length} rutinas activas.",
                     _preferences.Position);
                 return;
@@ -9095,7 +9110,7 @@ public partial class MainWindow : Window
             "Assistant" => ("Asistente", "Consulta, conversa o comparte contexto"),
             "Tasks" => ("Hoy", "Tareas, prioridades y recordatorios"),
             "Focus" => ("Enfoque", "Sesiones cortas sin perder el ritmo"),
-            "Routines" => ("Rutinas", "Acciones repetibles, claras y controladas"),
+            "Routines" => ("Atajos", "Varias acciones con una sola frase"),
             "Audio" => ("Audio", "Control local por aplicación"),
             "Capture" => ("Captura", "Captura y graba la pantalla"),
             "System" => ("Sistema", "Estado y diagnóstico del equipo"),

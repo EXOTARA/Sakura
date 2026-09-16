@@ -132,11 +132,11 @@
                                     AutomationProperties.Name="Cerrar aviso de sesión completada"
                                     Click="DismissSessionCompletionButton_Click" />
                             <Button x:Name="StartAnotherSessionButton"
-                                    Content="Iniciar otra sesión"
+                                    Content="Seguir 10 min más"
                                     Margin="7,0,0,0"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Padding="11,6"
-                                    AutomationProperties.Name="Iniciar otra sesión de enfoque"
+                                    AutomationProperties.Name="Seguir diez minutos más"
                                     Click="StartAnotherSessionButton_Click" />
                             <Button x:Name="CompleteAssociatedTaskButton"
                                     Content="Marcar como completada"
@@ -230,33 +230,39 @@
                            Margin="0,0,0,4"
                            Style="{StaticResource MutedTextStyle}" />
 
-                <TextBlock Text="Inicio rápido"
+                <!--
+                    2026-09-16 — enfoque flexible. Empezar es lo difícil: «solo 5 min» baja la barrera,
+                    y la última duración usada queda a un toque. Ya no hay tipos de sesión
+                    (enfoque, descanso, temporizador): un rato es un rato.
+                -->
+                <TextBlock Text="¿Cuánto rato?"
                            Margin="0,16,0,8"
                            FontWeight="SemiBold" />
                 <UniformGrid Columns="2">
-                    <Button Content="Enfoque · 25 min"
-                            Tag="Focus:25"
+                    <Button Content="Solo 5 min para empezar"
+                            Tag="Focus:5"
                             Margin="0,0,5,5"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Click="PresetButton_Click" />
-                    <Button Content="Enfoque · 50 min"
-                            Tag="Focus:50"
+                    <Button Content="15 min"
+                            Tag="Focus:15"
                             Margin="5,0,0,5"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Click="PresetButton_Click" />
-                    <Button Content="Descanso · 5 min"
-                            Tag="Break:5"
+                    <Button Content="25 min"
+                            Tag="Focus:25"
                             Margin="0,5,5,0"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Click="PresetButton_Click" />
-                    <Button Content="Descanso · 10 min"
-                            Tag="Break:10"
+                    <Button x:Name="LastDurationButton"
+                            Content="La última · 40 min"
+                            Tag="Focus:40"
                             Margin="5,5,0,0"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Click="PresetButton_Click" />
                 </UniformGrid>
 
-                <TextBlock Text="Duración personalizada"
+                <TextBlock Text="Otra duración (minutos)"
                            Margin="0,16,0,8"
                            FontWeight="SemiBold" />
                 <Grid>

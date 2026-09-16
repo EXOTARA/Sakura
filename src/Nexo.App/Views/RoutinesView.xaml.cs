@@ -64,10 +64,48 @@ public partial class RoutinesView : UserControl
         }
     }
 
+    /// <summary>Abre el editor ya rellenado; nada se guarda hasta pulsar Guardar.</summary>
+    private void TemplateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string template })
+        {
+            return;
+        }
+
+        NewRoutineButton_Click(sender, e);
+        switch (template)
+        {
+            case "study":
+                NameTextBox.Text = "Estudiar";
+                TriggerTextBox.Text = "modo estudio";
+                MuteDiscordCheckBox.IsChecked = true;
+                SpotifyVolumeCheckBox.IsChecked = true;
+                SpotifyVolumeTextBox.Text = "20";
+                StartFocusCheckBox.IsChecked = true;
+                FocusMinutesTextBox.Text = "25";
+                break;
+            case "code":
+                NameTextBox.Text = "Programar";
+                TriggerTextBox.Text = "a programar";
+                OpenCodeCheckBox.IsChecked = true;
+                OpenTerminalCheckBox.IsChecked = true;
+                StartFocusCheckBox.IsChecked = true;
+                FocusMinutesTextBox.Text = "50";
+                break;
+            case "rest":
+                NameTextBox.Text = "Descanso";
+                TriggerTextBox.Text = "hora de descansar";
+                UnmuteDiscordCheckBox.IsChecked = true;
+                StartBreakCheckBox.IsChecked = true;
+                BreakMinutesTextBox.Text = "10";
+                break;
+        }
+    }
+
     private void NewRoutineButton_Click(object sender, RoutedEventArgs e)
     {
         _editingId = null;
-        EditorTitleText.Text = "Nueva rutina";
+        EditorTitleText.Text = "Nuevo atajo";
         NameTextBox.Text = string.Empty;
         TriggerTextBox.Text = string.Empty;
         EnabledCheckBox.IsChecked = true;
@@ -103,7 +141,7 @@ public partial class RoutinesView : UserControl
         }
 
         _editingId = routine.Id;
-        EditorTitleText.Text = "Editar rutina";
+        EditorTitleText.Text = "Editar atajo";
         NameTextBox.Text = routine.Name;
         TriggerTextBox.Text = routine.TriggerPhrase;
         EnabledCheckBox.IsChecked = routine.IsEnabled;
@@ -152,8 +190,8 @@ public partial class RoutinesView : UserControl
         }
 
         var confirmation = MessageBox.Show(
-            $"¿Eliminar la rutina {routine.Name}?",
-            "Eliminar rutina",
+            $"¿Eliminar el atajo {routine.Name}?",
+            "Eliminar atajo",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
         if (confirmation != MessageBoxResult.Yes)
@@ -321,7 +359,7 @@ public partial class RoutinesView : UserControl
             var taskTitle = TaskTitleTextBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(taskTitle))
             {
-                error = "Escribe el título de la tarea que creará la rutina.";
+                error = "Escribe el título de la tarea que creará el atajo.";
                 return false;
             }
 

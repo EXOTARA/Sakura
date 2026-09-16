@@ -1,0 +1,89 @@
+<Window x:Class="Nexo.App.SelectionActionsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sakura: texto seleccionado"
+        Width="440"
+        SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual">
+    <!--
+        2026-09-16 — Alt+Shift+R: qué hacer con el texto seleccionado. Tres momentos en la misma
+        tarjeta: elegir, esperar (el texto aparece conforme llega) y decidir (Reemplazar o Copiar).
+    -->
+    <Border x:Name="Card"
+            Margin="24"
+            Padding="16,14"
+            CornerRadius="22"
+            Background="{DynamicResource BrushSurface}"
+            BorderBrush="{DynamicResource BrushBorder}"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.35" Color="Black" />
+        </Border.Effect>
+        <StackPanel>
+            <Grid>
+                <TextBlock x:Name="HeaderText"
+                           Text="TEXTO SELECCIONADO"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrushAccent}" />
+                <Button HorizontalAlignment="Right"
+                        Content="✕"
+                        Width="24"
+                        Height="24"
+                        FontSize="11"
+                        Background="Transparent"
+                        Style="{StaticResource IconButtonStyle}"
+                        AutomationProperties.Name="Cerrar"
+                        Click="Close_Click" />
+            </Grid>
+            <TextBlock x:Name="SourceText"
+                       Margin="0,6,0,0"
+                       MaxHeight="54"
+                       TextTrimming="CharacterEllipsis"
+                       TextWrapping="Wrap"
+                       Style="{StaticResource MutedTextStyle}" />
+
+            <WrapPanel x:Name="ActionsPanel" Margin="0,10,0,0" />
+
+            <Border x:Name="ResultBorder"
+                    Margin="0,10,0,0"
+                    Padding="12,10"
+                    CornerRadius="14"
+                    Background="{DynamicResource BrushSurfaceRaised}"
+                    Visibility="Collapsed">
+                <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+                    <TextBox x:Name="ResultText"
+                             IsReadOnly="True"
+                             TextWrapping="Wrap"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Foreground="{DynamicResource BrushTextPrimary}"
+                             AutomationProperties.Name="Resultado" />
+                </ScrollViewer>
+            </Border>
+
+            <StackPanel x:Name="ResultActions"
+                        Margin="0,10,0,0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Visibility="Collapsed">
+                <Button Content="Copiar"
+                        Padding="14,7"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="Copy_Click" />
+                <Button x:Name="ReplaceButton"
+                        Margin="7,0,0,0"
+                        Content="Reemplazar"
+                        Padding="14,7"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Click="Replace_Click" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

@@ -232,7 +232,7 @@
                     <!-- 2026-09-16 — Enfoque ya no va en el riel: se abre desde Hoy, Inicio y la paleta. -->
                     <CheckBox x:Name="FocusModuleCheckBox" Content="Enfoque" Visibility="Collapsed"
                               Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed" Tag="Focus" />
-                    <CheckBox x:Name="RoutinesModuleCheckBox" Content="Rutinas"
+                    <CheckBox x:Name="RoutinesModuleCheckBox" Content="Atajos"
                               Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed" Tag="Routines" />
                     <CheckBox x:Name="AudioModuleCheckBox" Content="Audio"
                               Checked="ModuleCheckBox_Changed" Unchecked="ModuleCheckBox_Changed" Tag="Audio" />
@@ -642,9 +642,9 @@
                     </StackPanel>
 
                     <StackPanel Margin="24,12,0,0">
-                        <TextBlock Margin="0,0,0,5" Text="Atajos" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,0,0,5" Text="Textos rápidos" FontWeight="SemiBold" />
                         <TextBlock Margin="0,0,0,6"
-                                   Text="Una línea por atajo, con el mismo formato. Lo escrito se inserta tal cual. Ejemplo: mi correo=nombre@ejemplo.com"
+                                   Text="Una línea por texto, con el mismo formato. Lo escrito se inserta tal cual. Ejemplo: mi correo=nombre@ejemplo.com"
                                    TextWrapping="Wrap"
                                    Style="{StaticResource MutedTextStyle}" />
                         <TextBox x:Name="FlowSnippetsBox"
@@ -654,7 +654,7 @@
                                  TextWrapping="NoWrap"
                                  VerticalScrollBarVisibility="Auto"
                                  LostFocus="FlowSnippetsBox_LostFocus"
-                                 AutomationProperties.Name="Atajos de dictado" />
+                                 AutomationProperties.Name="Textos rápidos del dictado" />
                         <TextBlock x:Name="FlowListsStatusText"
                                    Margin="0,6,0,0"
                                    Text=""

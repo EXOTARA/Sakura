@@ -131,6 +131,7 @@ public partial class FocusView : UserControl
 
         _pendingCompletionTaskId = null;
         _pendingCompletionTaskTitle = string.Empty;
+        _lastCompletedTaskId = completion.TaskId;
         var taskTitle = completion.TaskId is { } taskId ? _resolveTaskTitle?.Invoke(taskId) : null;
 
         if (!isBreak && completion.TaskId is { } id && !string.IsNullOrWhiteSpace(taskTitle))
@@ -155,10 +156,29 @@ public partial class FocusView : UserControl
     private void DismissSessionCompletionButton_Click(object sender, RoutedEventArgs e) =>
         HideSessionCompletionNotice();
 
+    /// <summary>
+    /// 2026-09-16 — el aviso de fin no corta: «Seguir 10 min más» continúa en lo mismo, con la
+    /// misma tarea, sin volver a elegir nada.
+    /// </summary>
     private void StartAnotherSessionButton_Click(object sender, RoutedEventArgs e)
     {
+        _pendingAssociatedTaskId = _pendingCompletionTaskId ?? _lastCompletedTaskId;
         HideSessionCompletionNotice();
-        FocusPrimaryControl();
+        Start(TimeSpan.FromMinutes(10), FocusSessionKind.Focus, remember: false);
+    }
+
+    private Guid? _lastCompletedTaskId;
+
+    /// <summary>La última duración elegida, para ofrecerla a un toque.</summary>
+    public event EventHandler<int>? DurationChosen;
+
+    public void SetLastDuration(int minutes)
+    {
+        minutes = Math.Clamp(minutes, 1, 1440);
+        LastDurationButton.Tag = $"Focus:{minutes}";
+        LastDurationButton.Content = $"La última · {minutes} min";
+        LastDurationButton.Visibility = minutes is 5 or 15 or 25 ? Visibility.Hidden : Visibility.Visible;
+        CustomMinutesTextBox.Text = minutes.ToString(CultureInfo.InvariantCulture);
     }
 
     private void CompleteAssociatedTaskButton_Click(object sender, RoutedEventArgs e)
@@ -203,10 +223,7 @@ public partial class FocusView : UserControl
             return;
         }
 
-        var kind = parts[0].Equals("Break", StringComparison.OrdinalIgnoreCase)
-            ? FocusSessionKind.Break
-            : FocusSessionKind.Focus;
-        Start(TimeSpan.FromMinutes(minutes), kind);
+        Start(TimeSpan.FromMinutes(minutes), FocusSessionKind.Focus);
     }
 
     private void StartCustomButton_Click(object sender, RoutedEventArgs e)
@@ -222,7 +239,7 @@ public partial class FocusView : UserControl
             return;
         }
 
-        Start(TimeSpan.FromMinutes(minutes), FocusSessionKind.Custom);
+        Start(TimeSpan.FromMinutes(minutes), FocusSessionKind.Focus);
     }
 
     private void PauseButton_Click(object sender, RoutedEventArgs e) =>
@@ -254,24 +271,25 @@ public partial class FocusView : UserControl
         Apply(_focusManager.Cancel());
     }
 
-    private void Start(TimeSpan duration, FocusSessionKind kind)
+    private void Start(TimeSpan duration, FocusSessionKind kind, bool remember = true)
     {
-        var label = kind switch
-        {
-            FocusSessionKind.Break => "Descanso",
-            FocusSessionKind.Focus => "Sesión de enfoque",
-            _ => "Temporizador"
-        };
-
         var taskId = _pendingAssociatedTaskId;
         _pendingAssociatedTaskId = null;
 
-        Apply(_focusManager.Start(
+        var result = _focusManager.Start(
             duration,
-            label,
+            "Enfoque",
             kind,
             DateTimeOffset.Now,
-            taskId));
+            taskId);
+        Apply(result);
+
+        if (result.Success && remember)
+        {
+            var minutes = (int)Math.Round(duration.TotalMinutes);
+            SetLastDuration(minutes);
+            DurationChosen?.Invoke(this, minutes);
+        }
     }
 
     private void Apply(FocusOperationResult result)

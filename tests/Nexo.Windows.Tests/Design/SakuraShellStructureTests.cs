@@ -159,7 +159,7 @@ public sealed class SakuraShellStructureTests
         string[] expectedAccessibleNames =
         [
             "Expandir o contraer navegación", "Inicio", "Asistente", "Pendientes de hoy", "Enfoque",
-            "Rutinas", "Audio", "Captura", "Sistema", "Personalización y perfiles",
+            "Atajos", "Audio", "Captura", "Sistema", "Personalización y perfiles",
             "Abrir paleta de comandos"
         ];
 
