@@ -88,8 +88,7 @@ public partial class TasksView : UserControl
         EditorTitleText.Text = "Nueva tarea";
         TitleTextBox.Text = CaptureTextBox.Text.Trim();
         NotesTextBox.Text = string.Empty;
-        DueDatePicker.SelectedDate = Day.ToDateTime(TimeOnly.MinValue);
-        DueTimeTextBox.Text = string.Empty;
+        SetWhen(new DateTimeOffset(Day.ToDateTime(TimeOnly.MinValue), DateTimeOffset.Now.Offset));
         PriorityComboBox.SelectedIndex = 1;
         ReminderCheckBox.IsChecked = false;
         DeleteTaskButton.Visibility = Visibility.Collapsed;
@@ -195,12 +194,28 @@ public partial class TasksView : UserControl
         Changed();
     }
 
+    /// <summary>
+    /// 2026-09-16 — «▶» ya no arranca 25 minutos sin preguntar (Adler: un enfoque de 25 minutos
+    /// para «comprar tortillas» no tiene sentido). Se elige cuánto rato, y el botón solo aparece en
+    /// lo importante, que es el trabajo que pide sentarse; un recordatorio no.
+    /// </summary>
     private void FocusTaskButton_Click(object sender, RoutedEventArgs e)
     {
-        if (TryGetTaskId(sender, out var id) && Find(id) is { } task)
+        if (sender is not Button button || !TryGetTaskId(sender, out var id) || Find(id) is not { } task)
         {
-            FocusRequested?.Invoke(this, new TaskFocusRequestedEventArgs(task.Id, task.Title));
+            return;
         }
+
+        var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        foreach (var minutes in new[] { 5, 15, 25, 45 })
+        {
+            var item = new MenuItem { Header = minutes == 5 ? "Solo 5 min para empezar" : $"{minutes} min" };
+            item.Click += (_, _) => FocusRequested?.Invoke(this, new TaskFocusRequestedEventArgs(task.Id, task.Title, minutes));
+            menu.Items.Add(item);
+        }
+
+        button.ContextMenu = menu;
+        menu.IsOpen = true;
     }
 
     private void PostponeTaskButton_Click(object sender, RoutedEventArgs e)
@@ -223,7 +238,23 @@ public partial class TasksView : UserControl
         _releasedId = id;
         UndoText.Text = $"Soltaste «{task.Title}»";
         UndoBar.Visibility = Visibility.Visible;
+
+        // El aviso se va solo: una barra que se queda para siempre acaba siendo ruido.
+        _undoTimer ??= new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+        _undoTimer.Stop();
+        _undoTimer.Tick -= HideUndo;
+        _undoTimer.Tick += HideUndo;
+        _undoTimer.Start();
         Changed();
+    }
+
+    private System.Windows.Threading.DispatcherTimer? _undoTimer;
+
+    private void HideUndo(object? sender, EventArgs e)
+    {
+        _undoTimer?.Stop();
+        _releasedId = null;
+        UndoBar.Visibility = Visibility.Collapsed;
     }
 
     private void UndoButton_Click(object sender, RoutedEventArgs e)
@@ -265,8 +296,7 @@ public partial class TasksView : UserControl
         EditorTitleText.Text = "Editar tarea";
         TitleTextBox.Text = task.Title;
         NotesTextBox.Text = task.Notes;
-        DueDatePicker.SelectedDate = task.DueAt?.Date;
-        DueTimeTextBox.Text = task.DueAt is { } due && due.TimeOfDay != TimeSpan.Zero ? due.ToString("HH:mm") : string.Empty;
+        SetWhen(task.DueAt);
         PriorityComboBox.SelectedIndex = task.Priority switch
         {
             TaskPriority.Low => 0,
@@ -364,28 +394,88 @@ public partial class TasksView : UserControl
         Changed();
     }
 
+    // ---------- Cuándo ----------
+
+    private DateTimeOffset? _whenOriginal;
+    private string _whenOriginalText = string.Empty;
+
+    /// <summary>Pone en la caja una fecha ya guardada, escrita de forma que se vuelva a entender.</summary>
+    private void SetWhen(DateTimeOffset? due)
+    {
+        _whenOriginal = due;
+        _whenOriginalText = due is not { } value
+            ? string.Empty
+            : DateOnly.FromDateTime(value.Date) == Today
+                ? "hoy" + (value.TimeOfDay == TimeSpan.Zero ? string.Empty : " " + TodayPlan.Clock(value))
+                : value.ToString("dd/MM", CultureInfo.InvariantCulture) + (value.TimeOfDay == TimeSpan.Zero ? string.Empty : " " + TodayPlan.Clock(value));
+        WhenTextBox.Text = _whenOriginalText;
+    }
+
+    private void WhenTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        WhenHint.Visibility = WhenTextBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        WhenPreviewText.Text = TryGetDueAt(out var due, out var error)
+            ? due is null ? "Sin fecha" : "→ " + TodayPlan.Describe(new NexoTask { DueAt = due }, DateTimeOffset.Now)
+            : error;
+    }
+
+    private void WhenChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string text })
+        {
+            // Si ya había hora, se conserva al cambiar de día.
+            var time = TryGetDueAt(out var due, out _) && due is { } current && current.TimeOfDay != TimeSpan.Zero
+                ? " " + TodayPlan.Clock(current)
+                : string.Empty;
+            WhenTextBox.Text = text.Length == 0 ? string.Empty : text + time;
+        }
+    }
+
+    private void EditorHint_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (NotesHint is null || TitleHint is null)
+        {
+            return;
+        }
+
+        NotesHint.Visibility = NotesTextBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        TitleHint.Visibility = TitleTextBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private bool TryGetDueAt(out DateTimeOffset? dueAt, out string error)
     {
         dueAt = null;
         error = string.Empty;
+        var text = WhenTextBox.Text.Trim();
 
-        if (!DueDatePicker.SelectedDate.HasValue)
+        if (text.Length == 0)
         {
             return true;
         }
 
-        var time = TimeSpan.Zero;
-        var text = DueTimeTextBox.Text.Trim();
-        if (text.Length > 0 &&
-            (!TimeSpan.TryParseExact(text, ["h\\:mm", "hh\\:mm"], CultureInfo.InvariantCulture, TimeSpanStyles.None, out time) ||
-             time < TimeSpan.Zero || time >= TimeSpan.FromDays(1)))
+        // Sin tocar, se guarda tal cual: releer «15/09» podría llevarla al año que viene.
+        if (text == _whenOriginalText)
         {
-            error = "Usa una hora como 09:00 o 18:30, o déjala vacía.";
+            dueAt = _whenOriginal;
+            return true;
+        }
+
+        // Aquí un número suelto es una hora («3» → 3:00 pm); en la caja de captura no, porque ahí
+        // puede ser parte del título.
+        if (int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var hour) && hour is >= 1 and <= 12)
+        {
+            text = "a las " + text;
+        }
+
+        // Si sobra texto sin entender, se dice en vez de guardar otra fecha.
+        var parsed = QuickCapture.Parse(text, DateTimeOffset.Now);
+        if (parsed.DueAt is null || parsed.Leftover.Length > 0)
+        {
+            error = "No entendí la fecha. Prueba «hoy 5 pm», «viernes» o «20/09».";
             return false;
         }
 
-        var local = DateTime.SpecifyKind(DueDatePicker.SelectedDate.Value.Date.Add(time), DateTimeKind.Unspecified);
-        dueAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
+        dueAt = parsed.DueAt;
         return true;
     }
 
@@ -432,6 +522,7 @@ public partial class TasksView : UserControl
             done ? (Brush)FindResource("BrushTextTertiary") : (Brush)FindResource("BrushTextPrimary"),
             (Brush)FindResource(item.LeftPending ? "BrushWarning" : "BrushTextTertiary"),
             done ? Visibility.Collapsed : Visibility.Visible,
+            !done && item.Task.Priority == TaskPriority.High ? Visibility.Visible : Visibility.Collapsed,
             done ? TextDecorations.Strikethrough : null);
     }
 
@@ -482,12 +573,15 @@ public partial class TasksView : UserControl
         Brush TitleBrush,
         Brush WhenBrush,
         Visibility PendingVisibility,
+        Visibility FocusVisibility,
         TextDecorationCollection? TextDecorations);
 }
 
-public sealed class TaskFocusRequestedEventArgs(Guid taskId, string taskTitle) : EventArgs
+public sealed class TaskFocusRequestedEventArgs(Guid taskId, string taskTitle, int minutes = 25) : EventArgs
 {
     public Guid TaskId { get; } = taskId;
 
     public string TaskTitle { get; } = taskTitle;
+
+    public int Minutes { get; } = minutes;
 }

@@ -129,6 +129,12 @@ public partial class MainWindow : Window
     private const uint VirtualKeyD = 0x44;
     private const uint VirtualKeyV = 0x56;
     private const uint VirtualKeyT = 0x54;
+    private const uint VirtualKeyN = 0x4E;
+
+    /// <summary>2026-09-16 — Alt+Shift+N, apuntar una tarea desde cualquier aplicación.</summary>
+    private const int QuickCaptureHotkeyId = 0x4E70;
+
+    private QuickCaptureWindow? _quickCaptureWindow;
     private const uint VirtualKeyEscape = 0x1B;
     private const uint ModNone = 0x0000;
     private const int WmHotkey = 0x0312;
@@ -662,6 +668,15 @@ public partial class MainWindow : Window
         _homeView.NewTaskRequested += HomeView_NewTaskRequested;
         _homeView.StartTaskFocusRequested += HomeView_StartTaskFocusRequested;
         _homeView.PostponeTaskRequested += HomeView_PostponeTaskRequested;
+        _homeView.ReviewActionRequested += HomeView_ReviewActionRequested;
+        _homeView.ReviewFinished += (_, _) => _morningReviewActive = false;
+        _homeView.CompleteTaskRequested += (_, e) =>
+        {
+            _taskManager.Complete(e.TaskId);
+            _homeView.AddRecentAction("Hecha", e.TaskTitle);
+            _tasksView.Refresh();
+            TasksView_TasksChanged(this, EventArgs.Empty);
+        };
         _homeView.PauseFocusRequested += (_, _) => { _focusManager.Pause(DateTimeOffset.Now); CheckFocusTimer(); RefreshHomeView(); };
         _homeView.ResumeFocusRequested += (_, _) => { _focusManager.Resume(DateTimeOffset.Now); CheckFocusTimer(); RefreshHomeView(); };
         _homeView.FinishFocusRequested += (_, _) => { _focusManager.Finish(DateTimeOffset.Now); CheckFocusTimer(); RefreshHomeView(); };
@@ -4338,7 +4353,7 @@ public partial class MainWindow : Window
     private void HomeView_StartTaskFocusRequested(object? sender, TaskFocusRequestedEventArgs e)
     {
         var result = _focusManager.Start(
-            TimeSpan.FromMinutes(25),
+            TimeSpan.FromMinutes(e.Minutes),
             e.TaskTitle,
             Nexo.Core.Focus.FocusSessionKind.Focus,
             DateTimeOffset.Now,
@@ -4349,7 +4364,7 @@ public partial class MainWindow : Window
         _capsuleWindow.ShowMessage(
             result.Success ? CapsuleKind.Success : CapsuleKind.Warning,
             result.Success ? "Enfoque en marcha" : "No pude empezar",
-            result.Success ? $"25 min en «{e.TaskTitle}»." : result.Message,
+            result.Success ? $"{e.Minutes} min en «{e.TaskTitle}»." : result.Message,
             _preferences.Position);
     }
 
@@ -4414,6 +4429,28 @@ public partial class MainWindow : Window
         ShowAnimated();
         NavigateTo(ShellNavigationPolicy.Tasks, animate: true);
         _tasksView.ShowDay(day);
+    }
+
+    private void ShowQuickCapture()
+    {
+        if (_quickCaptureWindow is null)
+        {
+            _quickCaptureWindow = new QuickCaptureWindow();
+            _quickCaptureWindow.Captured += (_, parsed) =>
+            {
+                _taskManager.Create(parsed.Title, null, parsed.DueAt, parsed.Priority);
+                _tasksView.Refresh();
+                _homeView.AddRecentAction("Apuntada", parsed.Title);
+                TasksView_TasksChanged(this, EventArgs.Empty);
+                _capsuleWindow.ShowMessage(
+                    CapsuleKind.Success,
+                    "Apuntada",
+                    parsed.DueAt is null ? parsed.Title : $"{parsed.Title} · {TodayPlan.Describe(new NexoTask { DueAt = parsed.DueAt }, DateTimeOffset.Now)}",
+                    _preferences.Position);
+            };
+        }
+
+        _quickCaptureWindow.ShowAtTop();
     }
 
     /// <summary>Los puntos del calendario: días con algo pendiente.</summary>
@@ -4489,6 +4526,12 @@ public partial class MainWindow : Window
         }
 
         RegisterCaptureHotkeys(windowHandle);
+
+        if (!RegisterHotKey(windowHandle, QuickCaptureHotkeyId, ModAlt | ModShift, VirtualKeyN))
+        {
+            _assistantView.AddSakuraMessage(
+                "Alt + Shift + N ya está siendo utilizado por otra aplicación; apuntar rápido no quedó disponible.");
+        }
 
         // Diseño D6.3 — el dictado global se registra igual que los demás atajos: como atajo de
         // sistema, para que funcione con Sakura sin foco (que es todo el sentido de dictar en otra
@@ -4618,6 +4661,7 @@ public partial class MainWindow : Window
         _topRevealWatcher.RevealRequested -= HandleTopRevealRequested;
         _topRevealWatcher.Dispose();
         _dashboardWindow.Close();
+        _quickCaptureWindow?.Close();
         _quickControlsWatcher.RevealRequested -= HandleQuickControlsRequested;
         _quickControlsWatcher.Dispose();
         _brightnessService.Dispose();
@@ -4646,6 +4690,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(windowHandle, LookHotkeyId);
             UnregisterHotKey(windowHandle, VoiceHotkeyId);
             UnregisterHotKey(windowHandle, TranslateHotkeyId);
+            UnregisterHotKey(windowHandle, QuickCaptureHotkeyId);
             UnregisterHotKey(windowHandle, FlowHotkeyId);
             UnregisterCaptureHotkeys(windowHandle);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
@@ -4706,6 +4751,11 @@ public partial class MainWindow : Window
         else if (wParam.ToInt32() == TranslateHotkeyId)
         {
             _ = TranslateRegionAsync();
+            handled = true;
+        }
+        else if (wParam.ToInt32() == QuickCaptureHotkeyId)
+        {
+            ShowQuickCapture();
             handled = true;
         }
         else if (HandleCaptureHotkey(wParam.ToInt32()))
@@ -4906,8 +4956,50 @@ public partial class MainWindow : Window
         ShowAnimated();
     }
 
+    private bool _morningReviewActive;
+
+    /// <summary>
+    /// 2026-09-16 — la primera vez que Sakura se abre cada día, si quedó algo de antes, Inicio empieza
+    /// con el repaso. Se ofrece una sola vez: cerrarlo sin decidir también cuenta.
+    /// </summary>
+    private void OfferMorningReview()
+    {
+        var today = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (_preferences.LastMorningReviewDate == today || !_preferences.ShowHomeModule)
+        {
+            return;
+        }
+
+        var hasLeftovers = _taskManager.GetAll().Any(task =>
+            !task.IsCompleted && task.DueAt is { } due && due.Date < DateTime.Today);
+        if (!hasLeftovers)
+        {
+            return;
+        }
+
+        _preferences.LastMorningReviewDate = today;
+        SavePreferences();
+        _morningReviewActive = true;
+        NavigateTo(ShellNavigationPolicy.Home, animate: false);
+        RefreshHomeView();
+    }
+
+    private void HomeView_ReviewActionRequested(object? sender, (Guid TaskId, string Action) e)
+    {
+        var now = DateTimeOffset.Now;
+        _ = e.Action switch
+        {
+            "today" => _taskManager.MoveToDay(e.TaskId, DateOnly.FromDateTime(now.Date), now),
+            "tomorrow" => _taskManager.Postpone(e.TaskId, now),
+            _ => _taskManager.Release(e.TaskId, now)
+        };
+        _tasksView.Refresh();
+        TasksView_TasksChanged(this, EventArgs.Empty);
+    }
+
     private void ShowAnimated()
     {
+        OfferMorningReview();
         _isHiding = false;
         _touchedSinceReveal = false;
         _pointerOutsideSince = null;
@@ -9027,7 +9119,7 @@ public partial class MainWindow : Window
             DateTimeOffset.Now);
 
         // 2026-09-16 — Inicio tiene su propio cálculo; el cajón sigue con el resumen de siempre.
-        _homeView.Refresh(HomeNowBuilder.Build(_taskManager, _focusManager, name: null, DateTimeOffset.Now));
+        _homeView.Refresh(HomeNowBuilder.Build(_taskManager, _focusManager, name: null, DateTimeOffset.Now, includeReview: _morningReviewActive));
 
         // El mismo resumen alimenta el cajón. Sale del mismo cálculo y no de otro propio: dos
         // cuentas separadas acabarían discrepando, y ver «3 pendientes» arriba y «2» abajo hace

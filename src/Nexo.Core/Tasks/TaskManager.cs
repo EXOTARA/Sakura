@@ -155,7 +155,11 @@ public sealed class TaskManager
     /// 2026-09-16 — «Mañana»: pasa al día siguiente a la misma hora, o sin hora si no la tenía. Dejar
     /// algo para mañana es una decisión, no un fallo, así que no se pregunta nada.
     /// </summary>
-    public TaskOperationResult Postpone(Guid id, DateTimeOffset now)
+    public TaskOperationResult Postpone(Guid id, DateTimeOffset now) =>
+        MoveToDay(id, DateOnly.FromDateTime(now.Date).AddDays(1), now);
+
+    /// <summary>Pasa la tarea a otro día conservando la hora, si tenía.</summary>
+    public TaskOperationResult MoveToDay(Guid id, DateOnly day, DateTimeOffset now)
     {
         lock (_sync)
         {
@@ -166,12 +170,12 @@ public sealed class TaskManager
             }
 
             var time = task.DueAt?.TimeOfDay ?? TimeSpan.Zero;
-            task.DueAt = new DateTimeOffset(now.Date.AddDays(1) + time, now.Offset);
+            task.DueAt = new DateTimeOffset(day.ToDateTime(TimeOnly.FromTimeSpan(time)), now.Offset);
             task.ReminderDeliveredAt = null;
             task.ReminderEnabled = task.ReminderEnabled && time != TimeSpan.Zero;
             task.UpdatedAt = now;
             SaveLocked();
-            return TaskOperationResult.Completed($"Pasa a mañana: {task.Title}.", task.Copy());
+            return TaskOperationResult.Completed($"Movida: {task.Title}.", task.Copy());
         }
     }
 

@@ -158,6 +158,12 @@ public sealed class ShellPreferences
     public bool DocumentSourcesAsked { get; set; }
 
     /// <summary>
+    /// 2026-09-16 — el último día en que se ofreció el repaso de la mañana (aaaa-mm-dd). Sale una vez
+    /// al día, la primera vez que se abre Sakura, y solo si quedó algo pendiente.
+    /// </summary>
+    public string? LastMorningReviewDate { get; set; }
+
+    /// <summary>
     /// Diseño D27 — llevar el ratón al borde donde está acoplada Kohana la hace aparecer.
     /// Llega activado porque una función que hay que descubrir en Ajustes para saber que existe no
     /// la usa nadie; y se puede apagar aquí mismo porque un borde de pantalla también es donde vive

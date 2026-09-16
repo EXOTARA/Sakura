@@ -75,7 +75,9 @@ public sealed class TodayPlanTests
 
     [Theory]
     [InlineData(-2, 0, "Quedó pendiente")]
-    [InlineData(0, 17, "Hoy · 17:00")]
+    [InlineData(0, 17, "Hoy · 5:00 pm")]
+    [InlineData(0, 9, "Hoy · 9:00 am")]
+    [InlineData(0, 12, "Hoy · 12:00 pm")]
     [InlineData(1, 0, "Mañana")]
     public void Describe_ReadsCalmly(int days, int hour, string expected)
     {

@@ -53,6 +53,15 @@ public partial class HomeView : UserControl
     /// <summary>Empezar a enfocarse en la tarea de «Ahora».</summary>
     public event EventHandler<TaskFocusRequestedEventArgs>? StartTaskFocusRequested;
 
+    /// <summary>Marcar hecha la tarea de «Ahora» (cuando no es importante).</summary>
+    public event EventHandler<TaskFocusRequestedEventArgs>? CompleteTaskRequested;
+
+    /// <summary>Una decisión del repaso de la mañana: «today», «tomorrow» o «release».</summary>
+    public event EventHandler<(Guid TaskId, string Action)>? ReviewActionRequested;
+
+    /// <summary>El repaso de la mañana terminó.</summary>
+    public event EventHandler? ReviewFinished;
+
     /// <summary>Dejar para mañana la tarea de «Ahora».</summary>
     public event EventHandler<TaskFocusRequestedEventArgs>? PostponeTaskRequested;
 
@@ -79,6 +88,17 @@ public partial class HomeView : UserControl
         CountsBlock.Visibility = model.DoneToday == 0 && model.PlannedToday == 0 && model.FocusMinutesToday == 0
             ? Visibility.Collapsed
             : Visibility.Visible;
+
+        if (model.Review is { Count: > 0 } review)
+        {
+            ReviewItems.ItemsSource = review;
+            ReviewBlock.Visibility = Visibility.Visible;
+        }
+        else if (model.Review is not null)
+        {
+            // Se decidió todo: el repaso termina solo.
+            CloseReview();
+        }
 
         if (model.Yesterday is { } yesterday)
         {
@@ -117,7 +137,7 @@ public partial class HomeView : UserControl
             return;
         }
 
-        FrameworkElement[] blocks = [HeaderBlock, NowBlock, CountsBlock, YesterdayBlock, TrailBlock];
+        FrameworkElement[] blocks = [HeaderBlock, ReviewBlock, NowBlock, CountsBlock, YesterdayBlock, TrailBlock];
         var index = 0;
         foreach (var block in blocks)
         {
@@ -142,10 +162,10 @@ public partial class HomeView : UserControl
         {
             case HomeNowKind.Task:
                 NowLabelText.Text = "AHORA · TOCA PARA DECIDIR";
-                NowPrimaryButton.Content = "Empezar";
+                NowPrimaryButton.Content = now.IsImportant ? "Empezar" : "Hecha";
                 NowSecondaryButton.Content = "Mañana";
                 AutomationProperties.SetName(NowBubble, $"Ahora: {now.Title}. Toca para decidir");
-                AutomationProperties.SetName(NowPrimaryButton, $"Empezar a enfocarme en {now.Title}");
+                AutomationProperties.SetName(NowPrimaryButton, now.IsImportant ? $"Empezar a trabajar en {now.Title}" : $"Marcar {now.Title} como hecha");
                 AutomationProperties.SetName(NowSecondaryButton, $"Dejar {now.Title} para mañana");
                 break;
             case HomeNowKind.Focus:
@@ -265,9 +285,25 @@ public partial class HomeView : UserControl
     {
         switch (_now.Kind)
         {
-            case HomeNowKind.Task when _now.TaskId is { } taskId:
-                StartTaskFocusRequested?.Invoke(this, new TaskFocusRequestedEventArgs(taskId, _now.Title));
+            // Un recordatorio («comprar tortillas») se marca hecho; solo lo importante pide sentarse.
+            case HomeNowKind.Task when _now.TaskId is { } taskId && !_now.IsImportant:
+                CompleteTaskRequested?.Invoke(this, new TaskFocusRequestedEventArgs(taskId, _now.Title));
                 break;
+            case HomeNowKind.Task when _now.TaskId is { } taskId:
+                var menu = new ContextMenu
+                {
+                    PlacementTarget = NowPrimaryButton,
+                    Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom
+                };
+                foreach (var minutes in new[] { 5, 15, 25, 45 })
+                {
+                    var item = new MenuItem { Header = minutes == 5 ? "Solo 5 min para empezar" : $"{minutes} min" };
+                    item.Click += (_, _) => StartTaskFocusRequested?.Invoke(this, new TaskFocusRequestedEventArgs(taskId, _now.Title, minutes));
+                    menu.Items.Add(item);
+                }
+
+                menu.IsOpen = true;
+                return;
             case HomeNowKind.Focus when _now.IsPaused:
                 ResumeFocusRequested?.Invoke(this, EventArgs.Empty);
                 break;
@@ -292,6 +328,27 @@ public partial class HomeView : UserControl
         }
 
         SetActionsOpen(false, animate: true);
+    }
+
+    private void ReviewAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string action, CommandParameter: Guid taskId })
+        {
+            ReviewActionRequested?.Invoke(this, (taskId, action));
+        }
+    }
+
+    private void ReviewDone_Click(object sender, RoutedEventArgs e) => CloseReview();
+
+    private void CloseReview()
+    {
+        if (ReviewBlock.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        ReviewBlock.Visibility = Visibility.Collapsed;
+        ReviewFinished?.Invoke(this, EventArgs.Empty);
     }
 
     private void YesterdayBubble_Click(object sender, RoutedEventArgs e) =>

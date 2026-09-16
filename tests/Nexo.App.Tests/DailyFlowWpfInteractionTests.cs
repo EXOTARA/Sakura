@@ -108,15 +108,12 @@ public sealed class DailyFlowWpfInteractionTests
         {
             var manager = new TaskManager(new FakeTaskStore());
             manager.Load();
-            var task = manager.Create("Escribir el informe");
+            // Solo lo importante ofrece enfocarse, y se elige cuánto rato.
+            var task = manager.Create("Escribir el informe", priority: TaskPriority.High);
 
             var view = new TasksView(manager);
             using var host = CreateOffscreenHost(view);
             host.Show();
-            host.UpdateLayout();
-
-            // Sin fecha no es de hoy: está en «Luego», que empieza plegada.
-            InvokeFilterButton(view, TodaySectionKind.Later);
             host.UpdateLayout();
 
             TaskFocusRequestedEventArgs? received = null;
@@ -124,11 +121,16 @@ public sealed class DailyFlowWpfInteractionTests
 
             var focusButton = FindButtonByAutomationName(view, "Enfocarme en esta tarea");
             Assert.NotNull(focusButton);
-            focusButton!.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Assert.Equal(Visibility.Visible, focusButton!.Visibility);
+            focusButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+
+            var fiveMinutes = (MenuItem)focusButton.ContextMenu!.Items[0];
+            fiveMinutes.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            focusButton.ContextMenu.IsOpen = false;
 
             Assert.NotNull(received);
             Assert.Equal(task.Id, received!.TaskId);
-            Assert.Equal("Escribir el informe", received.TaskTitle);
+            Assert.Equal(5, received.Minutes);
         });
     }
 
@@ -948,16 +950,18 @@ public sealed class DailyFlowWpfInteractionTests
 
             Assert.Equal(Visibility.Visible, actions.Visibility);
 
-            // «Empezar» pide enfocarse en esa tarea; «Mañana», moverla.
-            TaskFocusRequestedEventArgs? started = null;
+            // Una tarea que no es importante se marca «Hecha»; «Mañana» la mueve.
+            TaskFocusRequestedEventArgs? completed = null;
             TaskFocusRequestedEventArgs? postponed = null;
-            view.StartTaskFocusRequested += (_, e) => started = e;
+            view.CompleteTaskRequested += (_, e) => completed = e;
             view.PostponeTaskRequested += (_, e) => postponed = e;
 
-            ((Button)view.FindName("NowPrimaryButton")!).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            var primary = (Button)view.FindName("NowPrimaryButton")!;
+            Assert.Equal("Hecha", primary.Content);
+            primary.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
             ((Button)view.FindName("NowSecondaryButton")!).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
 
-            Assert.Equal("Terminar el borrador", started?.TaskTitle);
+            Assert.Equal("Terminar el borrador", completed?.TaskTitle);
             Assert.Equal("Terminar el borrador", postponed?.TaskTitle);
         });
     }
