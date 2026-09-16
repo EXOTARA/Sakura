@@ -542,16 +542,44 @@ public partial class DashboardView : UserControl
         var outMonth = (Brush)FindResource("BrushTextTertiary");
         var todayBackground = (Brush)FindResource("BrushAccent");
 
+        var dot = (Brush)FindResource("BrushAccent");
+
         _calendarCells.Clear();
         foreach (var day in MonthGrid.Build(_calendarMonth, today, culture.DateTimeFormat.FirstDayOfWeek))
         {
+            var busy = _busyDays.Contains(day.Date);
             _calendarCells.Add(new CalendarCell(
                 Date: day.Date,
                 Day: day.Date.Day.ToString(CultureInfo.CurrentCulture),
                 IsToday: day.IsToday,
                 Foreground: day.IsToday ? (Brush)FindResource("BrushBackground") : day.InMonth ? inMonth : outMonth,
                 Background: day.IsToday ? todayBackground : Brushes.Transparent,
-                Weight: day.IsToday || day.InMonth ? FontWeights.SemiBold : FontWeights.Normal));
+                Weight: day.IsToday || day.InMonth ? FontWeights.SemiBold : FontWeights.Normal,
+                DotBrush: day.IsToday ? (Brush)FindResource("BrushBackground") : dot,
+                DotVisibility: busy ? Visibility.Visible : Visibility.Collapsed,
+                HasTasks: busy));
+        }
+    }
+
+    /// <summary>
+    /// 2026-09-16 — el calendario deja de ser solo números: un punto marca los días con algo
+    /// pendiente y tocar un día abre Hoy en ese día.
+    /// </summary>
+    public event EventHandler<DateOnly>? DayRequested;
+
+    private IReadOnlySet<DateOnly> _busyDays = new HashSet<DateOnly>();
+
+    public void SetBusyDays(IReadOnlySet<DateOnly> days)
+    {
+        _busyDays = days;
+        RefreshCalendar();
+    }
+
+    private void CalendarDay_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: CalendarCell cell })
+        {
+            DayRequested?.Invoke(this, cell.Date);
         }
     }
 
@@ -573,9 +601,13 @@ public partial class DashboardView : UserControl
         bool IsToday,
         Brush Foreground,
         Brush Background,
-        FontWeight Weight)
+        FontWeight Weight,
+        Brush DotBrush,
+        Visibility DotVisibility,
+        bool HasTasks)
     {
-        public override string ToString() => Date.ToString("D", CultureInfo.CurrentCulture) + (IsToday ? ", hoy" : "");
+        public override string ToString() =>
+            Date.ToString("D", CultureInfo.CurrentCulture) + (IsToday ? ", hoy" : "") + (HasTasks ? ", con tareas" : "");
     }
 
     // ---------- Métricas ----------

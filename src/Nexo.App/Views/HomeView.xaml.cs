@@ -75,6 +75,11 @@ public partial class HomeView : UserControl
         AutomationProperties.SetName(DoneBubble, $"Hechas hoy: {DoneText.Text}. Ir a Hoy");
         AutomationProperties.SetName(FocusBubble, $"Enfoque de hoy: {FocusText.Text}");
 
+        // Dos ceros no dicen nada: en un día sin movimiento (o recién instalada) las cifras se esconden.
+        CountsBlock.Visibility = model.DoneToday == 0 && model.PlannedToday == 0 && model.FocusMinutesToday == 0
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
         if (model.Yesterday is { } yesterday)
         {
             YesterdayBlock.Visibility = Visibility.Visible;

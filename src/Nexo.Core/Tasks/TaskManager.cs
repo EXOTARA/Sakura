@@ -27,6 +27,7 @@ public sealed class TaskManager
         lock (_sync)
         {
             return _tasks
+                .Where(task => task.ArchivedAt is null)
                 .Select(task => task.Copy())
                 .OrderBy(task => task.IsCompleted)
                 .ThenBy(task => task.DueAt ?? DateTimeOffset.MaxValue)
@@ -150,6 +151,69 @@ public sealed class TaskManager
         }
     }
 
+    /// <summary>
+    /// 2026-09-16 — «Mañana»: pasa al día siguiente a la misma hora, o sin hora si no la tenía. Dejar
+    /// algo para mañana es una decisión, no un fallo, así que no se pregunta nada.
+    /// </summary>
+    public TaskOperationResult Postpone(Guid id, DateTimeOffset now)
+    {
+        lock (_sync)
+        {
+            var task = _tasks.FirstOrDefault(candidate => candidate.Id == id);
+            if (task is null)
+            {
+                return TaskOperationResult.Failed("La tarea ya no existe.");
+            }
+
+            var time = task.DueAt?.TimeOfDay ?? TimeSpan.Zero;
+            task.DueAt = new DateTimeOffset(now.Date.AddDays(1) + time, now.Offset);
+            task.ReminderDeliveredAt = null;
+            task.ReminderEnabled = task.ReminderEnabled && time != TimeSpan.Zero;
+            task.UpdatedAt = now;
+            SaveLocked();
+            return TaskOperationResult.Completed($"Pasa a mañana: {task.Title}.", task.Copy());
+        }
+    }
+
+    /// <summary>
+    /// 2026-09-16 — «Soltar»: deja de pedir atención sin borrarse. <see cref="GetAll"/> ya no la
+    /// devuelve y no vuelve a avisar.
+    /// </summary>
+    public TaskOperationResult Release(Guid id, DateTimeOffset now)
+    {
+        lock (_sync)
+        {
+            var task = _tasks.FirstOrDefault(candidate => candidate.Id == id);
+            if (task is null)
+            {
+                return TaskOperationResult.Failed("La tarea ya no existe.");
+            }
+
+            task.ArchivedAt = now;
+            task.UpdatedAt = now;
+            SaveLocked();
+            return TaskOperationResult.Completed($"Soltaste: {task.Title}.", task.Copy());
+        }
+    }
+
+    /// <summary>Deshace «Soltar».</summary>
+    public TaskOperationResult Restore(Guid id)
+    {
+        lock (_sync)
+        {
+            var task = _tasks.FirstOrDefault(candidate => candidate.Id == id);
+            if (task is null)
+            {
+                return TaskOperationResult.Failed("La tarea ya no existe.");
+            }
+
+            task.ArchivedAt = null;
+            task.UpdatedAt = DateTimeOffset.Now;
+            SaveLocked();
+            return TaskOperationResult.Completed($"Recuperaste: {task.Title}.", task.Copy());
+        }
+    }
+
     public TaskOperationResult CompleteMatching(string query)
     {
         lock (_sync)
@@ -206,6 +270,7 @@ public sealed class TaskManager
             var due = _tasks
                 .Where(task =>
                     !task.IsCompleted &&
+                    task.ArchivedAt is null &&
                     task.ReminderEnabled &&
                     task.DueAt.HasValue &&
                     task.DueAt.Value <= now &&
@@ -233,7 +298,7 @@ public sealed class TaskManager
     {
         lock (_sync)
         {
-            var today = _tasks
+            var today = Active
                 .Where(task =>
                     !task.IsCompleted &&
                     task.DueAt.HasValue &&
@@ -242,7 +307,7 @@ public sealed class TaskManager
                 .ThenByDescending(task => task.Priority)
                 .ToArray();
 
-            var overdue = _tasks.Count(task => task.IsOverdue(now));
+            var overdue = Active.Count(task => task.IsOverdue(now));
             if (today.Length == 0)
             {
                 return overdue > 0
@@ -275,7 +340,7 @@ public sealed class TaskManager
     {
         lock (_sync)
         {
-            var pending = _tasks
+            var pending = Active
                 .Where(task => !task.IsCompleted)
                 .OrderBy(task => task.DueAt ?? DateTimeOffset.MaxValue)
                 .ThenByDescending(task => task.Priority)
@@ -316,7 +381,7 @@ public sealed class TaskManager
             return null;
         }
 
-        return _tasks
+        return Active
             .Where(task => includeCompleted || !task.IsCompleted)
             .Select(task => new
             {
@@ -330,6 +395,9 @@ public sealed class TaskManager
             .Select(item => item.Task)
             .FirstOrDefault();
     }
+
+    /// <summary>Las tareas que no se soltaron.</summary>
+    private IEnumerable<NexoTask> Active => _tasks.Where(task => task.ArchivedAt is null);
 
     private void SaveLocked() =>
         _store.Save(_tasks.Select(task => task.Copy()).ToArray());

@@ -1,16 +1,26 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using Nexo.App.Motion;
 using Nexo.Core.Tasks;
 
 namespace Nexo.App.Views;
 
+/// <summary>
+/// 2026-09-16 — Hoy como centro del día. Qué entra en cada sección lo decide
+/// <see cref="TodayPlan"/>; lo que se escribe en la caja lo entiende <see cref="QuickCapture"/>.
+/// </summary>
 public partial class TasksView : UserControl
 {
+    private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-MX");
+
     private readonly TaskManager _taskManager;
-    private TaskFilter _filter = TaskFilter.Today;
+    private readonly HashSet<TodaySectionKind> _open = [TodaySectionKind.Important, TodaySectionKind.Day];
+    private DateOnly? _day;
     private Guid? _editingId;
+    private Guid? _releasedId;
 
     public TasksView(TaskManager taskManager)
     {
@@ -21,58 +31,68 @@ public partial class TasksView : UserControl
 
     public event EventHandler? TasksChanged;
 
-    /// <summary>
-    /// Diseño D3 — el usuario pulsó "Enfocarme" sobre una tarea pendiente. Hoy no inicia la
-    /// sesión por sí misma: le pasa el identificador y el título a quien la construya (MainWindow,
-    /// que ya tiene tanto <c>TaskManager</c> como <c>FocusManager</c>) para no duplicar la
-    /// dependencia de enfoque dentro de esta vista.
-    /// </summary>
+    /// <summary>Se pidió enfocarse en una tarea; lo arranca quien tiene el FocusManager.</summary>
     public event EventHandler<TaskFocusRequestedEventArgs>? FocusRequested;
+
+    private DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+
+    private DateOnly Day => _day ?? Today;
+
+    /// <summary>Abre Hoy en otro día: lo usa el calendario del panel de arriba.</summary>
+    public void ShowDay(DateOnly day)
+    {
+        _day = day == Today ? null : day;
+        EditorBorder.Visibility = Visibility.Collapsed;
+        Refresh();
+        if (SakuraMotion.AnimationsEnabled)
+        {
+            EntranceMotion.Rise(SectionsItemsControl, TimeSpan.Zero);
+        }
+    }
 
     public void Refresh()
     {
         var now = DateTimeOffset.Now;
-        var tasks = _taskManager.GetAll();
+        var isToday = Day == Today;
 
-        TodayCountText.Text = tasks.Count(task =>
-            !task.IsCompleted &&
-            task.DueAt.HasValue &&
-            task.DueAt.Value.LocalDateTime.Date == now.LocalDateTime.Date).ToString(CultureInfo.InvariantCulture);
-        PendingCountText.Text = tasks.Count(task => !task.IsCompleted).ToString(CultureInfo.InvariantCulture);
-        OverdueCountText.Text = tasks.Count(task => task.IsOverdue(now)).ToString(CultureInfo.InvariantCulture);
+        // Hoy ya lo dice el encabezado del panel: aquí basta la fecha. Otro día sí lleva título.
+        DayTitleText.Text = Capitalize(Day.ToString("dddd d 'de' MMMM", Spanish));
+        DaySubtitleText.Text = isToday ? string.Empty : "Lo que apuntes aquí queda para este día.";
+        DaySubtitleText.Visibility = isToday ? Visibility.Collapsed : Visibility.Visible;
+        BackToTodayButton.Visibility = isToday ? Visibility.Collapsed : Visibility.Visible;
 
-        var visible = tasks
-            .Where(task => _filter switch
-            {
-                TaskFilter.Today =>
-                    !task.IsCompleted &&
-                    task.DueAt.HasValue &&
-                    task.DueAt.Value.LocalDateTime.Date == now.LocalDateTime.Date,
-                TaskFilter.Pending => !task.IsCompleted,
-                TaskFilter.Completed => task.IsCompleted,
-                _ => false
-            })
-            .Select(task => CreateListItem(task, now))
+        var sections = TodayPlan.Build(_taskManager.GetAll(), Day, now)
+            .Where(section => section.Items.Count > 0)
+            .Select(section => CreateSection(section, now))
             .ToArray();
 
-        TasksItemsControl.ItemsSource = visible;
-        EmptyStateText.Visibility = visible.Length == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        SectionsItemsControl.ItemsSource = sections;
 
-        UpdateFilterStyles();
+        var empty = sections.Length == 0;
+        EmptyStatePanel.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        if (empty)
+        {
+            var hasAnyTask = _taskManager.GetAll().Count > 0;
+            EmptyStateTitle.Text = isToday ? "Hoy está libre" : "Nada para este día";
+            EmptyStateText.Text = !isToday
+                ? "Apunta arriba lo que quieras tener presente ese día."
+                : hasAnyTask
+                    ? "No hay nada para hoy. Apunta algo arriba o disfruta el hueco."
+                    : "Apunta arriba lo que tengas que hacer, como lo dirías: «llamar al dentista mañana a las 10» o «importante: estudiar para el parcial el jueves».";
+        }
     }
 
     public void OpenNewEditor()
     {
         _editingId = null;
         EditorTitleText.Text = "Nueva tarea";
-        TitleTextBox.Text = string.Empty;
+        TitleTextBox.Text = CaptureTextBox.Text.Trim();
         NotesTextBox.Text = string.Empty;
-        DueDatePicker.SelectedDate = null;
-        DueTimeTextBox.Text = "09:00";
+        DueDatePicker.SelectedDate = Day.ToDateTime(TimeOnly.MinValue);
+        DueTimeTextBox.Text = string.Empty;
         PriorityComboBox.SelectedIndex = 1;
         ReminderCheckBox.IsChecked = false;
+        DeleteTaskButton.Visibility = Visibility.Collapsed;
         HideEditorError();
         EditorBorder.Visibility = Visibility.Visible;
         TitleTextBox.Focus();
@@ -84,13 +104,181 @@ public partial class TasksView : UserControl
         {
             TitleTextBox.Focus();
         }
+        else
+        {
+            CaptureTextBox.Focus();
+        }
     }
+
+    // ---------- Captura ----------
+
+    private void CaptureTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var text = CaptureTextBox.Text;
+        CapturePlaceholder.Visibility = text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            CapturePreviewText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        // Lo que se entendió, antes de guardar: así una fecha mal leída se ve y se corrige.
+        var now = DateTimeOffset.Now;
+        var parsed = QuickCapture.Parse(text, now, Day);
+        var probe = new NexoTask { DueAt = parsed.DueAt };
+        var parts = new List<string> { parsed.DueAt is null ? "Sin fecha" : TodayPlan.Describe(probe, now) };
+        if (parsed.Priority == TaskPriority.High)
+        {
+            parts.Add("Importante");
+        }
+
+        CapturePreviewText.Text = "↵  " + string.Join(" · ", parts);
+        CapturePreviewText.Visibility = Visibility.Visible;
+    }
+
+    private void CaptureTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            CaptureTextBox.Clear();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key != Key.Enter || string.IsNullOrWhiteSpace(CaptureTextBox.Text))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var parsed = QuickCapture.Parse(CaptureTextBox.Text, DateTimeOffset.Now, Day);
+        _taskManager.Create(parsed.Title, null, parsed.DueAt, parsed.Priority);
+        CaptureTextBox.Clear();
+        Changed();
+    }
+
+    // ---------- Secciones y filas ----------
+
+    private void SectionHeader_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: TodaySectionKind kind })
+        {
+            return;
+        }
+
+        if (!_open.Remove(kind))
+        {
+            _open.Add(kind);
+        }
+
+        Refresh();
+    }
+
+    private void CheckButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetTaskId(sender, out var id))
+        {
+            return;
+        }
+
+        var done = sender is Button { Tag: "Done" };
+        if (done)
+        {
+            _taskManager.Reopen(id);
+        }
+        else
+        {
+            _taskManager.Complete(id);
+        }
+
+        Changed();
+    }
+
+    private void FocusTaskButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (TryGetTaskId(sender, out var id) && Find(id) is { } task)
+        {
+            FocusRequested?.Invoke(this, new TaskFocusRequestedEventArgs(task.Id, task.Title));
+        }
+    }
+
+    private void PostponeTaskButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (TryGetTaskId(sender, out var id))
+        {
+            _taskManager.Postpone(id, DateTimeOffset.Now);
+            Changed();
+        }
+    }
+
+    private void ReleaseTaskButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetTaskId(sender, out var id) || Find(id) is not { } task)
+        {
+            return;
+        }
+
+        _taskManager.Release(id, DateTimeOffset.Now);
+        _releasedId = id;
+        UndoText.Text = $"Soltaste «{task.Title}»";
+        UndoBar.Visibility = Visibility.Visible;
+        Changed();
+    }
+
+    private void UndoButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_releasedId is { } id)
+        {
+            _taskManager.Restore(id);
+        }
+
+        _releasedId = null;
+        UndoBar.Visibility = Visibility.Collapsed;
+        Changed();
+    }
+
+    private void BackToTodayButton_Click(object sender, RoutedEventArgs e) => ShowDay(Today);
+
+    // ---------- Editor ----------
 
     private void NewTaskButton_Click(object sender, RoutedEventArgs e) =>
         OpenNewEditor();
 
     private void CancelEditorButton_Click(object sender, RoutedEventArgs e) =>
         EditorBorder.Visibility = Visibility.Collapsed;
+
+    private void EditTaskButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetTaskId(sender, out var id))
+        {
+            return;
+        }
+
+        if (Find(id) is not { } task)
+        {
+            Refresh();
+            return;
+        }
+
+        _editingId = id;
+        EditorTitleText.Text = "Editar tarea";
+        TitleTextBox.Text = task.Title;
+        NotesTextBox.Text = task.Notes;
+        DueDatePicker.SelectedDate = task.DueAt?.Date;
+        DueTimeTextBox.Text = task.DueAt is { } due && due.TimeOfDay != TimeSpan.Zero ? due.ToString("HH:mm") : string.Empty;
+        PriorityComboBox.SelectedIndex = task.Priority switch
+        {
+            TaskPriority.Low => 0,
+            TaskPriority.High => 2,
+            _ => 1
+        };
+        ReminderCheckBox.IsChecked = task.ReminderEnabled;
+        DeleteTaskButton.Visibility = Visibility.Visible;
+        HideEditorError();
+        EditorBorder.Visibility = Visibility.Visible;
+        TitleTextBox.Focus();
+    }
 
     private void SaveTaskButton_Click(object sender, RoutedEventArgs e)
     {
@@ -109,9 +297,9 @@ public partial class TasksView : UserControl
 
         var priority = GetSelectedPriority();
         var reminderEnabled = ReminderCheckBox.IsChecked == true;
-        if (reminderEnabled && !dueAt.HasValue)
+        if (reminderEnabled && (dueAt is null || dueAt.Value.TimeOfDay == TimeSpan.Zero))
         {
-            ShowEditorError("Elige una fecha para poder activar el recordatorio.");
+            ShowEditorError("Elige fecha y hora para poder activar el recordatorio.");
             return;
         }
 
@@ -123,8 +311,7 @@ public partial class TasksView : UserControl
 
         if (_editingId.HasValue)
         {
-            var existing = _taskManager.GetAll().FirstOrDefault(task => task.Id == _editingId.Value);
-            if (existing is null)
+            if (Find(_editingId.Value) is not { } existing)
             {
                 ShowEditorError("La tarea ya no existe.");
                 return;
@@ -144,99 +331,23 @@ public partial class TasksView : UserControl
         }
         else
         {
-            _taskManager.Create(
-                title,
-                NotesTextBox.Text,
-                dueAt,
-                priority,
-                reminderEnabled);
+            _taskManager.Create(title, NotesTextBox.Text, dueAt, priority, reminderEnabled);
+            CaptureTextBox.Clear();
         }
 
-        _filter = dueAt.HasValue &&
-                  dueAt.Value.LocalDateTime.Date == DateTime.Today
-            ? TaskFilter.Today
-            : TaskFilter.Pending;
         EditorBorder.Visibility = Visibility.Collapsed;
-        Refresh();
-        TasksChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void FilterButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: string filter })
-        {
-            return;
-        }
-
-        _filter = filter switch
-        {
-            "Pending" => TaskFilter.Pending,
-            "Completed" => TaskFilter.Completed,
-            _ => TaskFilter.Today
-        };
-        Refresh();
-    }
-
-    private void CompleteTaskButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (!TryGetTaskId(sender, out var id))
-        {
-            return;
-        }
-
-        _taskManager.Complete(id);
-        Refresh();
-        TasksChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void EditTaskButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (!TryGetTaskId(sender, out var id))
-        {
-            return;
-        }
-
-        var task = _taskManager.GetAll().FirstOrDefault(candidate => candidate.Id == id);
-        if (task is null)
-        {
-            Refresh();
-            return;
-        }
-
-        _editingId = id;
-        EditorTitleText.Text = "Editar tarea";
-        TitleTextBox.Text = task.Title;
-        NotesTextBox.Text = task.Notes;
-        DueDatePicker.SelectedDate = task.DueAt?.LocalDateTime.Date;
-        DueTimeTextBox.Text = task.DueAt?.ToString("HH:mm") ?? "09:00";
-        PriorityComboBox.SelectedIndex = task.Priority switch
-        {
-            TaskPriority.Low => 0,
-            TaskPriority.High => 2,
-            _ => 1
-        };
-        ReminderCheckBox.IsChecked = task.ReminderEnabled;
-        HideEditorError();
-        EditorBorder.Visibility = Visibility.Visible;
-        TitleTextBox.Focus();
+        Changed();
     }
 
     private void DeleteTaskButton_Click(object sender, RoutedEventArgs e)
     {
-        if (!TryGetTaskId(sender, out var id))
+        if (_editingId is not { } id || Find(id) is not { } task)
         {
             return;
         }
 
-        var task = _taskManager.GetAll().FirstOrDefault(candidate => candidate.Id == id);
-        if (task is null)
-        {
-            return;
-        }
-
-        // Diseño D3: eliminar ya no borra sin preguntar. El foco por defecto de MessageBox.Show
-        // (mismo patrón que RoutinesView.DeleteRoutineButton_Click) cae en el primer botón —
-        // aquí "No", no "Sí" — así que Enter accidental no confirma una eliminación destructiva.
+        // Diseño D3: eliminar pregunta, con «No» por defecto. Para quitar algo de la vista sin
+        // perderlo está «Soltar».
         var confirmation = MessageBox.Show(
             $"¿Eliminar «{task.Title}»? Esta acción no se puede deshacer.",
             "Eliminar tarea",
@@ -249,36 +360,8 @@ public partial class TasksView : UserControl
         }
 
         _taskManager.Delete(id);
-        Refresh();
-        TasksChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void ReopenTaskButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (!TryGetTaskId(sender, out var id))
-        {
-            return;
-        }
-
-        _taskManager.Reopen(id);
-        Refresh();
-        TasksChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void FocusTaskButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (!TryGetTaskId(sender, out var id))
-        {
-            return;
-        }
-
-        var task = _taskManager.GetAll().FirstOrDefault(candidate => candidate.Id == id);
-        if (task is null)
-        {
-            return;
-        }
-
-        FocusRequested?.Invoke(this, new TaskFocusRequestedEventArgs(task.Id, task.Title));
+        EditorBorder.Visibility = Visibility.Collapsed;
+        Changed();
     }
 
     private bool TryGetDueAt(out DateTimeOffset? dueAt, out string error)
@@ -291,105 +374,72 @@ public partial class TasksView : UserControl
             return true;
         }
 
-        if (!TimeSpan.TryParseExact(
-                DueTimeTextBox.Text.Trim(),
-                ["h\\:mm", "hh\\:mm"],
-                CultureInfo.InvariantCulture,
-                TimeSpanStyles.None,
-                out var time))
+        var time = TimeSpan.Zero;
+        var text = DueTimeTextBox.Text.Trim();
+        if (text.Length > 0 &&
+            (!TimeSpan.TryParseExact(text, ["h\\:mm", "hh\\:mm"], CultureInfo.InvariantCulture, TimeSpanStyles.None, out time) ||
+             time < TimeSpan.Zero || time >= TimeSpan.FromDays(1)))
         {
-            error = "Usa una hora como 09:00 o 18:30.";
+            error = "Usa una hora como 09:00 o 18:30, o déjala vacía.";
             return false;
         }
 
-        if (time < TimeSpan.Zero || time >= TimeSpan.FromDays(1))
-        {
-            error = "La hora no es válida.";
-            return false;
-        }
-
-        var local = DateTime.SpecifyKind(
-            DueDatePicker.SelectedDate.Value.Date.Add(time),
-            DateTimeKind.Unspecified);
+        var local = DateTime.SpecifyKind(DueDatePicker.SelectedDate.Value.Date.Add(time), DateTimeKind.Unspecified);
         dueAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
         return true;
     }
 
-    private TaskListItem CreateListItem(NexoTask task, DateTimeOffset now)
-    {
-        var schedule = task.CompletedAt.HasValue
-            ? $"Completada {task.CompletedAt.Value:ddd d MMM · HH:mm}"
-            : task.DueAt.HasValue
-                ? FormatDueAt(task.DueAt.Value, now)
-                : "Sin fecha";
+    // ---------- Ayudantes ----------
 
-        var scheduleBrush = task.IsOverdue(now)
-            ? (Brush)FindResource("BrushWarning")
+    private void Changed()
+    {
+        Refresh();
+        TasksChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private NexoTask? Find(Guid id) =>
+        _taskManager.GetAll().FirstOrDefault(candidate => candidate.Id == id);
+
+    private SectionItem CreateSection(TodaySection section, DateTimeOffset now)
+    {
+        var collapsible = section.Kind is TodaySectionKind.Later or TodaySectionKind.Done;
+        var open = !collapsible || _open.Contains(section.Kind);
+        var titleBrush = section.Kind == TodaySectionKind.Important
+            ? (Brush)FindResource("BrushAccent")
             : (Brush)FindResource("BrushTextSecondary");
 
-        return new TaskListItem(
-            task.Id,
-            task.Title,
-            task.Notes,
-            schedule,
-            scheduleBrush,
-            task.Priority switch
-            {
-                TaskPriority.High => "ALTA",
-                TaskPriority.Low => "BAJA",
-                _ => "NORMAL"
-            },
-            string.IsNullOrWhiteSpace(task.Notes) ? Visibility.Collapsed : Visibility.Visible,
-            task.IsCompleted ? Visibility.Collapsed : Visibility.Visible,
-            // Diseño D3: reabrir y "Enfocarme" solo tienen sentido sobre una tarea pendiente —
-            // una tarea ya completada no necesita volver a enfocarse, y una pendiente no necesita
-            // reabrirse.
-            task.IsCompleted ? Visibility.Visible : Visibility.Collapsed,
-            task.IsCompleted ? Visibility.Collapsed : Visibility.Visible,
-            task.IsCompleted ? TextDecorations.Strikethrough : null);
+        return new SectionItem(
+            section.Kind,
+            section.Title.ToUpper(Spanish),
+            section.Items.Count.ToString(CultureInfo.InvariantCulture),
+            collapsible ? (open ? "▴" : "▾") : string.Empty,
+            collapsible,
+            collapsible ? $"{section.Title}, {section.Items.Count}. {(open ? "Plegar" : "Desplegar")}" : section.Title,
+            titleBrush,
+            open ? Visibility.Visible : Visibility.Collapsed,
+            section.Items.Select(CreateRow).ToArray());
     }
 
-    private static string FormatDueAt(DateTimeOffset dueAt, DateTimeOffset now)
+    private RowItem CreateRow(TodayItem item)
     {
-        var localDate = dueAt.LocalDateTime.Date;
-        var today = now.LocalDateTime.Date;
-        if (localDate == today)
-        {
-            return $"Hoy · {dueAt:HH:mm}";
-        }
-
-        if (localDate == today.AddDays(1))
-        {
-            return $"Mañana · {dueAt:HH:mm}";
-        }
-
-        return dueAt.ToString("ddd d MMM · HH:mm", new CultureInfo("es-MX"));
+        var done = item.Task.IsCompleted;
+        return new RowItem(
+            item.Task.Id,
+            item.Task.Title,
+            item.When,
+            done ? "Done" : "Pending",
+            done ? "Reabrir tarea" : "Marcar como completada",
+            done ? (Brush)FindResource("BrushTextTertiary") : (Brush)FindResource("BrushTextPrimary"),
+            (Brush)FindResource(item.LeftPending ? "BrushWarning" : "BrushTextTertiary"),
+            done ? Visibility.Collapsed : Visibility.Visible,
+            done ? TextDecorations.Strikethrough : null);
     }
 
-    private TaskPriority GetSelectedPriority()
-    {
-        return PriorityComboBox.SelectedItem is ComboBoxItem { Tag: string value } &&
-               Enum.TryParse<TaskPriority>(value, ignoreCase: true, out var priority)
+    private TaskPriority GetSelectedPriority() =>
+        PriorityComboBox.SelectedItem is ComboBoxItem { Tag: string value } &&
+        Enum.TryParse<TaskPriority>(value, ignoreCase: true, out var priority)
             ? priority
             : TaskPriority.Normal;
-    }
-
-    private void UpdateFilterStyles()
-    {
-        ApplyFilterStyle(TodayFilterButton, _filter == TaskFilter.Today);
-        ApplyFilterStyle(PendingFilterButton, _filter == TaskFilter.Pending);
-        ApplyFilterStyle(CompletedFilterButton, _filter == TaskFilter.Completed);
-    }
-
-    private void ApplyFilterStyle(Button button, bool selected)
-    {
-        button.Background = selected
-            ? (Brush)FindResource("BrushAccentSoft")
-            : Brushes.Transparent;
-        button.Foreground = selected
-            ? (Brush)FindResource("BrushTextPrimary")
-            : (Brush)FindResource("BrushTextSecondary");
-    }
 
     private void ShowEditorError(string message)
     {
@@ -406,27 +456,32 @@ public partial class TasksView : UserControl
     private static bool TryGetTaskId(object sender, out Guid id)
     {
         id = Guid.Empty;
-        return sender is Button { Tag: Guid taskId } && (id = taskId) != Guid.Empty;
+        return sender is Button { CommandParameter: Guid taskId } && (id = taskId) != Guid.Empty;
     }
 
-    private enum TaskFilter
-    {
-        Today,
-        Pending,
-        Completed
-    }
+    private static string Capitalize(string text) =>
+        text.Length == 0 ? text : char.ToUpper(text[0], Spanish) + text[1..];
 
-    private sealed record TaskListItem(
+    private sealed record SectionItem(
+        TodaySectionKind Key,
+        string Title,
+        string CountText,
+        string Chevron,
+        bool IsCollapsible,
+        string AccessibleName,
+        Brush TitleBrush,
+        Visibility ItemsVisibility,
+        IReadOnlyList<RowItem> Items);
+
+    private sealed record RowItem(
         Guid Id,
         string Title,
-        string Notes,
-        string ScheduleText,
-        Brush ScheduleBrush,
-        string PriorityLabel,
-        Visibility NotesVisibility,
-        Visibility CompleteVisibility,
-        Visibility ReopenVisibility,
-        Visibility FocusVisibility,
+        string When,
+        string CheckTag,
+        string CheckName,
+        Brush TitleBrush,
+        Brush WhenBrush,
+        Visibility PendingVisibility,
         TextDecorationCollection? TextDecorations);
 }
 

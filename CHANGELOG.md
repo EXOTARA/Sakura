@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.30.19-beta]
+
+### Nuevo
+
+- **Hoy, rehecho como el centro del día.**
+  - **Se apunta en una línea**, como se diría: «entregar U2A2 el viernes a las 5 !». Sakura deduce la fecha y la hora, y «!» o «importante» la marcan como importante. Antes de guardar se ve lo que entendió; si no entiende una fecha, no inventa ninguna.
+  - **Secciones tranquilas:** Importantes (tres como máximo), Hoy, Luego (plegada) y Hechas hoy (plegada). Ya no hay contador de vencidas: lo atrasado dice «Quedó pendiente».
+  - **Cada tarea tiene un círculo para marcarla**, y al pasar el ratón aparecen ▶ (empieza el enfoque ya), **Mañana** y **Soltar**.
+  - **Soltar** saca la tarea de la vista sin borrarla, y se puede deshacer. Eliminar sigue dentro de «Editar».
+- **El calendario del panel de arriba ya sirve:** un punto marca los días con algo pendiente, y tocar un día abre Hoy en ese día. Lo que apuntes ahí queda para esa fecha.
+- **Instalación nueva:** Inicio invita con un ejemplo en vez de mostrar ceros, y Hoy explica cómo apuntar.
+
+### Cambiado
+
+- **Enfoque sale del menú lateral.** Se empieza desde una tarea (en Hoy o en Inicio) o desde la paleta.
+- **Inicio y Hoy se ven en el menú lateral**, también al actualizar. Se pueden volver a ocultar en Personalizar.
+
 ## [0.30.18-beta]
 
 ### Nuevo

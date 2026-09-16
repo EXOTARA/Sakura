@@ -23,7 +23,7 @@ public sealed class ShellPreferences
     /// número suelto repetido en el último rung y en una veintena de pruebas, y un número repetido es
     /// un número que se olvida de actualizar en algún sitio.
     /// </summary>
-    public const int CurrentSchemaVersion = 30;
+    public const int CurrentSchemaVersion = 31;
 
     /// <summary>
     /// Modelos que un proveedor ha apagado, y por cuál se sustituyen. La clave es el identificador
@@ -598,6 +598,16 @@ public sealed class ShellPreferences
                 _ => WakePhrase.OyeSakura
             };
 
+            SchemaVersion = 30;
+        }
+
+        if (SchemaVersion < 31)
+        {
+            // 2026-09-16 — Inicio y Hoy vuelven al riel (Adler: «déjalos visibles»). Hoy pasó a
+            // ser el centro del día y Inicio responde «¿qué hago ahora?»: esconderlos en una
+            // instalación nueva dejaba la parte diaria de Sakura sin puerta de entrada.
+            ShowHomeModule = true;
+            ShowTasksModule = true;
             SchemaVersion = CurrentSchemaVersion;
         }
 
