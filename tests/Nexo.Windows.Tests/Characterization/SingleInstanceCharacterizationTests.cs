@@ -249,6 +249,40 @@ public sealed class SingleInstanceCharacterizationTests
     }
 
     [Fact]
+    public void Dispose_FromInsideTheActivationHandler_NeitherHangsNorCrashes()
+    {
+        // El oyente vive en un hilo propio: `Dispose` espera a que salga antes de liberar los
+        // handles sobre los que espera. Llamado desde el suscriptor, esa espera sería sobre sí
+        // mismo; tiene que detectarlo, volver, y dejar que el bucle termine solo. Una excepción
+        // en ese hilo tumbaría el proceso de pruebas entero, no solo esta prueba.
+        var key = NewKey();
+        var coordinator = new SingleInstanceCoordinator(key);
+        using var disposed = new ManualResetEventSlim(false);
+
+        coordinator.ActivationRequested += (_, _) =>
+        {
+            coordinator.Dispose();
+            disposed.Set();
+        };
+        coordinator.StartListening();
+
+        OnDedicatedThread(() =>
+        {
+            using var second = new SingleInstanceCoordinator(key);
+            second.SignalPrimaryInstance();
+            return true;
+        });
+
+        Assert.True(
+            disposed.Wait(TimeSpan.FromSeconds(5)),
+            "Dispose desde el suscriptor no volvió.");
+
+        // Deja al bucle ver la cancelación y salir; si tocara un handle liberado, el proceso
+        // caería aquí o en la prueba siguiente.
+        Thread.Sleep(200);
+    }
+
+    [Fact]
     public void DisposeDoesNotSwallowUnrelatedFailures()
     {
         // La corrección usa una guarda que **previene** la excepción, no un try/catch que la

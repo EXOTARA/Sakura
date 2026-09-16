@@ -6,13 +6,14 @@ public sealed class SingleInstanceCoordinator : IDisposable
 {
     private const string MutexName = @"Local\Sakura.Desktop.SingleInstance";
     private const string ActivationEventName = @"Local\Sakura.Desktop.Activate";
+    private static readonly TimeSpan ListenerExitTimeout = TimeSpan.FromSeconds(2);
 
     private readonly Mutex _mutex;
     private readonly EventWaitHandle _activationEvent;
     private readonly CancellationTokenSource _cancellation = new();
     private bool _ownsMutex;
     private bool _disposed;
-    private Task? _listenerTask;
+    private Thread? _listenerThread;
 
     /// <param name="instanceKey">
     /// Sufijo para aislar los objetos de sincronización. La aplicación siempre usa el valor por
@@ -58,30 +59,45 @@ public sealed class SingleInstanceCoordinator : IDisposable
 
     public void StartListening()
     {
-        if (!_ownsMutex || _listenerTask is not null)
+        if (!_ownsMutex || _listenerThread is not null)
         {
             return;
         }
 
-        _listenerTask = Task.Run(() =>
+        // Hilo propio, no del thread pool: el bucle se bloquea durante toda la vida de la app, y
+        // con `Task.Run` además necesitaba un hilo libre del pool para **empezar**. Con el pool
+        // saturado (arranque cargado, o pruebas en paralelo en un runner de CI pequeño) la
+        // activación llegaba segundos tarde. En segundo plano para no retener el cierre.
+        //
+        // Los handles se toman aquí, en el hilo que llama, y no dentro del oyente: si `Dispose`
+        // llegara antes de que el hilo arranque, leer `Token` sobre el CTS ya liberado lanzaría
+        // en un hilo propio, y eso — a diferencia de una tarea — tumba el proceso.
+        var handles = new WaitHandle[]
         {
-            var handles = new WaitHandle[]
-            {
-                _activationEvent,
-                _cancellation.Token.WaitHandle
-            };
+            _activationEvent,
+            _cancellation.Token.WaitHandle
+        };
 
-            while (!_cancellation.IsCancellationRequested)
-            {
-                var signaled = WaitHandle.WaitAny(handles);
-                if (signaled == 1 || _cancellation.IsCancellationRequested)
-                {
-                    break;
-                }
+        _listenerThread = new Thread(() => ListenForActivations(handles))
+        {
+            IsBackground = true,
+            Name = "Sakura.SingleInstance.Activation"
+        };
+        _listenerThread.Start();
+    }
 
-                ActivationRequested?.Invoke(this, EventArgs.Empty);
+    private void ListenForActivations(WaitHandle[] handles)
+    {
+        while (!_cancellation.IsCancellationRequested)
+        {
+            var signaled = WaitHandle.WaitAny(handles);
+            if (signaled == 1 || _cancellation.IsCancellationRequested)
+            {
+                break;
             }
-        });
+
+            ActivationRequested?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>
@@ -128,9 +144,33 @@ public sealed class SingleInstanceCoordinator : IDisposable
         // El hilo de escucha puede seguir despertando: sin esto, un suscriptor podría
         // recibir una activación de una instancia ya liberada.
         ActivationRequested = null;
-
-        _activationEvent.Dispose();
         _mutex.Dispose();
-        _cancellation.Dispose();
+
+        // El oyente espera sobre el evento y sobre el handle del CTS: liberarlos mientras sigue
+        // dentro de `WaitAny` le haría lanzar en su hilo y tumbaría el proceso. Ya está
+        // cancelado y despertado, así que sale enseguida. Si no sale a tiempo (un suscriptor
+        // bloqueado, o `Dispose` llamado desde el propio suscriptor) se dejan esos dos handles
+        // al finalizador: al volver verá la cancelación y terminará sin tocarlos.
+        if (WaitForListenerToExit())
+        {
+            _activationEvent.Dispose();
+            _cancellation.Dispose();
+        }
+    }
+
+    private bool WaitForListenerToExit()
+    {
+        var listener = _listenerThread;
+        if (listener is null)
+        {
+            return true;
+        }
+
+        if (listener == Thread.CurrentThread)
+        {
+            return false;
+        }
+
+        return listener.Join(ListenerExitTimeout);
     }
 }
