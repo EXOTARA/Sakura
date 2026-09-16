@@ -28,7 +28,21 @@ public sealed class DashboardTabStripTests
     public void SetTabs_WhileNeverMeasured_DoesNotQueueWorkForever()
     {
         var posted = 0;
-        DispatcherHookEventHandler counter = (_, _) => Interlocked.Increment(ref posted);
+
+        // Solo cuenta lo que se encola desde el propio hilo del Dispatcher. OperationPosted se
+        // dispara en el hilo que encola, y el Dispatcher es el compartido por toda la colección
+        // STA: mientras SetTabs corre, otro hilo puede mandarle trabajo que no tiene nada que ver
+        // con la tira (la continuación de una prueba anterior, una llamada de UI Automation...).
+        // En CI eso dio un 4 una vez y un 0 al repetir. SetTabs es síncrono y no bombea mensajes,
+        // así que todo lo que se encole desde este hilo durante la llamada sale de la tira — que
+        // es justo donde el defecto original se volvía a encolar.
+        DispatcherHookEventHandler counter = (_, e) =>
+        {
+            if (e.Dispatcher.CheckAccess())
+            {
+                Interlocked.Increment(ref posted);
+            }
+        };
 
         _wpf.Invoke(() =>
         {
