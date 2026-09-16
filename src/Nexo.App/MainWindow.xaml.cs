@@ -5797,7 +5797,9 @@ public partial class MainWindow : Window
                     : systemContext + Environment.NewLine + workspaceContext;
             }
 
-            var images = _pendingVisionAttachment is { } image
+            // 2026-09-16 — los botones de seguimiento («más fácil», «más corto») trabajan sobre la
+            // respuesta anterior: reenviar la captura solo obligaría a usar el modelo con visión.
+            var images = _pendingVisionAttachment is { } image && !AnswerFollowUps.IsFollowUp(prompt)
                 ? new[] { image }
                 : null;
             var requestMode = VisionIntentPolicy.Resolve(
