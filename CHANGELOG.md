@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.17-beta]
+
+### Corregido
+
+- **El panel de volumen y brillo «no se quitaba».** Con algo pegado al borde —las pestañas verticales de un navegador, por ejemplo—, el panel salía, se cerraba a los cuatro segundos y volvía a salir enseguida porque el ratón seguía ahí. Ahora el borde abre algo una vez por visita: no vuelve a hacerlo hasta que el ratón se aparta de verdad. Vale también para el panel de Sakura.
+- **El panel ya no se queda puesto si Windows no avisa de que el ratón se fue.** Al cumplirse la espera, Sakura mira dónde está el ratón de verdad: si no está encima ni se está arrastrando una barra, el panel se va.
+
 ## [0.30.16-beta]
 
 ### Nuevo
