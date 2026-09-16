@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>0.30.10</VersionPrefix>
+    <VersionPrefix>0.30.11</VersionPrefix>
     <VersionSuffix>beta</VersionSuffix>
     <Version>$(VersionPrefix)-$(VersionSuffix)</Version>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>

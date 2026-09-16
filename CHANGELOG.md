@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.30.11-beta]
+
+### Nuevo
+
+- **Imágenes en las presentaciones.** Si la respuesta pide una foto para una diapositiva («Imagen: turbinas eólicas en el mar»), Sakura la busca en Wikimedia Commons, de licencia libre, y la coloca: en la portada, a un lado del texto o de fondo en los separadores y en la conclusión. Cada foto lleva su crédito y la presentación termina con una diapositiva de créditos.
+- **Sakura pregunta la primera vez** antes de buscar imágenes, porque es salir a internet. Solo sale de tu equipo el término de búsqueda. Se cambia cuando quieras en Ajustes › «Buscar imágenes para las presentaciones».
+
+### Cambiado
+
+- **Sakura puede pedir la foto de cada diapositiva** con una línea «Imagen: …» que describe lo que debería verse.
+- Si una búsqueda no encuentra nada, se prueba con menos palabras; si aun así no hay imagen aprovechable —o PowerPoint no sabría dibujarla—, esa diapositiva sale sin foto y el documento se guarda igual.
+
 ## [0.30.10-beta]
 
 ### Nuevo
