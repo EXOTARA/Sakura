@@ -379,8 +379,11 @@ public sealed class DailyFlowWpfInteractionTests
             var completeButton = (FrameworkElement)view.FindName("CompleteAssociatedTaskButton")!;
             Assert.Equal(Visibility.Collapsed, completeButton.Visibility);
 
-            var startAnotherButton = FindButtonByAutomationName(view, "Iniciar otra sesión de enfoque");
-            Assert.NotNull(startAnotherButton);
+            // «Seguir 10 min más» continúa sin volver a elegir nada.
+            var keepGoing = FindButtonByAutomationName(view, "Seguir diez minutos más");
+            Assert.NotNull(keepGoing);
+            keepGoing!.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Assert.Equal(TimeSpan.FromMinutes(10), manager.GetSnapshot(DateTimeOffset.Now).ActiveTimer?.Duration);
         });
     }
 

@@ -622,6 +622,12 @@ public partial class MainWindow : Window
         _tasksView.FocusRequested += TasksView_FocusRequested;
         _focusView.FocusChanged += FocusView_FocusChanged;
         _focusView.CompleteAssociatedTaskRequested += FocusView_CompleteAssociatedTaskRequested;
+        _focusView.SetLastDuration(_preferences.LastFocusMinutes > 0 ? _preferences.LastFocusMinutes : 40);
+        _focusView.DurationChosen += (_, minutes) =>
+        {
+            _preferences.LastFocusMinutes = minutes;
+            SavePreferences();
+        };
         _routinesView.ExecuteRequested += RoutinesView_ExecuteRequested;
         // Los eventos de wake word se suscriben a través del coordinador (paso directo al
         // servicio subyacente): MainWindow ya no necesita una referencia al servicio.
