@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.30.9-beta]
+
+### Nuevo
+
+- **Guardar una respuesta como Excel.** Cada tabla es una hoja con la cabecera fija, filtros y columnas ajustadas, y los números y porcentajes se guardan como números para poder sumarlos y ordenarlos. Una respuesta sin tablas se guarda con una fila por apartado o punto.
+- **Guardar una respuesta como PowerPoint.** Una portada, una diapositiva por apartado o por paso, las tablas en su propia diapositiva y un diseño sobrio con el color de Sakura.
+- **Botones «Guardar como» bajo la última respuesta** del chat: Word, Excel o PowerPoint, en el escritorio. También están en el clic derecho.
+
 ## [0.30.8-beta]
 
 ### Cambiado
