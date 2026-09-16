@@ -15,6 +15,7 @@
 ### Cambiado
 
 - **Enfoque sale del menú lateral.** Se empieza desde una tarea (en Hoy o en Inicio) o desde la paleta.
+- **Inicio y Hoy se ven en el menú lateral**, también al actualizar. Se pueden volver a ocultar en Personalizar.
 
 ## [0.30.18-beta]
 
