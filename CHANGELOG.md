@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.30.30-beta]
+
+### Nuevo
+
+- **Consejo discreto sobre Groq.** Si una respuesta de la IA local tarda más de 20 segundos, Sakura sugiere una sola vez usar Groq, que responde en segundos desde la nube y tiene clave gratuita (Personalizar → IA). No cambia nada por su cuenta. En la bienvenida, el mismo consejo aparece al pasar el ratón por la explicación de la IA local.
+
 ## [0.30.29-beta]
 
 ### Cambiado

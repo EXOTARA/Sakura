@@ -189,6 +189,9 @@ public sealed class ShellPreferences
     /// <summary>Si ya se preguntaron los datos de portada y se prefirió no guardarlos: no se insiste.</summary>
     public bool StudentDetailsAsked { get; set; }
 
+    /// <summary>2026-09-17 — el consejo de Groq tras una respuesta local lenta ya se dio.</summary>
+    public bool CloudTipShown { get; set; }
+
     /// <summary>
     /// Diseño D27 — llevar el ratón al borde donde está acoplada Kohana la hace aparecer.
     /// Llega activado porque una función que hay que descubrir en Ajustes para saber que existe no
