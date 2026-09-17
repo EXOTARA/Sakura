@@ -173,7 +173,10 @@ public partial class AudioView : UserControl
         });
         titlePanel.Children.Add(new TextBlock
         {
-            Text = session.IsActive ? "Reproduciendo ahora" : "Sesión disponible",
+            // 2026-09-16 — «Sesión disponible» no decía nada: solo se avisa cuando suena algo.
+            Text = session.IsActive ? "Sonando ahora" : string.Empty,
+            Visibility = session.IsActive ? Visibility.Visible : Visibility.Collapsed,
+            Foreground = (System.Windows.Media.Brush)FindResource("BrushAccent"),
             Margin = new Thickness(0, 3, 0, 0),
             Style = (Style)FindResource("MutedTextStyle")
         });
