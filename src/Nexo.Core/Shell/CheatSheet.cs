@@ -26,7 +26,11 @@ public sealed record CheatGroup(string Title, IReadOnlyList<CheatItem> Items)
 /// </summary>
 public static class CheatSheet
 {
-    public static IReadOnlyList<CheatGroup> Build(bool dictationEnabled)
+    /// <param name="selectionKey">
+    /// 2026-09-16 — la letra que quedó para el texto seleccionado (Alt + Shift + letra), que depende
+    /// de cuál estaba libre; null si ninguna, y entonces no se anuncia.
+    /// </param>
+    public static IReadOnlyList<CheatGroup> Build(bool dictationEnabled, string? selectionKey = "E")
     {
         var voiceAndScreen = new List<CheatItem>
         {
@@ -36,6 +40,11 @@ public static class CheatSheet
             new("Alt + Shift + S", "Capturar una zona de la pantalla"),
             new("Alt + Shift + G", "Empezar o parar la grabación de la pantalla")
         };
+
+        if (!string.IsNullOrWhiteSpace(selectionKey))
+        {
+            voiceAndScreen.Insert(3, new CheatItem($"Alt + Shift + {selectionKey}", "Reescribir o traducir el texto seleccionado"));
+        }
 
         // El dictado se puede apagar en Personalizar; entonces el atajo no está registrado.
         if (dictationEnabled)
@@ -49,6 +58,8 @@ public static class CheatSheet
             [
                 new("Alt + A", "Abrir o recoger Sakura"),
                 new("Ctrl + Espacio", "Preguntar desde cualquier aplicación"),
+                new("Alt + Shift + N", "Apuntar una tarea"),
+                new("Alt + Shift + F", "Buscar archivos"),
                 new("Alt + Shift + A", "Vistazo rápido al equipo"),
                 new("Ctrl + K", "Centro de comandos, con Sakura abierta"),
                 new("Esc", "Recoger Sakura")

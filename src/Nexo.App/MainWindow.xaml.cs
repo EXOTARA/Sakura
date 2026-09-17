@@ -4343,6 +4343,21 @@ public partial class MainWindow : Window
             iconKey: "IconSakuraTasks");
 
         yield return new SakuraCommandDescriptor(
+            "selection.actions",
+            "Texto seleccionado",
+            "Reescribir, corregir, resumir o traducir lo que tengas seleccionado en otra aplicación.",
+            SakuraCommandCategory.Shell,
+            async _ =>
+            {
+                // La paleta se cierra primero: así la ventana de delante vuelve a ser la de la selección.
+                await Task.Delay(300);
+                await OnSelectionHotkeyAsync();
+                return CommandExecutionResult.Success();
+            },
+            keywords: ["texto", "seleccionado", "reescribir", "corregir", "resumir", "traducir"],
+            iconKey: "IconSakuraAssistant");
+
+        yield return new SakuraCommandDescriptor(
             "files.search",
             "Buscar archivos",
             "Por nombre o contenido, con el índice de Windows (Alt+Shift+F).",

@@ -11,7 +11,7 @@ public enum SelectionAction
 }
 
 /// <summary>
-/// 2026-09-16 — hacer algo con el texto seleccionado en cualquier aplicación (Alt+Shift+R).
+/// 2026-09-16 — hacer algo con el texto seleccionado en cualquier aplicación (Alt+Shift+E por omisión).
 ///
 /// La investigación (docs/research/QUE_SE_BUSCA_EN_UN_ASISTENTE.md) lo pone entre lo más pedido: no
 /// tener que copiar, abrir otro programa, pegar y volver. Se pide solo el resultado, sin
@@ -47,7 +47,7 @@ public static class SelectionRewrite
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            return (false, "Selecciona un texto primero y vuelve a pulsar Alt+Shift+R.");
+            return (false, "Selecciona un texto primero y vuelve a intentarlo.");
         }
 
         if (text.Length > MaximumLength)

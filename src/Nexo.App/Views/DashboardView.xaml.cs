@@ -484,9 +484,20 @@ public partial class DashboardView : UserControl
         _ => PanelPane
     };
 
+    private string? _selectionKey = "E";
+    private bool _dictationEnabled;
+
+    /// <summary>La letra que quedó registrada para el texto seleccionado; null si ninguna.</summary>
+    public void SetSelectionShortcut(string? letter)
+    {
+        _selectionKey = letter;
+        CheatGroupItems.ItemsSource = CheatSheet.Build(_dictationEnabled, _selectionKey);
+    }
+
     public void UpdateVoice(IReadOnlyList<VoiceGlanceRow> rows, bool dictationEnabled)
     {
-        CheatGroupItems.ItemsSource = CheatSheet.Build(dictationEnabled);
+        _dictationEnabled = dictationEnabled;
+        CheatGroupItems.ItemsSource = CheatSheet.Build(dictationEnabled, _selectionKey);
 
         var normal = (Brush)FindResource("BrushTextPrimary");
         var attention = (Brush)FindResource("BrushWarning");

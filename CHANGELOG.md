@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.30.25-beta]
+
+### Nuevo
+
+- **Borrador de tarea por tipo de trabajo.** En el **+** de la última respuesta, «Borrador de tarea» ofrece: Ejercicios o problemas, Ensayo, Informe o práctica, Investigación o resumen, Mapa conceptual o presentación, y Otro.
+  - Sakura marca el tipo que le parece según lo que escribiste; eliges tú.
+  - Cada tipo trae sus secciones. Por ejemplo, los ejercicios llevan portada, objetivos, introducción, planteamiento, marco teórico, desarrollo por inciso, resultados, conclusiones, referencias y anexos.
+  - Es una base, no el trabajo resuelto: plantea el procedimiento y marca con «[Completa aquí: …]» lo que te toca.
+  - Los datos personales quedan como huecos ([Nombre], [Matrícula]…) y no se inventan referencias.
+- **Hueco para gráficas de GeoGebra en Word.** Una línea «[Gráfica de GeoGebra: …]» se convierte en un recuadro punteado para pegar tu gráfica, con su pie de figura numerado.
+- **«Texto seleccionado» también está en la paleta.**
+- **La hoja de atajos del panel de arriba** incluye Alt+Shift+N (apuntar), Alt+Shift+F (buscar archivos) y el atajo de texto seleccionado.
+
+### Corregido
+
+- **Alt+Shift+R ya lo usaba otra aplicación** (Adler). El texto seleccionado pasa a **Alt+Shift+E**. Si también está ocupado, Sakura prueba Alt+Shift+W y luego Alt+Shift+Q, y la hoja de atajos enseña la que quedó.
+
 ## [0.30.24-beta]
 
 ### Cambiado

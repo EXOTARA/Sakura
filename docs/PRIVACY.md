@@ -99,7 +99,8 @@ Qué se manda y cuándo:
 - El texto leído de un recuadro de la pantalla, **solo** al usar el traductor
   (`Ctrl + Shift + T`), después de pasar por el mismo redactor.
 - El texto que el usuario tenga seleccionado en otra aplicación, **solo** al pulsar
-  `Alt + Shift + R` y elegir una acción (reescribir, corregir, resumir o traducir). Se envía tal
+  el atajo de texto seleccionado (`Alt + Shift + E` por omisión) o usar «Texto seleccionado» en la
+  paleta, y elegir una acción (reescribir, corregir, resumir o traducir). Se envía tal
   cual, sin redactar, porque el resultado puede sustituir a la selección. Sakura no lee texto de
   ventanas marcadas como sensibles.
 - Nunca el audio. La transcripción ya ocurrió en local; lo que viaja es texto.

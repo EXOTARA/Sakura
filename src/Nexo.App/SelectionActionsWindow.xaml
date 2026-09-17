@@ -12,7 +12,7 @@
         Topmost="True"
         WindowStartupLocation="Manual">
     <!--
-        2026-09-16 — Alt+Shift+R: qué hacer con el texto seleccionado. Tres momentos en la misma
+        2026-09-16 — Alt+Shift+E: qué hacer con el texto seleccionado. Tres momentos en la misma
         tarjeta: elegir, esperar (el texto aparece conforme llega) y decidir (Reemplazar o Copiar).
     -->
     <Border x:Name="Card"
