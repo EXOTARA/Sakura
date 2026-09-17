@@ -175,6 +175,21 @@ public sealed class ShellPreferences
     public int BrightnessDisplay { get; set; }
 
     /// <summary>
+    /// 2026-09-16 — datos de portada del Borrador de tarea, solo si la persona marcó «Recordar».
+    /// Quedan en settings.json, en este equipo; si no se marcan, no se guardan y se vuelven a pedir.
+    /// </summary>
+    public string? StudentName { get; set; }
+
+    public string? StudentId { get; set; }
+
+    public string? StudentProgram { get; set; }
+
+    public string? StudentSchool { get; set; }
+
+    /// <summary>Si ya se preguntaron los datos de portada y se prefirió no guardarlos: no se insiste.</summary>
+    public bool StudentDetailsAsked { get; set; }
+
+    /// <summary>
     /// Diseño D27 — llevar el ratón al borde donde está acoplada Kohana la hace aparecer.
     /// Llega activado porque una función que hay que descubrir en Ajustes para saber que existe no
     /// la usa nadie; y se puede apagar aquí mismo porque un borde de pantalla también es donde vive

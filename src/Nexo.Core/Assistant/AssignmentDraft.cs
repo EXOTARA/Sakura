@@ -27,7 +27,37 @@ public enum AssignmentKind
 /// </list>
 /// El documento sale con la marca de IA de siempre (<see cref="Documents.DocumentDisclosure"/>).
 /// </summary>
-public static class AssignmentDraft
+/// <summary>
+/// 2026-09-16 — los datos de la portada que la persona confirma. Los personales (nombre, matrícula,
+/// carrera, universidad) se pueden recordar; los de la actividad cambian cada vez y no se guardan.
+/// Lo que quede vacío va como hueco visible, nunca inventado.
+/// </summary>
+public sealed record AssignmentDetails(
+    string? Name = null,
+    string? StudentId = null,
+    string? Program = null,
+    string? School = null,
+    string? Subject = null,
+    string? Teacher = null,
+    string? Activity = null)
+{
+    public string ToPromptLines()
+    {
+        (string Label, string? Value)[] fields =
+        [
+            ("Nombre", Name), ("Matrícula", StudentId), ("Carrera", Program), ("Universidad", School),
+            ("Asignatura", Subject), ("Profesor", Teacher), ("Actividad", Activity)
+        ];
+
+        var given = fields.Where(field => !string.IsNullOrWhiteSpace(field.Value)).ToList();
+        return given.Count == 0
+            ? string.Empty
+            : "\n- Datos confirmados para la portada (úsalos tal cual): " +
+              string.Join("; ", given.Select(field => $"{field.Label}: {field.Value!.Trim()}")) + ".";
+    }
+}
+
+public static partial class AssignmentDraft
 {
     public static IReadOnlyList<AssignmentKind> All { get; } =
     [
@@ -115,6 +145,46 @@ public static class AssignmentDraft
 
         return best;
     }
+
+    /// <summary>
+    /// 2026-09-16 — fase 5: ¿es un examen? Solo cuenta con señales fuertes y juntas (decidido con
+    /// Adler: mejor dejar pasar un examen dudoso que tratar una tarea como examen): la palabra
+    /// examen o prueba, y algo que solo tiene un examen en curso (tiempo restante, «pregunta 3 de
+    /// 10», enviar respuestas…).
+    /// </summary>
+    public static bool LooksLikeExam(string? text)
+    {
+        var folded = Fold(text ?? string.Empty);
+        string[] exam = ["examen", "evaluacion parcial", "evaluacion final", "quiz", "cuestionario calificado", "prueba de"];
+        string[] inProgress =
+        [
+            "tiempo restante", "minutos restantes", "tiempo limite", "temporizador", "enviar respuestas",
+            "enviar examen", "terminar intento", "intento 1", "finalizar intento", "entregar examen",
+            "preguntas sin responder", "calificacion automatica"
+        ];
+
+        var hasExam = exam.Any(word => folded.Contains(word, StringComparison.Ordinal));
+        var hasProgress = inProgress.Any(word => folded.Contains(word, StringComparison.Ordinal)) ||
+                          QuestionCounter().IsMatch(folded);
+        return hasExam && hasProgress;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"pregunta\s+\d+\s+de\s+\d+")]
+    private static partial System.Text.RegularExpressions.Regex QuestionCounter();
+
+    /// <summary>
+    /// Modo tutor (decidido con Adler): con un examen no se hace borrador; se explica cómo se llega a
+    /// la respuesta con otro ejemplo, para aprender el método sin resolver las preguntas.
+    /// </summary>
+    public static string BuildTutorPrompt() =>
+        "Lo que te compartí parece un examen, así que no respondas sus preguntas ni me des los resultados. " +
+        "Explícame el método para resolver ese tipo de ejercicio paso a paso, usando un ejemplo distinto con otros datos, " +
+        "y dime en qué fijarme para no equivocarme. Si hay fórmulas, escríbelas con $…$. " +
+        "Al final, dame una pequeña guía de estudio de ese tema.";
+
+    /// <summary>La petición que se manda al modelo, en la misma conversación donde está la tarea.</summary>
+    public static string BuildPrompt(AssignmentKind kind, AssignmentDetails? details) =>
+        BuildPrompt(kind) + (details?.ToPromptLines() ?? string.Empty);
 
     /// <summary>La petición que se manda al modelo, en la misma conversación donde está la tarea.</summary>
     public static string BuildPrompt(AssignmentKind kind)
