@@ -312,6 +312,28 @@ public sealed class OfficeDocumentsTests
     }
 
     [Fact]
+    public void Word_AGeoGebraPlaceholder_LeavesAFramedGapWithItsNumberedCaption()
+    {
+        var document = WordDocumentBuilder.BuildFromMarkdown(
+            "Bisección",
+            "## Desarrollo por inciso\n\nPlantea la función.\n\n[Gráfica de GeoGebra: f(x) = x^3 - x - 2 en [1, 2]]\n");
+        AllPartsWellFormed(document);
+
+        var body = Part(document, "word/document.xml");
+        Assert.Contains("Inserta aquí tu gráfica de GeoGebra", body);
+        Assert.Contains("w:val=\"dashed\"", body);
+        Assert.Contains("Figura 1. f(x) = x^3 - x - 2 en [1, 2]", body);
+        Assert.DoesNotContain("[Gráfica de GeoGebra", body);
+    }
+
+    [Theory]
+    [InlineData("[Gráfica de GeoGebra: parábola y = x^2]", "parábola y = x^2")]
+    [InlineData("[grafica: raíces]", "raíces")]
+    [InlineData("Una gráfica normal", null)]
+    public void GraphPlaceholder_IsRecognized(string line, string? expected) =>
+        Assert.Equal(expected, GraphPlaceholder.Description(line));
+
+    [Fact]
     public void Word_ANumericTable_KeepsTheDataAndAddsItsChart()
     {
         var document = WordDocumentBuilder.BuildFromMarkdown("Energías renovables", Illustrated);
