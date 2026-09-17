@@ -13,6 +13,12 @@
   - Tocar un hábito lo marca hecho hoy; volver a tocarlo lo desmarca. Clic derecho para quitarlo.
   - La racha no se rompe por no haberlo marcado todavía hoy, y no hay avisos insistentes.
   - Máximo ocho hábitos. Vienen apagados.
+- **Borrador de tarea por tipo de trabajo.** En el **+** de la última respuesta, «Borrador de tarea» ofrece: Ejercicios o problemas, Ensayo, Informe o práctica, Investigación o resumen, Mapa conceptual o presentación, y Otro.
+  - Sakura marca el tipo que le parece según lo que escribiste; eliges tú.
+  - Cada tipo trae sus secciones. Por ejemplo, los ejercicios llevan portada, objetivos, introducción, planteamiento, marco teórico, desarrollo por inciso, resultados, conclusiones, referencias y anexos.
+  - Es una base, no el trabajo resuelto: plantea el procedimiento y marca con «[Completa aquí: …]» lo que te toca.
+  - Los datos personales quedan como huecos ([Nombre], [Matrícula]…) y no se inventan referencias.
+- **Hueco para gráficas de GeoGebra en Word.** Una línea «[Gráfica de GeoGebra: …]» se convierte en un recuadro punteado para pegar tu gráfica, con su pie de figura numerado.
 
 ## [0.30.22-beta]
 
