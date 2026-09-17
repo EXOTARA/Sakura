@@ -16,6 +16,36 @@ public sealed class AssignmentDraftTests
     public void Suggest_ReadsTheKindOfWork(string task, AssignmentKind expected) =>
         Assert.Equal(expected, AssignmentDraft.Suggest(task));
 
+    [Theory]
+    [InlineData("Examen parcial de Métodos Numéricos · Pregunta 3 de 10 · Tiempo restante 00:24:10", true)]
+    [InlineData("Quiz unidad 2 — Enviar respuestas", true)]
+    [InlineData("Para el examen de la próxima semana, resuelve estos ejercicios", false)]
+    [InlineData("Tiempo restante para la entrega: 2 días", false)]
+    public void LooksLikeExam_NeedsStrongSignalsTogether(string text, bool expected) =>
+        Assert.Equal(expected, AssignmentDraft.LooksLikeExam(text));
+
+    [Fact]
+    public void TheTutorPrompt_NeverAsksForTheAnswers()
+    {
+        var prompt = AssignmentDraft.BuildTutorPrompt();
+
+        Assert.Contains("no respondas", prompt);
+        Assert.Contains("ejemplo distinto", prompt);
+    }
+
+    [Fact]
+    public void ConfirmedDetails_GoIntoThePrompt_AndBlanksStayBlank()
+    {
+        var prompt = AssignmentDraft.BuildPrompt(
+            AssignmentKind.Essay,
+            new AssignmentDetails(Name: "Ana Pérez", Subject: "Ética", Program: "  "));
+
+        Assert.Contains("Nombre: Ana Pérez; Asignatura: Ética.", prompt);
+        Assert.DoesNotContain("Carrera:", prompt);
+        Assert.Contains("[Matrícula]", prompt);
+        Assert.Equal(AssignmentDraft.BuildPrompt(AssignmentKind.Essay), AssignmentDraft.BuildPrompt(AssignmentKind.Essay, new AssignmentDetails()));
+    }
+
     [Fact]
     public void Exercises_FollowTheAgreedSections()
     {

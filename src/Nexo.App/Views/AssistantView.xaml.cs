@@ -455,27 +455,22 @@ public partial class AssistantView : UserControl
         var taskText = string.Join(
             '\n',
             _messages.Where(message => message.Role == ConversationRole.User).Select(message => message.Text));
-        var suggested = Nexo.Core.Assistant.AssignmentDraft.Suggest(taskText);
 
-        var menu = new MenuItem { Header = "Borrador de tarea" };
-        foreach (var kind in Nexo.Core.Assistant.AssignmentDraft.All.OrderByDescending(kind => kind == suggested))
-        {
-            var label = Nexo.Core.Assistant.AssignmentDraft.Label(kind);
-            var item = new MenuItem
-            {
-                Header = kind == suggested ? $"{label} (sugerido)" : label,
-                FontWeight = kind == suggested ? FontWeights.SemiBold : FontWeights.Normal,
-                ToolTip = string.Join(" · ", Nexo.Core.Assistant.AssignmentDraft.Sections(kind))
-            };
-            var chosen = kind;
-            item.Click += (_, _) => PromptSubmitted?.Invoke(
-                this,
-                new PromptSubmittedEventArgs(Nexo.Core.Assistant.AssignmentDraft.BuildPrompt(chosen)));
-            menu.Items.Add(item);
-        }
-
+        // 2026-09-16 — fase 4: el tipo y los datos de la portada se confirman en su propia ventana.
+        // La conversación completa cuenta para detectar un examen: la explicación de la ventana
+        // (Ctrl+Shift+Espacio) describe lo que se veía en pantalla.
+        var conversation = string.Join('\n', _messages.Select(message => message.Text));
+        var menu = new MenuItem { Header = "Borrador de tarea…" };
+        menu.Click += (_, _) => AssignmentDraftRequested?.Invoke(this, taskText + "\n" + conversation);
         return menu;
     }
+
+    /// <summary>Se pidió el Borrador de tarea; lleva el texto de la conversación.</summary>
+    public event EventHandler<string>? AssignmentDraftRequested;
+
+    /// <summary>Manda un mensaje como si la persona lo hubiera escrito.</summary>
+    public void SubmitPrompt(string prompt) =>
+        PromptSubmitted?.Invoke(this, new PromptSubmittedEventArgs(prompt));
 
     /// <summary>
     /// 2026-09-16 — las dos filas de botones bajo cada respuesta pesaban más que la respuesta (Adler).

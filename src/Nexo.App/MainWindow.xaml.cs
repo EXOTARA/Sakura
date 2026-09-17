@@ -602,6 +602,7 @@ public partial class MainWindow : Window
 
         _assistantView.PromptSubmitted += AssistantView_PromptSubmitted;
         _assistantView.ExportRequested += (_, _) => ExportConversation();
+        _assistantView.AssignmentDraftRequested += (_, text) => ShowAssignmentDraft(text);
         _assistantView.ConversationChanged += AssistantView_ConversationChanged;
         _assistantView.ConversationCleared += AssistantView_ConversationCleared;
         _assistantView.VoiceInputStarted += AssistantView_VoiceInputStarted;
@@ -872,6 +873,8 @@ public partial class MainWindow : Window
             SakuraMotion.AnimationsEnabled = ShellAnimationsAllowed;
             SavePreferences();
         };
+
+        _settingsView.FeedbackRequested += (_, _) => ShowFeedback();
 
         _settingsView.EdgeQuickControlsChanged += enabled =>
         {
@@ -4365,6 +4368,19 @@ public partial class MainWindow : Window
             iconKey: "IconSakuraTasks");
 
         yield return new SakuraCommandDescriptor(
+            "feedback.send",
+            "Enviar comentarios",
+            "Cuéntale al proyecto qué te gustó, qué te confundió o qué falla.",
+            SakuraCommandCategory.Shell,
+            _ =>
+            {
+                ShowFeedback();
+                return Task.FromResult(CommandExecutionResult.Success());
+            },
+            keywords: ["comentarios", "opinión", "sugerencia", "error", "reportar", "feedback"],
+            iconKey: "IconSakuraAssistant");
+
+        yield return new SakuraCommandDescriptor(
             "selection.actions",
             "Texto seleccionado",
             "Reescribir, corregir, resumir o traducir lo que tengas seleccionado en otra aplicación.",
@@ -4556,6 +4572,52 @@ public partial class MainWindow : Window
         {
             _capsuleWindow.ShowMessage(CapsuleKind.Warning, "No pude guardarla", exception.Message, _preferences.Position);
         }
+    }
+
+    /// <summary>
+    /// 2026-09-16 — «Enviar comentarios». La versión va sin el «+hash» del commit, que no le dice
+    /// nada a quien lee el reporte.
+    /// </summary>
+    private void ShowFeedback()
+    {
+        var version = CurrentVersionText.Split('+')[0];
+        new FeedbackWindow(version).Show();
+    }
+
+    /// <summary>
+    /// 2026-09-16 — Borrador de tarea: confirma tipo y portada (o avisa si parece examen) y manda el
+    /// pedido a la conversación. Los datos personales solo se guardan si se marcó «Recordar».
+    /// </summary>
+    private void ShowAssignmentDraft(string conversationText)
+    {
+        var saved = string.IsNullOrWhiteSpace(_preferences.StudentName) &&
+                    string.IsNullOrWhiteSpace(_preferences.StudentId) &&
+                    string.IsNullOrWhiteSpace(_preferences.StudentProgram) &&
+                    string.IsNullOrWhiteSpace(_preferences.StudentSchool)
+            ? null
+            : new AssignmentDetails(_preferences.StudentName, _preferences.StudentId, _preferences.StudentProgram, _preferences.StudentSchool);
+
+        var window = new AssignmentDraftWindow(conversationText, chosen: null, saved, _preferences.StudentDetailsAsked);
+        window.Closed += (_, _) =>
+        {
+            if (window.Choice is not { } choice)
+            {
+                return;
+            }
+
+            if (choice.AskedPersonal)
+            {
+                _preferences.StudentDetailsAsked = true;
+                _preferences.StudentName = choice.RememberedDetails?.Name;
+                _preferences.StudentId = choice.RememberedDetails?.StudentId;
+                _preferences.StudentProgram = choice.RememberedDetails?.Program;
+                _preferences.StudentSchool = choice.RememberedDetails?.School;
+                SavePreferences();
+            }
+
+            _assistantView.SubmitPrompt(choice.Prompt);
+        };
+        window.Show();
     }
 
     private void ShowQuickCapture()

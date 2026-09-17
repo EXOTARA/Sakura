@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.30.27-beta]
+
+### Nuevo
+
+- **Enviar comentarios.** En la paleta («Enviar comentarios») y en Personalizar, junto a la versión.
+  - Escribes qué te gustó, qué te confundió o qué falla.
+  - **Abrir en GitHub** abre la página de reportes con el texto ya puesto (necesita cuenta de GitHub); **Copiar** lo deja listo para mandarlo por otro medio.
+  - Solo va lo que escribiste y, si lo dejas marcado, la versión de Sakura y de Windows. Nada se envía solo.
+- **Borrador de tarea con confirmación.** «Borrador de tarea…» abre una ventana antes de pedir nada:
+  - Eliges el tipo de trabajo; el sugerido va primero.
+  - Puedes escribir asignatura, profesor y actividad; si los dejas vacíos, se leen de la tarea.
+  - Tus datos de portada (nombre, matrícula, carrera, universidad) se guardan solo si marcas **Recordar**. Si no los das, salen como huecos resaltados y Sakura no vuelve a insistir; «Añadir mis datos» los vuelve a mostrar.
+- **Si la tarea parece un examen**, Sakura no hace el borrador. Ofrece **Explícame cómo se resuelve**: el método paso a paso con otro ejemplo y una pequeña guía de estudio. **No es un examen** sigue con el borrador normal. Solo se considera examen con señales claras y juntas: la palabra examen o quiz, más un contador de preguntas o el tiempo restante.
+
 ## [0.30.26-beta]
 
 ### Nuevo
