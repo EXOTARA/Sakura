@@ -1,0 +1,72 @@
+<Window x:Class="Nexo.App.FileSearchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Buscar archivos en Sakura"
+        Width="560"
+        SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual">
+    <!-- 2026-09-16 — Alt+Shift+F: buscar archivos propios con el índice de Windows. -->
+    <Border x:Name="Card"
+            Margin="24"
+            Padding="16,12"
+            CornerRadius="22"
+            Background="{DynamicResource BrushSurface}"
+            BorderBrush="{DynamicResource BrushBorder}"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.35" Color="Black" />
+        </Border.Effect>
+        <StackPanel>
+            <TextBlock Text="BUSCAR ARCHIVOS"
+                       FontSize="{DynamicResource FontSizeCaption}"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushAccent}" />
+            <Grid Margin="0,6,0,0">
+                <TextBox x:Name="QueryTextBox"
+                         Style="{StaticResource CompactTextBoxStyle}"
+                         AutomationProperties.Name="Buscar archivos"
+                         AutomationProperties.HelpText="Escribe parte del nombre o del contenido. Flechas para elegir, Enter abre, Ctrl+Enter abre la carpeta, Escape cierra."
+                         TextChanged="QueryTextBox_TextChanged"
+                         PreviewKeyDown="QueryTextBox_PreviewKeyDown" />
+                <TextBlock x:Name="Placeholder"
+                           Margin="13,0,0,0"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           Text="Nombre o palabras de dentro del archivo…"
+                           Style="{StaticResource MutedTextStyle}" />
+            </Grid>
+            <ListBox x:Name="ResultsList"
+                     Margin="0,8,0,0"
+                     MaxHeight="360"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     AutomationProperties.Name="Resultados"
+                     MouseDoubleClick="ResultsList_MouseDoubleClick"
+                     Visibility="Collapsed">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="2,4">
+                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Detail}"
+                                       FontSize="{DynamicResource FontSizeCaption}"
+                                       TextTrimming="CharacterEllipsis"
+                                       Style="{StaticResource MutedTextStyle}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock x:Name="StatusText"
+                       Margin="2,6,0,0"
+                       FontSize="{DynamicResource FontSizeCaption}"
+                       Style="{StaticResource MutedTextStyle}"
+                       Text="Busca en Documentos, Escritorio, Descargas, Imágenes, Vídeos y Música. Nada sale del equipo." />
+        </StackPanel>
+    </Border>
+</Window>

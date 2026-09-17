@@ -621,6 +621,7 @@ public partial class MainWindow : Window
         };
         _tasksView.TasksChanged += TasksView_TasksChanged;
         _tasksView.FocusRequested += TasksView_FocusRequested;
+        ApplyHabits();
         _focusView.FocusChanged += FocusView_FocusChanged;
         _focusView.CompleteAssociatedTaskRequested += FocusView_CompleteAssociatedTaskRequested;
         _focusView.SetLastDuration(_preferences.LastFocusMinutes > 0 ? _preferences.LastFocusMinutes : 40);
@@ -4342,6 +4343,19 @@ public partial class MainWindow : Window
             iconKey: "IconSakuraTasks");
 
         yield return new SakuraCommandDescriptor(
+            "files.search",
+            "Buscar archivos",
+            "Por nombre o contenido, con el índice de Windows (Alt+Shift+F).",
+            SakuraCommandCategory.System,
+            _ =>
+            {
+                ShowFileSearch();
+                return Task.FromResult(CommandExecutionResult.Success());
+            },
+            keywords: ["buscar", "archivo", "documento", "encontrar", "abrir archivo"],
+            iconKey: "IconSakuraSystem");
+
+        yield return new SakuraCommandDescriptor(
             "assistant.export",
             "Exportar la conversación",
             "Guarda el chat actual como archivo en Documentos\\Sakura.",
@@ -4741,6 +4755,7 @@ public partial class MainWindow : Window
         _dashboardWindow.Close();
         _quickCaptureWindow?.Close();
         _selectionWindow?.Close();
+        _fileSearchWindow?.Close();
         _quickControlsWatcher.RevealRequested -= HandleQuickControlsRequested;
         _quickControlsWatcher.Dispose();
         _brightnessService.Dispose();
@@ -4771,6 +4786,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(windowHandle, TranslateHotkeyId);
             UnregisterHotKey(windowHandle, QuickCaptureHotkeyId);
             UnregisterHotKey(windowHandle, SelectionHotkeyId);
+            UnregisterHotKey(windowHandle, FileSearchHotkeyId);
             UnregisterHotKey(windowHandle, FlowHotkeyId);
             UnregisterCaptureHotkeys(windowHandle);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
@@ -4841,6 +4857,11 @@ public partial class MainWindow : Window
         else if (wParam.ToInt32() == SelectionHotkeyId)
         {
             _ = OnSelectionHotkeyAsync();
+            handled = true;
+        }
+        else if (wParam.ToInt32() == FileSearchHotkeyId)
+        {
+            ShowFileSearch();
             handled = true;
         }
         else if (HandleCaptureHotkey(wParam.ToInt32()))
@@ -9392,6 +9413,20 @@ public partial class MainWindow : Window
         static Visibility Show(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private Nexo.Core.Habits.HabitManager? _habitManager;
+
+    /// <summary>2026-09-16 — los hábitos se cargan solo si están activados.</summary>
+    private void ApplyHabits()
+    {
+        if (_preferences.ShowHabits && _habitManager is null)
+        {
+            _habitManager = new Nexo.Core.Habits.HabitManager(new Nexo.Windows.Habits.JsonHabitStore());
+            _habitManager.Load();
+        }
+
+        _tasksView.SetHabits(_preferences.ShowHabits ? _habitManager : null);
+    }
+
     private void SetModuleVisibility(string module, bool visible)
     {
         switch (module)
@@ -9417,6 +9452,11 @@ public partial class MainWindow : Window
             case "System":
                 _preferences.ShowSystemModule = visible;
                 break;
+            case "Habits":
+                _preferences.ShowHabits = visible;
+                ApplyHabits();
+                SavePreferences();
+                return;
         }
 
         ApplyModuleVisibility();

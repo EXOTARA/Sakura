@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.30.23-beta]
+
+### Nuevo
+
+- **Alt+Shift+F: buscar archivos.**
+  - Se busca por nombre o por palabras de dentro, con el índice de Windows (lo mismo que usa el Explorador).
+  - Busca en Documentos, Escritorio, Descargas, Imágenes, Vídeos y Música.
+  - Enter abre el archivo y Ctrl+Enter abre su carpeta.
+  - Todo ocurre en el equipo. También está en la paleta como «Buscar archivos».
+- **Hábitos, si los quieres.** Se activan en Personalizar → Módulos («Hábitos») y aparecen como una fila dentro de Hoy.
+  - Tocar un hábito lo marca hecho hoy; volver a tocarlo lo desmarca. Clic derecho para quitarlo.
+  - La racha no se rompe por no haberlo marcado todavía hoy, y no hay avisos insistentes.
+  - Máximo ocho hábitos. Vienen apagados.
+
 ## [0.30.22-beta]
 
 ### Nuevo
