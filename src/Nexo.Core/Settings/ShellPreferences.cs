@@ -713,6 +713,15 @@ public sealed class ShellPreferences
             AiProvider = AiProviderKind.Disabled;
         }
 
+        // 2026-09-16 — lo mismo que la migración 23, pero en cada carga: la bienvenida guardaba
+        // «Ollama» con la dirección del motor de Sakura (11435) y esas instalaciones se quedaban sin
+        // IA. Solo se corrige esa combinación, que no puede ser otra cosa que el motor de Sakura.
+        if (AiProvider == AiProviderKind.Ollama &&
+            OllamaRuntimeEndpoints.IsManagedBaseUrl(AiProviderDefaults.NormalizeBaseUrl(AiBaseUrl)))
+        {
+            AiProvider = AiProviderKind.SakuraLocal;
+        }
+
         var aiDefaults = AiProviderDefaults.Get(AiProvider);
         AiBaseUrl = AiProviderDefaults.NormalizeBaseUrl(AiBaseUrl);
         if (AiProvider != AiProviderKind.Disabled && string.IsNullOrWhiteSpace(AiBaseUrl))

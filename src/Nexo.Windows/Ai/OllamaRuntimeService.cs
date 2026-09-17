@@ -580,6 +580,11 @@ public sealed class OllamaRuntimeService :
         var buffer = new byte[81920];
         long completedBytes = 0;
 
+        // 2026-09-16 — prueba desde cero: se avisaba en cada trozo de 80 KB, cientos de veces por
+        // segundo, y la ventana gastaba más de un núcleo solo en repintar el porcentaje. Basta con
+        // unas cuantas veces por segundo.
+        var lastReport = DateTime.MinValue;
+
         while (true)
         {
             var read = await source.ReadAsync(
@@ -595,12 +600,25 @@ public sealed class OllamaRuntimeService :
                 cancellationToken);
             completedBytes += read;
 
+            var now = DateTime.UtcNow;
+            if (now - lastReport < TimeSpan.FromMilliseconds(250))
+            {
+                continue;
+            }
+
+            lastReport = now;
             progress?.Report(new OllamaRuntimeInstallProgress(
                 "download",
                 "Descargando el motor de IA local…",
                 completedBytes,
                 totalBytes));
         }
+
+        progress?.Report(new OllamaRuntimeInstallProgress(
+            "download",
+            "Descargando el motor de IA local…",
+            completedBytes,
+            totalBytes));
     }
 
     private static async Task<string> ComputeSha256Async(
