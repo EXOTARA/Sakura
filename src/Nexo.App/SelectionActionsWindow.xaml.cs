@@ -6,7 +6,7 @@ using Nexo.Core.Assistant;
 
 namespace Nexo.App;
 
-/// <summary>2026-09-16 — acciones sobre el texto seleccionado (Alt+Shift+R).</summary>
+/// <summary>2026-09-16 — acciones sobre el texto seleccionado (Alt+Shift+E por omisión).</summary>
 public partial class SelectionActionsWindow : Window
 {
     private string _result = string.Empty;

@@ -9,7 +9,7 @@ using Nexo.Core.Assistant;
 namespace Nexo.App;
 
 /// <summary>
-/// 2026-09-16 — Alt+Shift+R: reescribir, corregir, resumir o traducir el texto seleccionado en
+/// 2026-09-16 — Alt+Shift+E (o la primera combinación libre): reescribir, corregir, resumir o traducir el texto seleccionado en
 /// cualquier aplicación y, si se quiere, ponerlo en su lugar.
 ///
 /// Leer la selección:
@@ -24,7 +24,6 @@ namespace Nexo.App;
 public partial class MainWindow
 {
     private const int SelectionHotkeyId = 0x4E71;
-    private const uint VirtualKeyR = 0x52;
 
     private SelectionActionsWindow? _selectionWindow;
     private long _selectionTargetWindow;
@@ -51,12 +50,34 @@ public partial class MainWindow
                 "Alt + Shift + F ya está siendo utilizado por otra aplicación; la búsqueda de archivos sigue en la paleta.");
         }
 
-        if (!RegisterHotKey(windowHandle, SelectionHotkeyId, ModAlt | ModShift, VirtualKeyR))
+        // 2026-09-16 — Alt+Shift+R lo tenía otra aplicación en el equipo de Adler. Se prueban varias
+        // combinaciones y se usa la primera libre; la hoja de atajos enseña la que quedó.
+        foreach (var (key, letter) in SelectionHotkeyCandidates)
         {
-            _assistantView.AddSakuraMessage(
-                "Alt + Shift + R ya está siendo utilizado por otra aplicación; las acciones sobre texto seleccionado no quedaron disponibles.");
+            if (RegisterHotKey(windowHandle, SelectionHotkeyId, ModAlt | ModShift, key))
+            {
+                SelectionHotkeyLabel = $"Alt + Shift + {letter}";
+                _dashboardWindow.View.SetSelectionShortcut(letter);
+                return;
+            }
         }
+
+        SelectionHotkeyLabel = null;
+        _dashboardWindow.View.SetSelectionShortcut(null);
+        _assistantView.AddSakuraMessage(
+            "Las combinaciones para el texto seleccionado (Alt + Shift + E, W o Q) ya las usa otra aplicación. " +
+            "Esa función sigue disponible desde la paleta: «Texto seleccionado».");
     }
+
+    private static readonly (uint Key, string Letter)[] SelectionHotkeyCandidates =
+    [
+        (0x45, "E"),
+        (0x57, "W"),
+        (0x51, "Q")
+    ];
+
+    /// <summary>La combinación que quedó registrada, o null si ninguna estaba libre.</summary>
+    private string? SelectionHotkeyLabel { get; set; }
 
     private async Task OnSelectionHotkeyAsync()
     {
@@ -71,7 +92,7 @@ public partial class MainWindow
             var target = GetForegroundWindow();
             if (target == IntPtr.Zero || target == new System.Windows.Interop.WindowInteropHelper(this).Handle)
             {
-                ShowSelectionNotice("Selecciona texto en otra aplicación y pulsa Alt+Shift+R.");
+                ShowSelectionNotice($"Selecciona texto en otra aplicación y pulsa {SelectionHotkeyLabel ?? "el atajo"}.");
                 return;
             }
 

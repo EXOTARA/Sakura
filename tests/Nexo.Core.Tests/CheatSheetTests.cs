@@ -17,11 +17,24 @@ public sealed class CheatSheetTests
                  {
                      "Alt + A", "Alt + Shift + A", "Ctrl + Espacio", "Ctrl + Shift + Espacio",
                      "Alt + V", "Ctrl + Shift + T", "Ctrl + Shift + D", "Alt + Shift + S", "Alt + Shift + G",
+                     "Alt + Shift + N", "Alt + Shift + F", "Alt + Shift + E",
                      "Ctrl + K", "Esc"
                  })
         {
             Assert.Contains(expected, keys);
         }
+
+        Assert.DoesNotContain("Alt + Shift + R", keys);
+    }
+
+    [Fact]
+    public void TheSelectionShortcut_IsTheOneThatWasFree_OrHiddenIfNone()
+    {
+        string[] Keys(string? letter) =>
+            CheatSheet.Build(dictationEnabled: true, letter).SelectMany(group => group.Items).Select(item => item.Keys).ToArray();
+
+        Assert.Contains("Alt + Shift + W", Keys("W"));
+        Assert.DoesNotContain(Keys(null), key => key is "Alt + Shift + E" or "Alt + Shift + W" or "Alt + Shift + Q");
     }
 
     [Fact]

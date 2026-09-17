@@ -127,6 +127,10 @@ public static class WordDocumentBuilder
                     }
 
                     break;
+                case AnswerParagraph paragraph when GraphPlaceholder.Description(AnswerMarkdown.ToPlainText(paragraph.Spans)) is { } graph:
+                    writer.EndList();
+                    writer.GraphPlaceholder(graph);
+                    break;
                 case AnswerParagraph paragraph:
                     writer.EndList();
                     foreach (var line in SplitLines(paragraph.Spans))
@@ -381,8 +385,29 @@ public static class WordDocumentBuilder
                 .Append("<pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"").Append(width).Append("\" cy=\"").Append(height).Append("\"/></a:xfrm>")
                 .Append("<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
 
-            var caption = $"Figura {_images.Count}. {image.Title} — {WikimediaImagePolicy.Credit(image.Author, image.License)}";
+            var caption = $"Figura {++_figures}. {image.Title} — {WikimediaImagePolicy.Credit(image.Author, image.License)}";
             Paragraph("Caption", [new AnswerSpan(caption, AnswerSpanStyle.None)]);
+        }
+
+        private int _figures;
+
+        /// <summary>
+        /// El hueco para una gráfica que hace la persona: un recuadro punteado con la indicación y su
+        /// pie de figura, numerado junto con las fotos.
+        /// </summary>
+        public void GraphPlaceholder(string description)
+        {
+            _body.Append("<w:p><w:pPr><w:pBdr>")
+                .Append("<w:top w:val=\"dashed\" w:sz=\"6\" w:space=\"8\" w:color=\"A0A0A0\"/>")
+                .Append("<w:left w:val=\"dashed\" w:sz=\"6\" w:space=\"8\" w:color=\"A0A0A0\"/>")
+                .Append("<w:bottom w:val=\"dashed\" w:sz=\"6\" w:space=\"8\" w:color=\"A0A0A0\"/>")
+                .Append("<w:right w:val=\"dashed\" w:sz=\"6\" w:space=\"8\" w:color=\"A0A0A0\"/>")
+                .Append("</w:pBdr><w:spacing w:before=\"1400\" w:after=\"1400\"/><w:jc w:val=\"center\"/></w:pPr>")
+                .Append("<w:r><w:rPr><w:color w:val=\"808080\"/><w:highlight w:val=\"yellow\"/></w:rPr><w:t xml:space=\"preserve\">")
+                .Append(Escape("Inserta aquí tu gráfica de GeoGebra"))
+                .Append("</w:t></w:r></w:p>");
+
+            Paragraph("Caption", [new AnswerSpan($"Figura {++_figures}. {description}", AnswerSpanStyle.None)]);
         }
 
         /// <summary>La gráfica de una tabla, editable desde Word porque lleva su hoja de datos dentro.</summary>
