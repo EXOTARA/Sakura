@@ -168,6 +168,9 @@ public sealed class ShellPreferences
     /// <summary>2026-09-16 — la última duración de enfoque elegida, en minutos (0 = ninguna aún).</summary>
     public int LastFocusMinutes { get; set; }
 
+    /// <summary>2026-09-16 — la fila de hábitos en Hoy. Apagada de fábrica.</summary>
+    public bool ShowHabits { get; set; }
+
     /// <summary>
     /// Diseño D27 — llevar el ratón al borde donde está acoplada Kohana la hace aparecer.
     /// Llega activado porque una función que hay que descubrir en Ajustes para saber que existe no

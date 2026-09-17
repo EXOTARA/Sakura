@@ -210,6 +210,44 @@ public sealed class DailyFlowWpfInteractionTests
     }
 
     [Fact]
+    public void TasksView_Habits_AreHiddenUntilEnabled_AndATapMarksToday()
+    {
+        _fixture.Invoke(() =>
+        {
+            var manager = new TaskManager(new FakeTaskStore());
+            manager.Load();
+            var view = new TasksView(manager);
+            using var host = CreateOffscreenHost(view);
+            host.Show();
+
+            var panel = (FrameworkElement)view.FindName("HabitsPanel")!;
+            Assert.Equal(Visibility.Collapsed, panel.Visibility);
+
+            var habits = new Nexo.Core.Habits.HabitManager(new MemoryHabitStore());
+            habits.Load();
+            habits.Add("Leer");
+            view.SetHabits(habits);
+            host.UpdateLayout();
+            Assert.Equal(Visibility.Visible, panel.Visibility);
+
+            FindButtonByAutomationName(view, "Leer, sin marcar")!
+                .RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+
+            Assert.True(habits.Today(DateOnly.FromDateTime(DateTime.Today)).Single().DoneToday);
+            Assert.NotNull(FindButtonByAutomationName(view, "Leer, hecho hoy"));
+        });
+    }
+
+    private sealed class MemoryHabitStore : Nexo.Core.Habits.IHabitStore
+    {
+        private IReadOnlyCollection<Nexo.Core.Habits.Habit> _habits = [];
+
+        public IReadOnlyList<Nexo.Core.Habits.Habit> Load() => _habits.ToList();
+
+        public void Save(IReadOnlyCollection<Nexo.Core.Habits.Habit> habits) => _habits = habits;
+    }
+
+    [Fact]
     public void TasksView_AnEmptyDay_InvitesToWriteSomething()
     {
         _fixture.Invoke(() =>
