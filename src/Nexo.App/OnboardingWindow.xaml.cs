@@ -438,6 +438,21 @@ public partial class OnboardingWindow : Window
         {
             var snapshot = await _runtimeService.InspectAsync(cancellationToken);
 
+            // 2026-09-16 — antes de descargar varios GB se comprueba que caben.
+            if (snapshot.State is OllamaRuntimeState.Unavailable or OllamaRuntimeState.ManagedInstalled or OllamaRuntimeState.ManagedRunning)
+            {
+                var drive = new System.IO.DriveInfo(System.IO.Path.GetPathRoot(Nexo.Core.Diagnostics.NexoDataPaths.RootDirectory)!);
+                var noRoom = LocalAiDiskPolicy.Check(drive.AvailableFreeSpace, snapshot.State != OllamaRuntimeState.Unavailable);
+                if (noRoom is not null)
+                {
+                    AiRuntimeTitleText.Text = "Falta espacio en el disco";
+                    AiStatusText.Text = noRoom;
+                    InstallAiButton.Content = "Volver a intentar";
+                    InstallAiButton.Visibility = Visibility.Visible;
+                    return;
+                }
+            }
+
             if (snapshot.State == OllamaRuntimeState.Unavailable)
             {
                 // 2026-09-16 — mientras se instala, el título no puede seguir diciendo «no instalada».

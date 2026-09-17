@@ -127,7 +127,7 @@
 
                 <StackPanel x:Name="AiPanel" Visibility="Collapsed">
                     <TextBlock Margin="0,0,0,16"
-                               Text="La IA local de Sakura funciona con Ollama, en tu equipo. Si aún no lo tienes, desde aquí te ayuda a conseguirlo. Sin IA, Sakura sigue entendiendo órdenes, tareas y dictado."
+                               Text="Opcional. Sakura por sí sola ocupa unos 250 MB; la IA local (Ollama y el modelo) ocupa unos 5 GB y descarga cerca de 4,8 GB, así que puede tardar según tu conexión. Todo se queda en tu equipo. Si prefieres no descargarla, puedes usar un proveedor en la nube con tu clave (Personalizar → IA) o seguir sin IA: Sakura sigue entendiendo órdenes, tareas y dictado."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 

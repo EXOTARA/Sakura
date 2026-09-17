@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.30.29-beta]
+
+### Cambiado
+
+- **La bienvenida dice claramente cuánto pesa cada cosa.** Sakura ocupa unos 250 MB. La IA local es opcional: ocupa unos 5 GB y descarga cerca de 4,8 GB, así que puede tardar según la conexión. Sin ella se puede usar un proveedor en la nube con tu clave o seguir sin IA.
+
+### Corregido
+
+- **Antes de descargar la IA local se comprueba que haya espacio**: unos 9 GB libres para instalarla entera, o 4 GB si solo falta el modelo. Si no cabe, se dice cuánto falta en lugar de fallar a mitad.
+
 ## [0.30.28-beta]
 
 ### Corregido
