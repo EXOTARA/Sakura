@@ -7068,11 +7068,11 @@ public partial class MainWindow : Window
             listeningStarted = true;
             _assistantView.SetVoiceState(
                 AssistantVoiceState.Listening,
-                "Escuchando… suelta Mic cuando termines.");
+                "Escuchando… toca el micrófono otra vez cuando termines.");
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Processing,
                 "Escuchando",
-                "Suelta Mic cuando termines de hablar.",
+                "Toca el micrófono otra vez cuando termines de hablar.",
                 _preferences.Position);
         }
         finally

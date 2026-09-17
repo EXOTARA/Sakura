@@ -200,4 +200,25 @@ public sealed class AiProviderMigrationTests
         Assert.Equal(AiProviderKind.Groq, preferences.AiProvider);
         Assert.False(preferences.EdgeRevealEnabled);
     }
+
+    [Theory]
+    [InlineData("http://127.0.0.1:11435/v1", AiProviderKind.SakuraLocal)]
+    [InlineData("http://127.0.0.1:11434/v1", AiProviderKind.Ollama)]
+    public void OllamaPointingAtSakurasEngine_IsRepairedOnEveryLoad(string baseUrl, AiProviderKind expected)
+    {
+        // 2026-09-16 — la bienvenida guardaba «Ollama» con el motor de Sakura (11435) y la IA no
+        // arrancaba nunca. Un archivo ya al día también se repara.
+        var preferences = new ShellPreferences
+        {
+            SchemaVersion = ShellPreferences.CurrentSchemaVersion,
+            AiProvider = AiProviderKind.Ollama,
+            AiBaseUrl = baseUrl,
+            AiModel = "qwen3.5:4b"
+        };
+
+        preferences.Normalize();
+
+        Assert.Equal(expected, preferences.AiProvider);
+        Assert.Equal(baseUrl, preferences.AiBaseUrl);
+    }
 }

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.30.28-beta]
+
+### Corregido
+
+Salió de una instalación desde cero, cronometrada y vigilada por detrás (un amigo de Adler decía que tardaba mucho).
+
+- **Grave: tras la bienvenida, la IA local no respondía** («No pude preparar la IA local: La IA administrada por Sakura no está configurada»). La bienvenida guardaba el proveedor «Ollama» con la dirección del motor de Sakura, y ese motor nunca se arrancaba. Ahora se guarda el proveedor correcto, y las instalaciones que ya estaban así se reparan solas al abrir Sakura.
+- **La bienvenida ya no se contradice.**
+  - Durante la instalación dice «Instalando la IA local · Paso 1 de 2».
+  - Con el motor listo, «Motor de IA instalado · falta el modelo».
+  - Antes decía «IA local de Sakura lista» mientras faltaban 3 GB de modelo y, debajo, «Ollama no está disponible».
+- **El progreso del modelo se entiende:** «Descargando… · 512 MB de 3,0 GB» en lugar de «pulling 81fb60c7daa8 · 6%».
+- **La ventana ya no se atasca al descargar el motor.** Se avisaba del progreso cientos de veces por segundo, y solo repintar el porcentaje gastaba más de un núcleo.
+- El aviso del micrófono decía «suelta Mic cuando termines»; ahora dice «toca el micrófono otra vez cuando termines».
+
 ## [0.30.27-beta]
 
 ### Nuevo

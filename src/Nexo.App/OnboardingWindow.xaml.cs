@@ -297,11 +297,14 @@ public partial class OnboardingWindow : Window
             $"Descargando {RecommendedModel}…",
             indeterminate: true);
 
+        // 2026-09-16 — antes se enseñaba el texto crudo de Ollama («pulling 81fb60c7daa8 · 6%»).
+        AiStatusText.Text = $"Descargando {RecommendedModel}, el modelo de IA (unos 3 GB). Puede tardar varios minutos según tu conexión.";
         var progress = new Progress<OllamaPullProgress>(update =>
         {
+            var described = OllamaPullStatusText.Describe(update);
             AiProgressText.Text = update.Percentage is double percentage
-                ? $"{update.Status} · {percentage:0}%"
-                : update.Status;
+                ? $"{described} · {percentage:0}%"
+                : described;
             AiProgressText.Visibility = Visibility.Visible;
 
             if (update.Percentage is double value)
@@ -437,6 +440,9 @@ public partial class OnboardingWindow : Window
 
             if (snapshot.State == OllamaRuntimeState.Unavailable)
             {
+                // 2026-09-16 — mientras se instala, el título no puede seguir diciendo «no instalada».
+                AiRuntimeTitleText.Text = "Instalando la IA local";
+                AiStatusText.Text = "Paso 1 de 2: el motor (Ollama, unos 1,5 GB). Después, el modelo (unos 3 GB).";
                 var runtimeProgress = new Progress<OllamaRuntimeInstallProgress>(update =>
                 {
                     AiProgressText.Text = update.Percentage is double percentage
@@ -478,9 +484,13 @@ public partial class OnboardingWindow : Window
             }
 
             _activeAiBaseUrl = snapshot.BaseUrl;
+
+            // 2026-09-16 — el título decía «lista» mientras el texto seguía en «Ollama no está
+            // disponible»: la IA no está lista hasta tener el modelo.
             AiRuntimeTitleText.Text = snapshot.State == OllamaRuntimeState.ManagedRunning
-                ? "IA local de Sakura lista"
+                ? "Motor de IA instalado · falta el modelo"
                 : "Ollama conectado";
+            AiStatusText.Text = "El motor ya funciona. Ahora se comprueba el modelo.";
 
             var modelReady = await DownloadRecommendedModelAsync(
                 snapshot.BaseUrl,
@@ -630,7 +640,13 @@ public partial class OnboardingWindow : Window
                 return;
             }
 
-            _preferences.AiProvider = AiProviderKind.Ollama;
+            // 2026-09-16 — prueba de instalación desde cero: aquí se guardaba siempre «Ollama» (el
+            // externo), también cuando la IA era la que Sakura acaba de instalar en el 11435. El
+            // supervisor solo arranca la de Sakura con SakuraLocal, así que la primera pregunta
+            // fallaba con «La IA administrada por Sakura no está configurada».
+            _preferences.AiProvider = OllamaRuntimeEndpoints.IsManagedBaseUrl(_activeAiBaseUrl)
+                ? AiProviderKind.SakuraLocal
+                : AiProviderKind.Ollama;
             _preferences.AiBaseUrl = _activeAiBaseUrl;
             _preferences.AiModel = model;
             _preferences.AiApiKeyEnvironmentVariable = string.Empty;
