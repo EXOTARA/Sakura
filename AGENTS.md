@@ -16,7 +16,7 @@ Nada de esto tiene servidor propio ni cuentas de usuario. Todo lo que hace Sakur
 
 ## El dueño del proyecto
 
-Adler es un estudiante sin conocimientos técnicos profundos y sin presupuesto. Delega todas las decisiones técnicas pero decide todo lo demás: qué construir, cuándo publicar, qué aprobar. No asumas que sabe leer un diff — explícale las cosas en resultados, no en mecanismos internos.
+Adler delega las decisiones técnicas y decide qué construir, cuándo publicar y qué aprobar. Explica los cambios por sus resultados y consecuencias, sin exigir que lea un diff.
 
 ## Flujo de trabajo (no te lo saltes)
 
@@ -41,7 +41,7 @@ Adler es un estudiante sin conocimientos técnicos profundos y sin presupuesto. 
 - Nunca borrado permanente de datos del usuario sin una confirmación explícita en el propio flujo.
 - Nunca pagos ni compras.
 - Antes de descargar algo (un instalador, un modelo), pregunta o dilo explícitamente en el reporte — no lo des por hecho en silencio.
-- Si vas a ejecutar la app de verdad en el equipo de Adler (para probar algo en vivo), comprueba antes que no haya League of Legends o Riot Client corriendo — es cuando él suele estar jugando y no hay que tocarle el equipo.
+- Antes de ejecutar la app en vivo, comprueba que League of Legends y Riot Client no estén corriendo. Si alguno está activo, aplaza la prueba para evitar interferir con el uso del equipo.
 - No inventes datos personales, fuentes académicas, ni cifras: si algo no se puede verificar, dilo así en vez de rellenar.
 
 ## Cómo probar en vivo
@@ -55,7 +55,7 @@ No hay una suite de UI automatizada más allá de las pruebas WPF con `StaWpfFix
 ## Dónde está el contexto que no cabe aquí
 
 - `CHANGELOG.md` — historial completo de qué se hizo y cuándo, en español, versión por versión.
-- `docs/research/` — investigaciones de producto ya hechas (qué busca la gente en un asistente, qué pide la gente de productividad). Léelas antes de proponer algo del rediseño diario para no repetir trabajo.
+- `docs/research/`, si existe en el checkout — investigaciones de producto. Lee los documentos disponibles antes de proponer cambios del rediseño diario para no repetir trabajo. Por ahora pueden ser archivos locales sin seguimiento; no asumas que existen en otros equipos ni los publiques sin revisar su contenido.
 - `docs/PRIVACY.md` y `site/legal/{es,en}/` — qué sale del equipo, por qué, y el resumen legal en dos idiomas. Cualquier cambio que afecte qué datos salen del equipo tiene que reflejarse aquí también, en los tres sitios a la vez.
 
 ## Estado del rediseño diario (contexto vivo, puede quedar desactualizado — revisa el CHANGELOG para lo más reciente)
@@ -69,4 +69,6 @@ Se acordó con Adler un rediseño de Inicio/Hoy/Enfoque/Atajos (antes "Rutinas")
 - Peek y el panel de volumen/brillo del borde vienen apagados en instalaciones nuevas; quien actualiza conserva lo que tenía.
 - La IA local (Ollama + un modelo) es opcional y pesa varios GB; la app en sí pesa poco. Esto se explica ya en la bienvenida — no lo ocultes ni lo minimices si tocas esa pantalla.
 
-Pendiente, en este orden aproximado de prioridad: fases 4–5 del "Borrador de tarea" (leer el enunciado de la ventana activa, guardar en `Documentos\Sakura\<Asignatura>\<Actividad>.docx`, iteraciones en Excel, botón "rehacer"), buscar archivos y exportar conversación ya están hechos, unificar la paleta de comandos con el Command Center sigue aplazado por poco beneficio frente al esfuerzo.
+Prioridad acordada el 2026-09-17: consolidar las funciones existentes antes de añadir otras. Orden: cumplimiento de permisos y exclusiones en Lens/Flow; persistencia y recuperación de Hoy/Enfoque; documentos sin sobrescrituras; instalación y bienvenida; voz medida en condiciones reales. La accesibilidad se verifica dentro de cada bloque. Cada cambio requiere evidencia y pruebas; esta lista no declara que todos los riesgos estén reproducidos.
+
+Las fases 4–5 del "Borrador de tarea" quedan aplazadas (leer el enunciado de la ventana activa, guardar en `Documentos\Sakura\<Asignatura>\<Actividad>.docx`, iteraciones en Excel y botón "rehacer"). Buscar archivos y exportar conversación ya están hechos. Unificar la paleta de comandos con el Command Center sigue aplazado por poco beneficio frente al esfuerzo.
