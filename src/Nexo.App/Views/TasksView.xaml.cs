@@ -67,6 +67,7 @@ public partial class TasksView : UserControl
             .ToArray();
 
         SectionsItemsControl.ItemsSource = sections;
+        RefreshHabits();
 
         var empty = sections.Length == 0;
         EmptyStatePanel.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
@@ -106,6 +107,99 @@ public partial class TasksView : UserControl
         else
         {
             CaptureTextBox.Focus();
+        }
+    }
+
+    // ---------- Hábitos ----------
+
+    private Nexo.Core.Habits.HabitManager? _habits;
+
+    /// <summary>Enseña (o esconde) la fila de hábitos. Llega apagada: se activa en Personalizar.</summary>
+    public void SetHabits(Nexo.Core.Habits.HabitManager? habits)
+    {
+        _habits = habits;
+        RefreshHabits();
+    }
+
+    private void RefreshHabits()
+    {
+        if (_habits is null)
+        {
+            HabitsPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        HabitsPanel.Visibility = Visibility.Visible;
+        HabitsWrap.Children.Clear();
+        foreach (var habit in _habits.Today(Today))
+        {
+            var streak = habit.Streak > 1 ? $" · {habit.Streak} días" : string.Empty;
+            var chip = new Button
+            {
+                Content = (habit.DoneToday ? "✓ " : string.Empty) + habit.Name + streak,
+                Tag = habit.Id,
+                Margin = new Thickness(0, 0, 6, 6),
+                Style = (Style)FindResource("SoftChipButtonStyle"),
+                ToolTip = habit.DoneToday ? "Hecho hoy. Toca para desmarcar." : "Toca para marcarlo hoy.",
+                Foreground = (Brush)FindResource(habit.DoneToday ? "BrushAccent" : "BrushTextPrimary")
+            };
+            System.Windows.Automation.AutomationProperties.SetName(
+                chip, $"{habit.Name}, {(habit.DoneToday ? "hecho hoy" : "sin marcar")}{streak}");
+            chip.Click += (_, _) =>
+            {
+                _habits.Toggle(habit.Id, Today);
+                RefreshHabits();
+            };
+
+            var remove = new MenuItem { Header = $"Quitar «{habit.Name}»" };
+            remove.Click += (_, _) =>
+            {
+                _habits.Remove(habit.Id);
+                RefreshHabits();
+            };
+            chip.ContextMenu = new ContextMenu { Items = { remove } };
+            HabitsWrap.Children.Add(chip);
+        }
+
+        var add = new Button
+        {
+            Content = "+ hábito",
+            Margin = new Thickness(0, 0, 6, 6),
+            Style = (Style)FindResource("SoftChipButtonStyle"),
+            ToolTip = "Añadir un hábito (clic derecho sobre uno para quitarlo)"
+        };
+        add.Click += (_, _) =>
+        {
+            NewHabitRow.Visibility = Visibility.Visible;
+            NewHabitTextBox.Focus();
+        };
+        HabitsWrap.Children.Add(add);
+    }
+
+    private void NewHabitTextBox_TextChanged(object sender, TextChangedEventArgs e) =>
+        NewHabitHint.Visibility = NewHabitTextBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    private void NewHabitTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            NewHabitTextBox.Clear();
+            NewHabitRow.Visibility = Visibility.Collapsed;
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key != Key.Enter || _habits is null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        if (_habits.Add(NewHabitTextBox.Text))
+        {
+            NewHabitTextBox.Clear();
+            NewHabitRow.Visibility = Visibility.Collapsed;
+            RefreshHabits();
         }
     }
 

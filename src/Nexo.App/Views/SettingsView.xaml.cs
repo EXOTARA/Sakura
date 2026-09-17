@@ -128,6 +128,7 @@ public partial class SettingsView : UserControl
         ApplyAccentSourceToControls(preferences.AccentSource);
         HighlightSelectedTheme(preferences.AccentColor);
         HomeModuleCheckBox.IsChecked = preferences.ShowHomeModule;
+        HabitsModuleCheckBox.IsChecked = preferences.ShowHabits;
         TasksModuleCheckBox.IsChecked = preferences.ShowTasksModule;
         FocusModuleCheckBox.IsChecked = preferences.ShowFocusModule;
         RoutinesModuleCheckBox.IsChecked = preferences.ShowRoutinesModule;
