@@ -754,6 +754,7 @@ public partial class MainWindow : Window
         _edgeRevealWatcher.RevealRequested += HandleEdgeRevealRequested;
         _quickControlsWatcher.RevealRequested += HandleQuickControlsRequested;
         _quickControlsWindow.ControlChanged += QuickControlsWindow_ControlChanged;
+        _quickControlsWindow.DisplayCycleRequested += QuickControlsWindow_DisplayCycleRequested;
 
         // Diseño D28 — con el acento siguiendo a Windows, cambiar de fondo de escritorio (con
         // "Color de acento automático" activo) debe verse en Sakura sin reabrirla. UserPreferenceChanged
@@ -1743,7 +1744,11 @@ public partial class MainWindow : Window
             }
 
             var audio = _audioMixerService.ReadSnapshot();
+            var displays = _brightnessService.DisplayCount;
+            _brightnessService.SelectedDisplay = BrightnessTarget.Clamp(_preferences.BrightnessDisplay, displays);
             var brightness = _brightnessService.ReadSnapshot();
+            _quickControlsWindow.SetDisplayChoice(
+                brightness.IsAvailable ? BrightnessTarget.Label(_brightnessService.SelectedDisplay, displays) : null);
 
             _quickControlsWindow.ShowControls(
                 _preferences.Position,
@@ -1752,6 +1757,23 @@ public partial class MainWindow : Window
                 brightness.Percent,
                 brightness.IsAvailable);
         });
+    }
+
+    /// <summary>2026-09-16 — el brillo pasa a la siguiente pantalla (o a todas) y se recuerda.</summary>
+    private void QuickControlsWindow_DisplayCycleRequested(object? sender, EventArgs e)
+    {
+        var displays = _brightnessService.DisplayCount;
+        var next = BrightnessTarget.Next(_brightnessService.SelectedDisplay, displays);
+        _brightnessService.SelectedDisplay = next;
+        _preferences.BrightnessDisplay = next;
+        SavePreferences();
+
+        _quickControlsWindow.SetDisplayChoice(BrightnessTarget.Label(next, displays));
+        var brightness = _brightnessService.ReadSnapshot();
+        if (brightness.IsAvailable)
+        {
+            _quickControlsWindow.ShowBrightness(brightness.Percent);
+        }
     }
 
     private void QuickControlsWindow_ControlChanged(

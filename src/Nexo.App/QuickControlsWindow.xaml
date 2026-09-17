@@ -46,7 +46,20 @@
                 Background="{DynamicResource BrushSidebarSurface}"
                 BorderBrush="{DynamicResource BrushAccentBorder}"
                 BorderThickness="1">
-            <StackPanel x:Name="ControlsPanel" Orientation="Horizontal" />
+            <StackPanel>
+                <StackPanel x:Name="ControlsPanel" Orientation="Horizontal" />
+                <!-- 2026-09-16 — con varias pantallas, a cuál va el brillo. Tocar cambia a la siguiente. -->
+                <Button x:Name="DisplayChoiceButton"
+                        Margin="0,6,4,0"
+                        HorizontalAlignment="Right"
+                        Padding="8,2"
+                        FontSize="11"
+                        Visibility="Collapsed"
+                        Style="{StaticResource SoftChipButtonStyle}"
+                        ToolTip="A qué pantalla va el brillo. Toca para cambiar."
+                        AutomationProperties.Name="Pantalla del brillo"
+                        Click="DisplayChoiceButton_Click" />
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

@@ -171,6 +171,9 @@ public sealed class ShellPreferences
     /// <summary>2026-09-16 — la fila de hábitos en Hoy. Apagada de fábrica.</summary>
     public bool ShowHabits { get; set; }
 
+    /// <summary>2026-09-16 — a qué pantalla va el brillo del panel del borde: 0 = principal, −1 = todas.</summary>
+    public int BrightnessDisplay { get; set; }
+
     /// <summary>
     /// Diseño D27 — llevar el ratón al borde donde está acoplada Kohana la hace aparecer.
     /// Llega activado porque una función que hay que descubrir en Ajustes para saber que existe no
