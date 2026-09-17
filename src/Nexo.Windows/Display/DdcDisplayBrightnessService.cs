@@ -19,11 +19,56 @@ namespace Nexo.Windows.Display;
 /// </summary>
 public sealed class DdcDisplayBrightnessService : IDisplayBrightnessService, IDisposable
 {
-    private const uint MonitorDefaultToPrimary = 1;
+    private const uint MonitorInfoPrimary = 1;
 
     private readonly object _sync = new();
-    private PhysicalMonitor[]? _monitors;
+
+    /// <summary>
+    /// 2026-09-16 — los monitores físicos de cada pantalla, con la principal primero. Antes solo se
+    /// pedían los de la principal y la segunda pantalla no se podía tocar (Adler).
+    /// </summary>
+    private List<PhysicalMonitor[]>? _screens;
+    private int _selected;
     private bool _disposed;
+
+    public int DisplayCount
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return TryEnsureMonitorsLocked(out _) ? _screens!.Count : 0;
+            }
+        }
+    }
+
+    public int SelectedDisplay
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _selected;
+            }
+        }
+        set
+        {
+            lock (_sync)
+            {
+                _selected = BrightnessTarget.Clamp(value, _screens?.Count ?? int.MaxValue);
+            }
+        }
+    }
+
+    /// <summary>Los monitores a los que va la orden según la pantalla elegida.</summary>
+    private IEnumerable<PhysicalMonitor> TargetsLocked()
+    {
+        var screens = _screens!;
+        var selected = BrightnessTarget.Clamp(_selected, screens.Count);
+        return selected == BrightnessTarget.All
+            ? screens.SelectMany(screen => screen)
+            : screens[selected];
+    }
 
     public BrightnessSnapshot ReadSnapshot()
     {
@@ -74,7 +119,7 @@ public sealed class DdcDisplayBrightnessService : IDisplayBrightnessService, IDi
     {
         var applied = false;
 
-        foreach (var monitor in _monitors!)
+        foreach (var monitor in TargetsLocked())
         {
             // El rango se relee por monitor y no se asume 0-100: hay monitores cuyo mínimo no es
             // cero, y mandarles el porcentaje tal cual los dejaría más oscuros de lo pedido.
@@ -102,7 +147,7 @@ public sealed class DdcDisplayBrightnessService : IDisplayBrightnessService, IDi
     {
         percent = 0;
 
-        foreach (var monitor in _monitors!)
+        foreach (var monitor in TargetsLocked())
         {
             if (GetMonitorBrightness(monitor.Handle, out var minimum, out var current, out var maximum) &&
                 maximum > minimum)
@@ -158,30 +203,44 @@ public sealed class DdcDisplayBrightnessService : IDisplayBrightnessService, IDi
             return false;
         }
 
-        if (_monitors is { Length: > 0 })
+        if (_screens is { Count: > 0 })
         {
             return true;
         }
 
         try
         {
-            var handle = MonitorFromWindow(GetDesktopWindow(), MonitorDefaultToPrimary);
-            if (handle == IntPtr.Zero ||
-                !GetNumberOfPhysicalMonitorsFromHMONITOR(handle, out var count) ||
-                count == 0)
+            var handles = new List<(IntPtr Handle, bool Primary)>();
+            EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (monitor, _, _, _) =>
+            {
+                var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+                var primary = GetMonitorInfo(monitor, ref info) && (info.Flags & MonitorInfoPrimary) != 0;
+                handles.Add((monitor, primary));
+                return true;
+            }, IntPtr.Zero);
+
+            var screens = new List<PhysicalMonitor[]>();
+            foreach (var (handle, _) in handles.OrderByDescending(entry => entry.Primary))
+            {
+                if (!GetNumberOfPhysicalMonitorsFromHMONITOR(handle, out var count) || count == 0)
+                {
+                    continue;
+                }
+
+                var monitors = new PhysicalMonitor[count];
+                if (GetPhysicalMonitorsFromHMONITOR(handle, count, monitors))
+                {
+                    screens.Add(monitors);
+                }
+            }
+
+            if (screens.Count == 0)
             {
                 message = "No encontré un monitor al que pedirle el brillo.";
                 return false;
             }
 
-            var monitors = new PhysicalMonitor[count];
-            if (!GetPhysicalMonitorsFromHMONITOR(handle, count, monitors))
-            {
-                message = "El monitor no respondió a la consulta de brillo.";
-                return false;
-            }
-
-            _monitors = monitors;
+            _screens = screens;
             return true;
         }
         catch (Exception exception) when (
@@ -195,14 +254,17 @@ public sealed class DdcDisplayBrightnessService : IDisplayBrightnessService, IDi
 
     private void ReleaseMonitorsLocked()
     {
-        if (_monitors is not { Length: > 0 })
+        if (_screens is not { Count: > 0 })
         {
             return;
         }
 
         try
         {
-            DestroyPhysicalMonitors((uint)_monitors.Length, _monitors);
+            foreach (var monitors in _screens)
+            {
+                DestroyPhysicalMonitors((uint)monitors.Length, monitors);
+            }
         }
         catch (Exception exception) when (
             exception is DllNotFoundException or EntryPointNotFoundException)
@@ -210,7 +272,7 @@ public sealed class DdcDisplayBrightnessService : IDisplayBrightnessService, IDi
             // Nada que liberar si la biblioteca no está.
         }
 
-        _monitors = null;
+        _screens = null;
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -222,11 +284,33 @@ public sealed class DdcDisplayBrightnessService : IDisplayBrightnessService, IDi
         public string Description;
     }
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDesktopWindow();
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public Rect Monitor;
+        public Rect Work;
+        public uint Flags;
+    }
+
+    private delegate bool MonitorEnumProc(IntPtr monitor, IntPtr hdc, IntPtr rect, IntPtr data);
 
     [DllImport("user32.dll")]
-    private static extern IntPtr MonitorFromWindow(IntPtr window, uint flags);
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc callback, IntPtr data);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
 
     [DllImport("dxva2.dll", SetLastError = true)]
     private static extern bool GetNumberOfPhysicalMonitorsFromHMONITOR(IntPtr monitor, out uint count);

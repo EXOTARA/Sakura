@@ -263,6 +263,28 @@ public sealed class OllamaRuntimeService :
                 "La IA local todavía no está instalada.");
         }
 
+        // 2026-09-16 — a un amigo de Adler le salió «Ollama se cerró antes de completar el inicio» a
+        // mitad de descargar el modelo. Durante una descarga Ollama puede tardar más de dos segundos
+        // en contestar; el vigilante lo daba por caído y lanzaba un segundo «ollama serve» en el
+        // mismo puerto, que se cerraba al instante, y ese mensaje tapaba la descarga. Si el nuestro
+        // sigue vivo, no se arranca otro: se le da más tiempo y, si sigue sin contestar, se dice que
+        // está ocupado.
+        if (IsManagedProcessAlive())
+        {
+            var answered = await IsEndpointRunningAsync(
+                OllamaRuntimeEndpoints.ManagedTagsEndpoint,
+                cancellationToken,
+                TimeSpan.FromSeconds(15));
+
+            return new OllamaRuntimeSnapshot(
+                OllamaRuntimeState.ManagedRunning,
+                OllamaRuntimeEndpoints.ManagedBaseUrl,
+                _managedExecutablePath,
+                answered
+                    ? "La IA local administrada por Sakura está funcionando."
+                    : "La IA local está ocupada (por ejemplo, descargando un modelo).");
+        }
+
         var runtimeDirectory = Path.GetDirectoryName(_managedExecutablePath);
         if (string.IsNullOrWhiteSpace(runtimeDirectory))
         {
@@ -596,13 +618,31 @@ public sealed class OllamaRuntimeService :
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
+    /// <summary>Si ya hay un Ollama de Sakura vivo, aunque no conteste a tiempo.</summary>
+    private bool IsManagedProcessAlive()
+    {
+        foreach (var process in Process.GetProcessesByName("ollama"))
+        {
+            using (process)
+            {
+                if (!process.HasExited && IsManagedProcess(process, _managedExecutablePath))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private async Task<bool> IsEndpointRunningAsync(
         string endpoint,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? wait = null)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(2));
+        timeout.CancelAfter(wait ?? TimeSpan.FromSeconds(2));
 
         try
         {

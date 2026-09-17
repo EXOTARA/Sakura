@@ -74,6 +74,27 @@ public partial class QuickControlsWindow : Window
         };
     }
 
+    /// <summary>Se pidió pasar el brillo a la siguiente pantalla.</summary>
+    public event EventHandler? DisplayCycleRequested;
+
+    /// <summary>Enseña a qué pantalla va el brillo; null si solo hay una.</summary>
+    public void SetDisplayChoice(string? label)
+    {
+        DisplayChoiceButton.Content = label is null ? null : "☀ " + label;
+        DisplayChoiceButton.Visibility = label is null ? Visibility.Collapsed : Visibility.Visible;
+        System.Windows.Automation.AutomationProperties.SetName(
+            DisplayChoiceButton, label is null ? "Pantalla del brillo" : $"Brillo de: {label}. Cambiar de pantalla");
+    }
+
+    /// <summary>Tras cambiar de pantalla, el nivel que tiene la nueva.</summary>
+    public void ShowBrightness(double percent) => SetLevel(QuickControlKind.Brightness, percent, animate: true);
+
+    private void DisplayChoiceButton_Click(object sender, RoutedEventArgs e)
+    {
+        RestartIdle();
+        DisplayCycleRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>Se pidió mover un mando. El porcentaje ya viene normalizado.</summary>
     public event EventHandler<QuickControlChangedEventArgs>? ControlChanged;
 

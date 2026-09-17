@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.30.26-beta]
+
+### Nuevo
+
+- **Brillo por pantalla** (Adler, con dos monitores). Con varias pantallas, el panel de volumen y brillo muestra debajo a cuál va el brillo («☀ Pantalla 1»). Al tocarlo pasa a la siguiente y, al final, a «Todas». Sakura recuerda la elección. Antes solo se movía la pantalla principal.
+
+### Corregido
+
+- **«Ollama se cerró antes de completar el inicio» a mitad de descargar el modelo.** Durante una descarga, la IA local puede tardar en contestar. Sakura la daba por caída e intentaba arrancar una segunda copia, que se cerraba al instante, y ese aviso tapaba la descarga. Ahora, si la IA local de Sakura sigue abierta, no se lanza otra: se le da más tiempo y, si sigue ocupada, se dice así.
+
 ## [0.30.25-beta]
 
 ### Nuevo
