@@ -1098,6 +1098,12 @@
                     <TextBlock x:Name="UpdateCurrentVersionText"
                                Text="Versión instalada: —"
                                FontWeight="SemiBold" />
+                    <Button Margin="0,8,0,4"
+                            HorizontalAlignment="Left"
+                            Content="Enviar comentarios"
+                            Style="{StaticResource SoftChipButtonStyle}"
+                            ToolTip="Cuéntale al proyecto qué te gustó, qué te confundió o qué falla"
+                            Click="FeedbackButton_Click" />
 
                     <TextBlock x:Name="UpdateStatusText"
                                Margin="0,4,0,0"

@@ -873,6 +873,8 @@ public partial class MainWindow : Window
             SavePreferences();
         };
 
+        _settingsView.FeedbackRequested += (_, _) => ShowFeedback();
+
         _settingsView.EdgeQuickControlsChanged += enabled =>
         {
             _preferences.EdgeQuickControlsEnabled = enabled;
@@ -4365,6 +4367,19 @@ public partial class MainWindow : Window
             iconKey: "IconSakuraTasks");
 
         yield return new SakuraCommandDescriptor(
+            "feedback.send",
+            "Enviar comentarios",
+            "Cuéntale al proyecto qué te gustó, qué te confundió o qué falla.",
+            SakuraCommandCategory.Shell,
+            _ =>
+            {
+                ShowFeedback();
+                return Task.FromResult(CommandExecutionResult.Success());
+            },
+            keywords: ["comentarios", "opinión", "sugerencia", "error", "reportar", "feedback"],
+            iconKey: "IconSakuraAssistant");
+
+        yield return new SakuraCommandDescriptor(
             "selection.actions",
             "Texto seleccionado",
             "Reescribir, corregir, resumir o traducir lo que tengas seleccionado en otra aplicación.",
@@ -4556,6 +4571,16 @@ public partial class MainWindow : Window
         {
             _capsuleWindow.ShowMessage(CapsuleKind.Warning, "No pude guardarla", exception.Message, _preferences.Position);
         }
+    }
+
+    /// <summary>
+    /// 2026-09-16 — «Enviar comentarios». La versión va sin el «+hash» del commit, que no le dice
+    /// nada a quien lee el reporte.
+    /// </summary>
+    private void ShowFeedback()
+    {
+        var version = CurrentVersionText.Split('+')[0];
+        new FeedbackWindow(version).Show();
     }
 
     private void ShowQuickCapture()

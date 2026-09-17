@@ -1581,6 +1581,12 @@ public partial class SettingsView : UserControl
     // ---------- Actualizaciones (Diseño D65) ----------
 
     /// <summary>La versión que está corriendo ahora, para que se vea sin buscarla.</summary>
+    /// <summary>2026-09-16 — abrir «Enviar comentarios».</summary>
+    public event EventHandler? FeedbackRequested;
+
+    private void FeedbackButton_Click(object sender, RoutedEventArgs e) =>
+        FeedbackRequested?.Invoke(this, EventArgs.Empty);
+
     public void SetCurrentVersion(string version) =>
         UpdateCurrentVersionText.Text = $"Versión instalada: {version}";
 
