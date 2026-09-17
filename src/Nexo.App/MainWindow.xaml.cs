@@ -4575,6 +4575,28 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 2026-09-17 — consejo discreto, una sola vez (Adler): si la IA local tarda en contestar, se
+    /// sugiere Groq, que responde rápido desde la nube y tiene clave gratuita. No se insiste ni se
+    /// cambia nada solo.
+    /// </summary>
+    private void OfferCloudTipIfSlow(bool usedLocalRuntime, TimeSpan elapsed)
+    {
+        if (!usedLocalRuntime || _preferences.CloudTipShown || elapsed < TimeSpan.FromSeconds(20))
+        {
+            return;
+        }
+
+        _preferences.CloudTipShown = true;
+        SavePreferences();
+        _capsuleWindow.ShowMessage(
+            CapsuleKind.Information,
+            "¿Respuestas lentas?",
+            "Tu equipo tarda con la IA local. Groq responde en segundos desde la nube y su clave es gratis: Personalizar → IA.",
+            _preferences.Position,
+            TimeSpan.FromSeconds(12));
+    }
+
+    /// <summary>
     /// 2026-09-16 — «Enviar comentarios». La versión va sin el «+hash» del commit, que no le dice
     /// nada a quien lee el reporte.
     /// </summary>
@@ -6279,6 +6301,7 @@ public partial class MainWindow : Window
                 requestMode);
 
             var receivedFirstChunk = false;
+            var answerWatch = System.Diagnostics.Stopwatch.StartNew();
 
             await foreach (var chunk in _aiChatService.StreamAsync(
                 configuration,
@@ -6301,6 +6324,7 @@ public partial class MainWindow : Window
 
             var finalText = _assistantView.CompleteSakuraStreamingMessage();
             streamingStarted = false;
+            OfferCloudTipIfSlow(usesLocalRuntime, answerWatch.Elapsed);
 
             if (_answerInPill)
             {
