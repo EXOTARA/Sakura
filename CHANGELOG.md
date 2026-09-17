@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.30.24-beta]
+
+### Cambiado
+
+- **Atajos, más tranquilo.**
+  - Cada atajo es una fila con ▶ delante, su frase debajo y lo que hace.
+  - Pausar, Editar y Eliminar aparecen al pasar el ratón.
+  - Las plantillas y «Nuevo» van en una sola línea arriba.
+  - Un atajo en pausa se ve atenuado.
+  - La última ejecución se muestra en formato de 12 horas.
+- **Audio:** cada aplicación ya no dice «Sesión disponible»; solo se indica «Sonando ahora» cuando suena algo.
+
+### Corregido
+
+- En Atajos, el botón «Desactivar» salía cortado. Ahora dice «Pausar» y cabe.
+
 ## [0.30.23-beta]
 
 ### Nuevo

@@ -886,7 +886,7 @@ public sealed class DailyFlowWpfInteractionTests
             host.Show();
             host.UpdateLayout();
 
-            var toggleName = $"Desactivar {routine.Name}";
+            var toggleName = $"Pausar {routine.Name}";
             var toggleButton = FindButtonByAutomationName(view, toggleName);
             Assert.NotNull(toggleButton);
             toggleButton!.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));

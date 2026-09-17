@@ -26,18 +26,19 @@ public partial class RoutinesView : UserControl
             .Select(routine => new RoutineListItem(
                 routine.Id,
                 routine.Name,
-                routine.TriggerPhrase,
-                routine.IsEnabled ? "ACTIVA" : "PAUSADA",
+                $"«{routine.TriggerPhrase}»",
+                routine.IsEnabled ? string.Empty : " · en pausa",
                 BuildStepSummary(routine),
                 FormatLastExecution(routine),
                 routine.LastExecutionSucceeded == false
                     ? (Brush)FindResource("BrushWarning")
                     : (Brush)FindResource("BrushTextTertiary"),
-                routine.IsEnabled ? "Desactivar" : "Activar",
+                routine.IsEnabled ? "Pausar" : "Activar",
                 $"Ejecutar {routine.Name}",
-                routine.IsEnabled ? $"Desactivar {routine.Name}" : $"Activar {routine.Name}",
+                routine.IsEnabled ? $"Pausar {routine.Name}" : $"Activar {routine.Name}",
                 $"Editar {routine.Name}",
-                $"Eliminar {routine.Name}"))
+                $"Eliminar {routine.Name}",
+                routine.IsEnabled ? 1.0 : 0.55))
             .ToArray();
         RoutinesItemsControl.ItemsSource = items;
         EmptyStateText.Visibility = items.Length == 0
@@ -53,7 +54,8 @@ public partial class RoutinesView : UserControl
         }
 
         var outcome = routine.LastExecutionSucceeded == false ? " · con avisos" : string.Empty;
-        return $"Última vez: {routine.LastExecutedAt.Value:ddd d MMM · HH:mm}{outcome}";
+        var at = routine.LastExecutedAt.Value;
+        return $"Última vez: {at.ToString("ddd d MMM", CultureInfo.GetCultureInfo("es-MX")).Replace(".", string.Empty)} · {Nexo.Core.Tasks.TodayPlan.Clock(at)}{outcome}";
     }
 
     public void FocusPrimaryControl()
@@ -435,7 +437,8 @@ public partial class RoutinesView : UserControl
         string RunAutomationName,
         string ToggleAutomationName,
         string EditAutomationName,
-        string DeleteAutomationName);
+        string DeleteAutomationName,
+        double RowOpacity);
 }
 
 public sealed class RoutineRequestedEventArgs : EventArgs
