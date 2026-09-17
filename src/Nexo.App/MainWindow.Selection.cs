@@ -31,8 +31,26 @@ public partial class MainWindow
     private string _selectionText = string.Empty;
     private bool _selectionBusy;
 
+    // 2026-09-16 — Alt+Shift+F, buscar archivos. Vive aquí porque comparte el registro de atajos
+    // globales nuevos del rediseño.
+    private const int FileSearchHotkeyId = 0x4E72;
+    private const uint VirtualKeyF = 0x46;
+    private FileSearchWindow? _fileSearchWindow;
+
+    private void ShowFileSearch()
+    {
+        _fileSearchWindow ??= new FileSearchWindow(new Nexo.Windows.Files.WindowsFileSearchService());
+        _fileSearchWindow.ShowAtTop();
+    }
+
     private void RegisterSelectionHotkey(IntPtr windowHandle)
     {
+        if (!RegisterHotKey(windowHandle, FileSearchHotkeyId, ModAlt | ModShift, VirtualKeyF))
+        {
+            _assistantView.AddSakuraMessage(
+                "Alt + Shift + F ya está siendo utilizado por otra aplicación; la búsqueda de archivos sigue en la paleta.");
+        }
+
         if (!RegisterHotKey(windowHandle, SelectionHotkeyId, ModAlt | ModShift, VirtualKeyR))
         {
             _assistantView.AddSakuraMessage(

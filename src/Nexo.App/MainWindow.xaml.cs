@@ -4342,6 +4342,19 @@ public partial class MainWindow : Window
             iconKey: "IconSakuraTasks");
 
         yield return new SakuraCommandDescriptor(
+            "files.search",
+            "Buscar archivos",
+            "Por nombre o contenido, con el índice de Windows (Alt+Shift+F).",
+            SakuraCommandCategory.System,
+            _ =>
+            {
+                ShowFileSearch();
+                return Task.FromResult(CommandExecutionResult.Success());
+            },
+            keywords: ["buscar", "archivo", "documento", "encontrar", "abrir archivo"],
+            iconKey: "IconSakuraSystem");
+
+        yield return new SakuraCommandDescriptor(
             "assistant.export",
             "Exportar la conversación",
             "Guarda el chat actual como archivo en Documentos\\Sakura.",
@@ -4741,6 +4754,7 @@ public partial class MainWindow : Window
         _dashboardWindow.Close();
         _quickCaptureWindow?.Close();
         _selectionWindow?.Close();
+        _fileSearchWindow?.Close();
         _quickControlsWatcher.RevealRequested -= HandleQuickControlsRequested;
         _quickControlsWatcher.Dispose();
         _brightnessService.Dispose();
@@ -4771,6 +4785,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(windowHandle, TranslateHotkeyId);
             UnregisterHotKey(windowHandle, QuickCaptureHotkeyId);
             UnregisterHotKey(windowHandle, SelectionHotkeyId);
+            UnregisterHotKey(windowHandle, FileSearchHotkeyId);
             UnregisterHotKey(windowHandle, FlowHotkeyId);
             UnregisterCaptureHotkeys(windowHandle);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
@@ -4841,6 +4856,11 @@ public partial class MainWindow : Window
         else if (wParam.ToInt32() == SelectionHotkeyId)
         {
             _ = OnSelectionHotkeyAsync();
+            handled = true;
+        }
+        else if (wParam.ToInt32() == FileSearchHotkeyId)
+        {
+            ShowFileSearch();
             handled = true;
         }
         else if (HandleCaptureHotkey(wParam.ToInt32()))
