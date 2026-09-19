@@ -1,3 +1,4 @@
+using Nexo.App.Permissions;
 using System.Text;
 using Nexo.Core.Ai;
 using Nexo.Core.Assistant;
@@ -71,7 +72,33 @@ public partial class MainWindow
             return;
         }
 
+        // El guard se activa ANTES de preguntar: con el diálogo abierto un segundo atajo entraría
+        // de nuevo y abriría otro diálogo y otra explicación. Se libera en cuanto se sabe que no
+        // habrá explicación (denegado o error), y en el finally de abajo si la hay.
         _explainingWindow = true;
+        bool explainAllowed;
+        string explainDenial;
+        try
+        {
+            explainAllowed = TryGetLensPermission(
+                "Explicar la ventana activa.",
+                FlowExclusionCheck.DescribeTarget(ambient),
+                out explainDenial);
+        }
+        catch
+        {
+            _explainingWindow = false;
+            throw;
+        }
+
+        if (!explainAllowed)
+        {
+            _explainingWindow = false;
+            _capsuleWindow.ShowMessage(
+                CapsuleKind.Warning, "Lens no permitido", explainDenial, _preferences.Position, force: true);
+            return;
+        }
+
         var title = string.IsNullOrWhiteSpace(ambient.WindowTitle) ? "la ventana activa" : ambient.WindowTitle!;
         _answerPillWindow.BeginAnswer($"Explicando «{title}»", _preferences.Position);
         LensIndicator.Visibility = System.Windows.Visibility.Visible;

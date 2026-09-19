@@ -21,6 +21,7 @@ using Nexo.App.Automation;
 using Nexo.App.DailyFlow;
 using Nexo.App.Motion;
 using Nexo.App.Optimization;
+using Nexo.App.Permissions;
 using Nexo.Windows.Distribution;
 using Nexo.Windows.Display;
 using Nexo.Windows.Documents;
@@ -2452,13 +2453,20 @@ public partial class MainWindow : Window
     /// seguir. Cuando el broker pide confirmación, se pregunta aquí y la respuesta queda registrada:
     /// un "sí" que no deja rastro es indistinguible de un permiso que nadie dio.
     /// </summary>
-    private bool TryGetPermission(PermissionRequest request)
+    private bool TryGetPermission(PermissionRequest request, bool announceDenial = true)
     {
         var decision = PermissionBroker.Decide(request, _preferences.Permissions);
 
         if (decision.IsDenied)
         {
-            _assistantView.AddSakuraMessage(decision.Reason);
+            // Quien ya enseña el motivo por su cuenta (la píldora de Lens, la cápsula) pasa
+            // announceDenial: false para que la persona no lea el mismo aviso dos veces. El
+            // registro de auditoría se escribe siempre.
+            if (announceDenial)
+            {
+                _assistantView.AddSakuraMessage(decision.Reason);
+            }
+
             RecordAudit(
                 AuditCapability.Permisos,
                 $"Acción denegada ({request.Capability})",
@@ -2472,15 +2480,22 @@ public partial class MainWindow : Window
             return true;
         }
 
-        var confirmation = MessageBox.Show(
-            this,
+        var confirmationText =
             $"{request.Description}{Environment.NewLine}{Environment.NewLine}{decision.Reason}" +
-                $"{Environment.NewLine}{Environment.NewLine}¿Lo hago?",
-            $"Permiso: {CapabilityTitleFor(request.Capability)}",
-            MessageBoxButton.YesNo,
-            decision.TriggeredCategories.Count > 0
-                ? MessageBoxImage.Warning
-                : MessageBoxImage.Question);
+            $"{Environment.NewLine}{Environment.NewLine}¿Lo hago?";
+        var confirmationTitle = $"Permiso: {CapabilityTitleFor(request.Capability)}";
+        var confirmationImage = decision.TriggeredCategories.Count > 0
+            ? MessageBoxImage.Warning
+            : MessageBoxImage.Question;
+
+        // Con un atajo global Sakura puede estar oculta. Un cuadro cuyo propietario está oculto
+        // puede quedar detrás de otras ventanas sin que nadie lo vea y la acción esperaría en
+        // silencio, así que en ese caso se muestra sin propietario.
+        var confirmation = IsVisible
+            ? MessageBox.Show(
+                this, confirmationText, confirmationTitle, MessageBoxButton.YesNo, confirmationImage)
+            : MessageBox.Show(
+                confirmationText, confirmationTitle, MessageBoxButton.YesNo, confirmationImage);
 
         var granted = confirmation == MessageBoxResult.Yes;
 
@@ -2494,6 +2509,37 @@ public partial class MainWindow : Window
 
         return granted;
     }
+
+    /// <summary>
+    /// Lens (mirar la pantalla) tiene un único punto de entrada al broker para TODAS las rutas que
+    /// capturan: ExecuteLens, Explicar ventana, Peek, capturas y traducir zona. Se llama justo antes
+    /// de <c>CaptureAsync</c>; si devuelve false no se captura, ni se hace OCR ni se lee la
+    /// ventana. <paramref name="denialReason"/> lleva el motivo para que cada ruta lo enseñe a su
+    /// manera (el aviso del asistente no se repite: se pasa announceDenial: false).
+    /// </summary>
+    private bool TryGetLensPermission(string description, string? targetApp, out string denialReason)
+    {
+        var request = new PermissionRequest(SakuraCapability.Lens, description, targetApp);
+        var decision = PermissionBroker.Decide(request, _preferences.Permissions);
+
+        if (TryGetPermission(request, announceDenial: false))
+        {
+            denialReason = string.Empty;
+            return true;
+        }
+
+        denialReason = decision.IsDenied
+            ? decision.Reason
+            : "Dijiste que no, así que no miré la pantalla.";
+        return false;
+    }
+
+    private static string? DescribeVisionTarget(VisionCaptureTarget target) =>
+        FlowExclusionCheck.DescribeTarget(new AmbientContextSnapshot(target.Title, target.Subtitle, false));
+
+    private void ShowLensDenied(string reason) =>
+        _capsuleWindow.ShowMessage(
+            CapsuleKind.Warning, "Lens no permitido", reason, _preferences.Position, force: true);
 
     private void ShowFullAudit()
     {
@@ -6501,6 +6547,19 @@ public partial class MainWindow : Window
                 _preferences.Position);
         }
 
+        if (!TryGetLensPermission(
+                $"Mirar la ventana «{target.Title}» para dar contexto visual.",
+                DescribeVisionTarget(target),
+                out var visualDenial))
+        {
+            if (showFeedback)
+            {
+                ShowLensDenied(visualDenial);
+            }
+
+            return false;
+        }
+
         VisionCaptureResult result;
         try
         {
@@ -6621,6 +6680,15 @@ public partial class MainWindow : Window
         }
 
         var selectedTarget = picker.SelectedTarget;
+        if (!TryGetLensPermission(
+                $"Capturar «{selectedTarget.Title}» para analizarla.",
+                DescribeVisionTarget(selectedTarget),
+                out var captureDenial))
+        {
+            ShowLensDenied(captureDenial);
+            return;
+        }
+
         _capsuleWindow.ShowMessage(
             CapsuleKind.Processing,
             "Preparando captura",
@@ -7355,6 +7423,18 @@ public partial class MainWindow : Window
                 region.Width,
                 region.Height);
 
+            // Una zona dibujada a mano no tiene título de ventana, pero sigue siendo «ver la
+            // pantalla»: por coherencia pasa por el mismo permiso de Lens (las exclusiones por
+            // aplicación no pueden coincidir aquí porque no se sabe qué hay debajo del recuadro).
+            if (!TryGetLensPermission(
+                    "Leer una zona de la pantalla para traducirla.",
+                    targetApp: null,
+                    out var translateDenial))
+            {
+                ShowTranslationNotice(translateDenial);
+                return;
+            }
+
             var capture = await _screenCaptureService.CaptureAsync(
                 target, _lifetimeCancellation.Token);
 
@@ -8084,14 +8164,37 @@ public partial class MainWindow : Window
 
     private async Task<CommandExecutionResult> ExecuteLensAsync(LensMode mode)
     {
-        var now = DateTimeOffset.Now;
         var context = _ambientContextProvider.Capture(_ambientForegroundTracker.LastExternalWindowHandle);
 
+        // El permiso se pide ANTES de abrir la solicitud ambiental. Con «Preguntar» el diálogo es
+        // modal y el reloj de atasco sigue corriendo: si la solicitud ya estuviera abierta y la
+        // persona tardara en contestar, caducaría y la respuesta de Lens nunca llegaría a la
+        // píldora. Solo se pregunta si la ventana va a poder mirarse; si no, las comprobaciones de
+        // más abajo la rechazan igual sin capturar nada.
+        string? lensDenial = null;
+        if (context is { IsSensitive: false } &&
+            _ambientForegroundTracker.LastExternalWindowHandle != 0 &&
+            !TryGetLensPermission(
+                $"Sakura Lens — {LensModeLabel(mode)}: mirar la ventana activa.",
+                FlowExclusionCheck.DescribeTarget(context),
+                out var denial))
+        {
+            lensDenial = denial;
+        }
+
         var beginResult = _ambientRequestManager.Begin(
-            $"Sakura Lens — {LensModeLabel(mode)}", context, now);
+            $"Sakura Lens — {LensModeLabel(mode)}", context, DateTimeOffset.Now);
         if (!beginResult.Success)
         {
             return CommandExecutionResult.Failure(beginResult.Message);
+        }
+
+        if (lensDenial is not null)
+        {
+            // La solicitud se abre y se cierra en el acto solo para que la denegación se vea en la
+            // píldora; no queda nada abierto esperando.
+            _ambientRequestManager.Fail(lensDenial, DateTimeOffset.Now);
+            return CommandExecutionResult.Success();
         }
 
         CheckAmbientRequest();
@@ -8331,6 +8434,13 @@ public partial class MainWindow : Window
         // insertor comprobará después que el foco no cambió.
         _flowTargetWindowHandle = _ambientForegroundTracker.LastExternalWindowHandle;
 
+        // El permiso se decide ANTES de abrir el micrófono: si la persona bloqueó Flow o excluyó
+        // esa aplicación, ni siquiera se graba.
+        if (IsFlowDeniedForTarget("Dictar en la aplicación activa"))
+        {
+            return;
+        }
+
         var stopSignal = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         _flowStopSignal = stopSignal;
@@ -8388,6 +8498,33 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Consulta el broker contra la ventana recordada como destino. Solo detiene el dictado si está
+    /// denegado (Flow bloqueado o aplicación excluida); «Preguntar» no se resuelve aquí porque un
+    /// diálogo robaría el foco a la aplicación destino (ver <see cref="FlowExclusionCheck"/>).
+    /// </summary>
+    private bool IsFlowDeniedForTarget(string description)
+    {
+        var context = _ambientContextProvider.Capture(_flowTargetWindowHandle);
+        var decision = FlowExclusionCheck.Evaluate(
+            _preferences.Permissions,
+            description,
+            FlowExclusionCheck.DescribeTarget(context));
+
+        if (!decision.IsDenied)
+        {
+            return false;
+        }
+
+        RecordAudit(
+            AuditCapability.Permisos,
+            "Acción denegada (Flow)",
+            $"{description} — {decision.Reason}",
+            "Permiso denegado");
+        ShowFlowNotice(CapsuleKind.Warning, "Dictado no permitido", decision.Reason);
+        return true;
+    }
+
+    /// <summary>
     /// Diseño D6.3 — rama propia para el dictado: NO pasa por
     /// <c>HandleVoiceRecognitionResultAsync</c> ni por <c>ProcessPromptAsync</c>. Lo dictado es
     /// texto que la persona quiere escribir en otra aplicación, no una orden para Sakura; mezclarlo
@@ -8408,6 +8545,15 @@ public partial class MainWindow : Window
             FlowSettingsParser.ParseSnippets(_preferences.FlowSnippets));
 
         var text = SpanishDictationNormalizer.Normalize(recognition.Text, options);
+
+        // Se vuelve a comprobar al escribir: entre pulsar y soltar el dictado la persona pudo
+        // cambiar de ventana, y la exclusión vale para donde se va a escribir de verdad. Lo dictado
+        // se descarta (no va al portapapeles): podría ser justo lo que se quiso proteger.
+        if (IsFlowDeniedForTarget("Escribir el dictado en la aplicación activa"))
+        {
+            return;
+        }
+
         var insertion = _flowTextInserter.Insert(text, _flowTargetWindowHandle);
 
         if (insertion.IsInserted)

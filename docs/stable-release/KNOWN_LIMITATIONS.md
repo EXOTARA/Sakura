@@ -318,6 +318,26 @@ cuenta en SignPath con 2FA y enviar el formulario. Después, cablear el flujo de
 los `.sha256` al final, sobre los archivos ya firmados).
 **Para estable:** no bloquea RC. La automática se habilita solo con firma + rollback probado.
 
+### L15 — No todas las capacidades pasan por el Permission Broker ⚠️ (2026-09-18)
+**Qué:** Personalizar muestra nivel y exclusiones para las seis capacidades, pero no todas se consultan.
+**Ya pasan por el broker:** Memoria (borrado total), Proyecto, restaurar copia, Computer Use, **Lens**
+(0.30.31: antes de CADA captura de pantalla —modos de Lens, Explicar ventana, contexto visual,
+capturas y traducir zona—; las zonas y la pantalla entera no dicen qué aplicación hay debajo, así que
+ahí cuenta el nivel pero no las exclusiones por aplicación) y **Flow** (0.30.31: antes de abrir el
+micrófono y antes de escribir, Bloqueado y exclusiones).
+**Sin resolver:** en **Flow**, el nivel «Preguntar» no pregunta: un diálogo le robaría el foco a la
+aplicación destino y el dictado acabaría en el portapapeles. Se comporta como si estuviera permitido.
+Adler eligió (2026-09-18) dejarlo así en 0.30.31: preguntar en Flow queda como **bloque aparte**, por el
+robo de foco. Bloqueado y aplicación excluida sí se cumplen.
+**Rutas de captura de pantalla que TODAVÍA no pasan por Lens (pendientes, bloque siguiente):** la
+grabación de pantalla (`StartRecordingAsync`, `MainWindow.Capture.cs`) y la lectura del texto
+seleccionado (`MainWindow.Selection.cs`).
+**Cambio de comportamiento:** Lens viene en «Preguntar» por omisión, así que ahora pregunta antes de cada
+uso salvo que se pase a «Permitido» en Personalizar.
+**No se ha comprobado que pasen:** Optimización y el resto de rutas de Memoria y Proyecto; no se afirma
+cobertura general.
+**Para estable:** decidir cómo preguntar en Flow sin perder el foco y auditar cada capacidad restante.
+
 ## Fuera de alcance de 1.0 (decidido, no es limitación)
 
 Puentes de mensajería · marketplace comunitario · automatización de navegador (experimental) ·

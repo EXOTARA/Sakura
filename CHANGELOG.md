@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.31-beta]
+
+### Corregido
+
+- **Lo que eliges en Personalizar para Lens y el dictado (Flow) ahora se cumple.** Antes esos dos permisos se podían cambiar pero Sakura no los consultaba: aunque pusieras Lens en «Bloqueado» o excluyeras una aplicación, seguía mirando o dictando en ella.
+  - Lens con «Bloqueado», o sobre una aplicación excluida, no captura la ventana ni la lee: se para antes de mirar.
+  - **Cambio visible:** Lens viene en «Preguntar» por omisión, así que quien no haya tocado Personalizar verá ahora una pregunta antes de cada uso de Lens, incluidos «Explicar ventana» (Ctrl + Shift + Espacio), las capturas y la traducción de una zona. Si prefieres que no pregunte, pon «Ver la pantalla (Lens)» en «Permitido» en Personalizar.
+  - Vale cada vez que Sakura captura la pantalla o una ventana para analizarla: los modos de Lens, «Explicar ventana», el contexto visual, las capturas y la traducción de una zona. Al denegar se dice el motivo una sola vez.
+  - Todavía no pasan por este permiso la grabación de pantalla ni la lectura del texto seleccionado; quedan para un bloque siguiente.
+  - El dictado con «Bloqueado», o en una aplicación excluida, ni abre el micrófono; y si cambias de ventana mientras dictas, se vuelve a comprobar antes de escribir y el texto se descarta en vez de escribirse.
+  - Todo queda en el registro de actividad.
+  - Limitación: en el dictado, «Preguntar» todavía no pregunta y dicta como antes (un aviso le quitaría el foco a la aplicación donde escribes). «Bloqueado» y las aplicaciones excluidas sí se cumplen.
+
 ## [0.30.30-beta]
 
 ### Nuevo
