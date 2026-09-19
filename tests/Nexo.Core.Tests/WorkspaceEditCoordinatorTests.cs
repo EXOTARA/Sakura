@@ -33,8 +33,20 @@ public sealed class WorkspaceEditCoordinatorTests
 
         public List<string> Deleted { get; } = [];
 
-        public (bool Existed, string Content) ReadForCheckpoint(string authorizedRoot, string relativePath) =>
-            Files.TryGetValue(relativePath, out var content) ? (true, content) : (false, string.Empty);
+        /// <summary>Simula un archivo que no se puede leer (bloqueado, sin permiso).</summary>
+        public bool Unreadable { get; set; }
+
+        public (bool Existed, bool Readable, string Content) ReadForCheckpoint(string authorizedRoot, string relativePath)
+        {
+            if (Unreadable)
+            {
+                return (false, false, string.Empty);
+            }
+
+            return Files.TryGetValue(relativePath, out var content)
+                ? (true, true, content)
+                : (false, true, string.Empty);
+        }
 
         public WorkspaceStepResult WriteFile(string authorizedRoot, string relativePath, string content)
         {
@@ -213,6 +225,41 @@ public sealed class WorkspaceEditCoordinatorTests
         var checkpoint = Assert.Single(checkpoints.Saved);
         Assert.True(checkpoint.PreviousExisted);
         Assert.Equal("contenido anterior", checkpoint.PreviousContent);
+    }
+
+    [Fact]
+    public void AFileThatCannotBeRead_IsNotReplaced_AndNoCheckpointIsSaved()
+    {
+        // «No pude leerlo» no es «no existía»: tratarlo como nuevo lo reemplazaba y, al deshacer, lo
+        // borraba.
+        var (coordinator, writer, checkpoints, audit) = Build();
+        writer.Files["src\\Program.cs"] = "trabajo de la persona";
+        writer.Unreadable = true;
+
+        var result = coordinator.Apply(Edit(), Settings());
+
+        Assert.False(result.Success);
+        Assert.Contains("No pude leer", result.Detail);
+        Assert.Equal("trabajo de la persona", writer.Files["src\\Program.cs"]);
+        Assert.Empty(checkpoints.Saved);
+        Assert.Contains(audit.Entries, entry => entry.Action == "Cambio no aplicado");
+    }
+
+    [Fact]
+    public void RevertingWhenTheFileCannotBeRead_DoesNotClaimItIsGone()
+    {
+        var (coordinator, writer, checkpoints, _) = Build();
+        writer.Files["src\\Program.cs"] = "antes";
+        var applied = coordinator.Apply(Edit(content: "después"), Settings());
+        Assert.True(applied.Success);
+
+        writer.Unreadable = true;
+        var result = coordinator.Revert(applied.CheckpointId, Settings());
+
+        Assert.False(result.Success);
+        Assert.DoesNotContain("ya no existe", result.Detail);
+        Assert.Contains("No pude comprobar", result.Detail);
+        Assert.Single(checkpoints.Saved);
     }
 
     // ---------- Camino feliz ----------

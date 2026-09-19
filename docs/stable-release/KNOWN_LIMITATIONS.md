@@ -374,6 +374,36 @@ enfoque, rutinas y la píldora en el sitio. Los hábitos entran en la copia prev
 - **Nada de esto se reprodujo ejecutando la app**: hay pruebas automáticas de los almacenes y los
   gestores, pero no una prueba en vivo.
 
+### L17 — Los documentos ya no pisan archivos, pero el nombre no es el título (0.30.33, 2026-09-18)
+**Qué se cubre:** los documentos (Word, Excel, PowerPoint), las conversaciones exportadas y las
+capturas se crean con `FileMode.CreateNew`: numerar y crear es una sola operación y un archivo que ya
+existe no se toca nunca. Un título con dos puntos, interrogación, barra, etc. se limpia para el nombre
+del archivo en vez de rechazarse (el documento por dentro conserva el título exacto). Si la escritura
+falla, se borra lo que quedó a medias. El acompañante de proyecto ya no reemplaza un archivo que no
+pudo leer.
+**Qué NO se cubre:**
+- El nombre del archivo puede no coincidir con el título del documento («¿Qué es la fotosíntesis?»
+  se guarda como «¿Qué es la fotosíntesis.docx») y no se avisa de ello.
+- Un fallo al guardar un documento, una captura o una conversación se anuncia **solo en la cápsula**,
+  que el Narrador puede no leer si no tiene el foco (no comprobado). El mensaje no se manda al
+  asistente a propósito: el historial del asistente viaja al proveedor de IA en la nube si hay uno
+  configurado (mismo motivo que L16).
+- Si el proceso muere justo mientras escribe, puede quedar un documento incompleto: el borrado de lo
+  que quedó a medias solo ocurre cuando la escritura falla, no cuando la app desaparece.
+- El defecto del acompañante de proyecto (un archivo ilegible tratado como inexistente) **no se
+  reprodujo**: es una hipótesis con arreglo barato. Con el archivo bloqueado en exclusiva ya no se
+  destruía nada. Alguna edición que antes ocurría ahora se rechaza con un mensaje.
+- Los 200 intentos de numeración son un tope duro: con 200 archivos del mismo nombre, se rechaza.
+- Los documentos siguen yendo solo al escritorio y no se puede elegir ni cambiar el nombre antes de
+  guardar. `CaptureFileNames.Unique` sigue sin tope de intentos (hoy siempre termina).
+- Carpetas sincronizadas (OneDrive): `CreateNew` protege contra pisar, no contra que el cliente de
+  sincronización renombre o mueva por detrás. No se añadieron reintentos; no hay un caso observado.
+- No hay una prueba que compruebe que **toda** escritura en una carpeta personal pasa por
+  `FreshFileWriter`; una ruta nueva podría volver a pisar.
+- Si abrir el explorador tras exportar una conversación falla, ya no se dice «No pude guardarla»: la
+  cápsula dice que se guardó y que no se pudo abrir la carpeta (corregido en 0.30.33).
+- **Nada de esto se reprodujo ejecutando la app**: hay pruebas automáticas, no una prueba en vivo.
+
 ## Fuera de alcance de 1.0 (decidido, no es limitación)
 
 Puentes de mensajería · marketplace comunitario · automatización de navegador (experimental) ·

@@ -5,8 +5,10 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Nexo.Core.Ai;
+using Nexo.Core.Storage;
 using Nexo.Core.Vision;
 using Nexo.Windows.Recording;
+using Nexo.Windows.Storage;
 
 namespace Nexo.App;
 
@@ -245,14 +247,27 @@ public partial class MainWindow
         {
             var path = CaptureFileNames.ScreenshotPath(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), DateTimeOffset.Now, File.Exists);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllBytes(path, png);
+            var folder = Path.GetDirectoryName(path)!;
+            Directory.CreateDirectory(folder);
+
+            // ScreenshotPath sigue decidiendo carpeta y nombre con la marca de tiempo, pero ya no es la
+            // única defensa: FreshFileWriter numera y crea en una sola operación, así que dos capturas
+            // en el mismo segundo no se pisan ni con una carrera.
+            var saved = FreshFileWriter.Write(folder, Path.GetFileName(path), png);
+            if (!saved.Saved)
+            {
+                _capsuleWindow.ShowMessage(CapsuleKind.Error, "No pude guardar la captura", saved.Message, _preferences.Position);
+                return;
+            }
+
             _capsuleWindow.ShowMessage(
                 CapsuleKind.Success, "Captura guardada", "En Imágenes › Sakura", _preferences.Position);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            _capsuleWindow.ShowMessage(CapsuleKind.Error, "No pude guardar la captura", exception.Message, _preferences.Position);
+            // Sin el mensaje crudo: trae la ruta con el usuario de Windows.
+            _capsuleWindow.ShowMessage(
+                CapsuleKind.Error, "No pude guardar la captura", SakuraDataWriteException.ReasonFor(exception), _preferences.Position);
         }
     }
 

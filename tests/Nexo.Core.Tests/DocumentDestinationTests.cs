@@ -108,6 +108,30 @@ public sealed class DocumentDestinationTests
         Assert.NotEmpty(refusal.Message);
     }
 
+    [Theory]
+    [InlineData("a/b")]
+    [InlineData("¿Qué es la fotosíntesis?")]
+    [InlineData("CON")]
+    [InlineData("...")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void ResolveFromTitle_NeverRefuses(string? title)
+    {
+        // La otra puerta: el título lo escribió un modelo y nadie lo va a corregir.
+        var target = DocumentDestination.ResolveFromTitle(DocumentFolder.Desktop, title, ".docx");
+
+        Assert.True(target.IsAllowed);
+        Assert.EndsWith(".docx", target.FileName);
+        Assert.Equal(DocumentFolder.Desktop, target.Folder);
+    }
+
+    [Fact]
+    public void ResolveFromTitle_CleansTheColon() =>
+        Assert.Equal(
+            "Introducción el problema.docx",
+            DocumentDestination.ResolveFromTitle(
+                DocumentFolder.Desktop, "Introducción: el problema", ".docx").FileName);
+
     [Fact]
     public void PlacesAreDescribedInWords_NotPaths() =>
         Assert.Equal("el escritorio", DocumentDestination.Describe(DocumentFolder.Desktop));

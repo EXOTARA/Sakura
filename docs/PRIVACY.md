@@ -29,6 +29,10 @@ la otra cambia en el mismo commit.
   `Imágenes\Sakura` y una grabación a `Vídeos\Sakura`, como archivos normales. La grabación incluye
   el sonido del equipo y, solo si se marca, el del micrófono; se codifica en el propio equipo y
   Sakura no la envía a ningún sitio.
+- **Los documentos y las conversaciones que guardas.** Un documento guardado con «Guardar como» va al
+  **escritorio**, con el nombre del primer apartado de la respuesta, y una conversación exportada va a
+  `Documentos\Sakura\Conversaciones`; los dos como archivos normales. Sakura no sobrescribe ninguno:
+  si el nombre está ocupado, numera.
 - **Cualquier forma de telemetría, analítica, informe de errores o medición de uso.** No existe en el
   código. No hay ninguna, ni anónima ni agregada ni opcional.
 

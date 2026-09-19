@@ -53,13 +53,31 @@ public sealed class FileSystemWorkspaceWriterTests : IDisposable
     [Fact]
     public void ReadForCheckpoint_TellsWhetherTheFileExisted()
     {
-        Assert.False(_writer.ReadForCheckpoint(_root, "nuevo.cs").Existed);
+        var (existedBefore, readableBefore, _) = _writer.ReadForCheckpoint(_root, "nuevo.cs");
+        Assert.False(existedBefore);
+        Assert.True(readableBefore);
 
         _writer.WriteFile(_root, "nuevo.cs", "contenido");
 
-        var (existed, content) = _writer.ReadForCheckpoint(_root, "nuevo.cs");
+        var (existed, readable, content) = _writer.ReadForCheckpoint(_root, "nuevo.cs");
         Assert.True(existed);
+        Assert.True(readable);
         Assert.Equal("contenido", content);
+    }
+
+    [Fact]
+    public void ReadForCheckpoint_ALockedFile_IsUnreadable_NotMissing()
+    {
+        File.WriteAllText(Path.Combine(_root, "abierto.cs"), "contenido");
+
+        // Bloqueado en exclusiva por otro programa: la lectura falla, pero el archivo EXISTE. Antes se
+        // hacía pasar por inexistente.
+        using var locked = new FileStream(
+            Path.Combine(_root, "abierto.cs"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        var (_, readable, _) = _writer.ReadForCheckpoint(_root, "abierto.cs");
+
+        Assert.False(readable);
     }
 
     [Fact]
