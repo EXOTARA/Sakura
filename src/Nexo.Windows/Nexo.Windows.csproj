@@ -15,6 +15,11 @@
     <PackageReference Include="Vosk" Version="0.3.38" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Para la costura de FreshFileWriter que simula la carrera entre comprobar y abrir. -->
+    <InternalsVisibleTo Include="Nexo.Windows.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -1,3 +1,4 @@
+using Nexo.Core.Storage;
 using Nexo.Core.Workspace;
 
 namespace Nexo.Windows.Workspace;
@@ -13,23 +14,26 @@ namespace Nexo.Windows.Workspace;
 /// </summary>
 public sealed class FileSystemWorkspaceWriter : IWorkspaceWriter
 {
-    public (bool Existed, string Content) ReadForCheckpoint(string authorizedRoot, string relativePath)
+    public (bool Existed, bool Readable, string Content) ReadForCheckpoint(string authorizedRoot, string relativePath)
     {
         if (!TryResolve(authorizedRoot, relativePath, out var fullPath))
         {
-            return (false, string.Empty);
+            // Una ruta que no se puede resolver no es «un archivo que no existe»: no se sabe.
+            return (false, false, string.Empty);
         }
 
         try
         {
             return File.Exists(fullPath)
-                ? (true, File.ReadAllText(fullPath))
-                : (false, string.Empty);
+                ? (true, true, File.ReadAllText(fullPath))
+                : (false, true, string.Empty);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)
         {
-            return (false, string.Empty);
+            // Antes esto devolvía «no existía», y el coordinador reemplazaba un archivo que solo
+            // había fallado al leerse. Ahora se dice la verdad: no se pudo leer.
+            return (false, false, string.Empty);
         }
     }
 
@@ -62,7 +66,10 @@ public sealed class FileSystemWorkspaceWriter : IWorkspaceWriter
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            return WorkspaceStepResult.Failed($"No pude escribir {relativePath}: {exception.Message}");
+            // Motivo genérico y no exception.Message: trae la ruta completa con el usuario de Windows y
+            // este texto acaba en el Audit Log y en mensajes del asistente.
+            return WorkspaceStepResult.Failed(
+                $"No pude escribir {relativePath}: {SakuraDataWriteException.ReasonFor(exception)}");
         }
     }
 
@@ -86,7 +93,8 @@ public sealed class FileSystemWorkspaceWriter : IWorkspaceWriter
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)
         {
-            return WorkspaceStepResult.Failed($"No pude borrar {relativePath}: {exception.Message}");
+            return WorkspaceStepResult.Failed(
+                $"No pude borrar {relativePath}: {SakuraDataWriteException.ReasonFor(exception)}");
         }
     }
 

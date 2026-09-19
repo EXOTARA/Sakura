@@ -33,8 +33,14 @@ public sealed record WorkspaceWriteResult(bool Success, string Detail, Guid Chec
 /// </summary>
 public interface IWorkspaceWriter
 {
-    /// <summary>Lee lo que hay ahora para poder volver a ello. <c>Existed</c> false si no existe.</summary>
-    (bool Existed, string Content) ReadForCheckpoint(string authorizedRoot, string relativePath);
+    /// <summary>
+    /// Lee lo que hay ahora para poder volver a ello. <c>Existed</c> false si no existe.
+    ///
+    /// <c>Readable</c> false significa que no se PUDO leer (bloqueado, sin permiso, ruta no
+    /// resoluble): es distinto de «no existe». Confundirlos hacía tratar como archivo nuevo uno que
+    /// simplemente no se podía leer, reemplazarlo y, al deshacer, borrarlo.
+    /// </summary>
+    (bool Existed, bool Readable, string Content) ReadForCheckpoint(string authorizedRoot, string relativePath);
 
     WorkspaceStepResult WriteFile(string authorizedRoot, string relativePath, string content);
 

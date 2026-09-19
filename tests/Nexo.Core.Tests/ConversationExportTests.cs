@@ -33,6 +33,18 @@ public sealed class ConversationExportTests
     }
 
     [Fact]
+    public void FileName_TwoExportsInTheSameMinute_GiveTheSameName()
+    {
+        // Medido: el nombre lleva la hora al minuto, así que dos exportaciones seguidas comparten
+        // nombre. Por eso al escribir hace falta numerar (FreshFileWriter): esta prueba deja
+        // documentado el porqué y avisa si algún día el nombre cambia.
+        var first = ConversationExport.FileName(Messages, Now.AddSeconds(10));
+        var second = ConversationExport.FileName(Messages, Now.AddSeconds(55));
+
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
     public void FileName_WithoutQuestions_HasAFallback() =>
         Assert.EndsWith("- Conversación.md", ConversationExport.FileName([], Now));
 }

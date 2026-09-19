@@ -59,7 +59,7 @@ public static class DocumentDestination
     /// Nombres reservados por MS-DOS que Windows sigue rechazando hoy. Un documento titulado «CON»
     /// es raro pero no imposible, y el fallo que produce no se parece en nada a su causa.
     /// </summary>
-    private static readonly string[] Reserved =
+    internal static readonly string[] Reserved =
     [
         "CON", "PRN", "AUX", "NUL",
         "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
@@ -67,7 +67,7 @@ public static class DocumentDestination
     ];
 
     /// <summary>Lo más largo que se admite, dejando sitio para la carpeta y la extensión.</summary>
-    private const int MaximumNameLength = 96;
+    internal const int MaximumNameLength = 96;
 
     /// <summary>
     /// Traduce cómo alguien nombra un sitio. Devuelve <c>null</c> cuando no reconoce ninguno, que no
@@ -170,6 +170,19 @@ public static class DocumentDestination
 
         return DocumentTarget.Allow(folder, name + extension);
     }
+
+    /// <summary>
+    /// La otra puerta: para un título que escribió un modelo, no una persona.
+    ///
+    /// <see cref="Resolve"/> rechaza, y eso es correcto para un nombre que alguien dictó y puede
+    /// repetir. Un título como «Introducción: el problema» lo escribe el modelo y nadie lo va a
+    /// corregir: rechazarlo tiraba el documento entero, ya hecho, después de preguntar por internet
+    /// y de descargar imágenes. Aquí se limpia y nunca se rechaza; el documento por dentro conserva
+    /// su título exacto, solo el nombre del archivo se adapta a lo que Windows admite.
+    /// </summary>
+    public static DocumentTarget ResolveFromTitle(
+        DocumentFolder folder, string? title, string extension, string fallback = "Respuesta de Sakura") =>
+        DocumentTarget.Allow(folder, DocumentFileName.Sanitize(title, extension, fallback));
 
     /// <summary>Cómo se dice el destino en un aviso, para no enseñar rutas.</summary>
     public static string Describe(DocumentFolder folder) => folder switch

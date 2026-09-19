@@ -83,6 +83,7 @@ using Nexo.Windows.SelfCheck;
 using Nexo.Windows.Resources;
 using Nexo.Windows.Settings;
 using Nexo.Windows.Skills;
+using Nexo.Windows.Storage;
 using Nexo.Windows.Tasks;
 using Nexo.Windows.Voice;
 using Nexo.Windows.Vision;
@@ -3549,7 +3550,11 @@ public partial class MainWindow : Window
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)
         {
-            ShowFlowNotice(CapsuleKind.Warning, "No pude guardarlo", exception.Message);
+            // Sin exception.Message: trae la ruta con el usuario de Windows.
+            ShowFlowNotice(
+                CapsuleKind.Warning,
+                "No pude guardarlo",
+                $"{Path.GetFileName(dialog.FileName)}: {SakuraDataWriteException.ReasonFor(exception)}");
             return;
         }
 
@@ -4760,22 +4765,28 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
-        {
-            var now = DateTimeOffset.Now;
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Sakura", "Conversaciones");
-            Directory.CreateDirectory(folder);
-            var path = Path.Combine(folder, ConversationExport.FileName(messages, now));
-            File.WriteAllText(path, ConversationExport.ToMarkdown(messages, now), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        var folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Sakura", "Conversaciones");
 
-            _capsuleWindow.ShowMessage(CapsuleKind.Success, "Conversación guardada", Path.GetFileName(path), _preferences.Position);
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or Win32Exception)
+        // Guardar y abrir el explorador se cuentan por separado (ConversationExportSaver): si solo
+        // falla abrir la carpeta, el archivo sí se guardó y no se dice lo contrario.
+        var outcome = ConversationExportSaver.Save(
+            folder,
+            messages,
+            DateTimeOffset.Now,
+            path => Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }));
+
+        if (!outcome.Saved)
         {
-            _capsuleWindow.ShowMessage(CapsuleKind.Warning, "No pude guardarla", exception.Message, _preferences.Position);
+            _capsuleWindow.ShowMessage(CapsuleKind.Warning, "No pude guardarla", outcome.Message, _preferences.Position);
+            return;
         }
+
+        _capsuleWindow.ShowMessage(
+            CapsuleKind.Success,
+            "Conversación guardada",
+            outcome.FolderOpened ? outcome.FileName : $"{outcome.FileName} — no pude abrir la carpeta.",
+            _preferences.Position);
     }
 
     /// <summary>
@@ -5940,7 +5951,11 @@ public partial class MainWindow : Window
             DocumentSaveFormat.PowerPoint => (".pptx", PresentationDocumentBuilder.BuildFromMarkdown(title, e.Answer, images, sources)),
             _ => (".docx", WordDocumentBuilder.BuildFromMarkdown(title, e.Answer, images, sources))
         };
-        var target = DocumentDestination.Resolve(DocumentFolder.Desktop, title, extension);
+        // Solo el NOMBRE DEL ARCHIVO se limpia: «title» sigue siendo el título de dentro del documento
+        // (ya construido arriba), que conserva sus dos puntos. Un título de modelo como «Introducción:
+        // el problema» ya no tira el documento entero por un nombre que nadie eligió.
+        var target = DocumentDestination.ResolveFromTitle(
+            DocumentFolder.Desktop, title, extension, "Respuesta de Sakura");
         var result = _documentDropService.Save(target, bytes);
 
         if (!result.Saved)

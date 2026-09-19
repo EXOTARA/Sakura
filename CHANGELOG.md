@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.30.33-beta]
+
+### Corregido
+
+- **Un documento cuyo título lleva dos puntos, una interrogación o una barra ya se guarda.** Antes Sakura hacía el documento entero —incluidas las búsquedas en internet— y luego se negaba a guardarlo diciendo que el nombre no valía, con un título que tú no habías elegido. Ahora el nombre del archivo se limpia («Introducción: el problema» queda como «Introducción el problema.docx») y por dentro el documento conserva el título exacto.
+- **Exportar la conversación dos veces seguidas ya no borra la primera.** Antes, dos exportaciones dentro del mismo minuto compartían nombre y la segunda pisaba a la anterior sin decir nada. Ahora la segunda sale numerada («… (2).md») y el explorador te señala esa.
+- **Si solo falla abrir la carpeta al exportar la conversación, ya no se dice que no se guardó.** Se avisa de que quedó guardada y de que no se pudo abrir la carpeta.
+- **Un archivo que ya existe no se toca nunca.** El documento nuevo sale numerado, como al copiar en Windows; antes era una comprobación previa, ahora es el propio sistema quien lo impide. Lo mismo con las capturas.
+- **Si algo falla a mitad de guardar, ya no queda un archivo roto con nombre de bueno.** Se borra lo que quedó a medias y se te dice que no se guardó, sin enseñarte rutas de tu equipo.
+- **Un archivo de tu proyecto que Sakura no puede leer ya no se sobrescribe.** Antes se trataba como si no existiera, y al deshacer se habría borrado. Ahora explica que no pudo leerlo y no toca nada. Puede que alguna edición que antes ocurría ahora se rechace con un mensaje.
+- **Los avisos de fallo al escribir ya no enseñan la ruta completa de tu equipo**, solo el nombre del archivo y un motivo sencillo.
+- **La página de privacidad ya dice dónde deja Sakura los documentos y las conversaciones**: el escritorio y `Documentos\Sakura\Conversaciones`.
+
+### Lo que este cambio NO cubre
+
+- No se ha reproducido ninguno de los casos ejecutando la app; están cubiertos por pruebas automáticas, no por una prueba en vivo.
+- Los documentos siguen yendo solo al escritorio y no puedes elegir el nombre antes de guardar. El nombre puede no coincidir con el título del documento y no se avisa.
+- Un corte de corriente o un cierre forzado justo al guardar sigue pudiendo dejar un documento a medias: solo se limpia cuando la escritura falla, no cuando la app desaparece.
+- El fallo se anuncia solo en la cápsula; no se ha comprobado si el Narrador lo lee cuando la cápsula no tiene el foco.
+- El caso del proyecto con un archivo ilegible no se reprodujo; es una precaución de bajo coste, no la corrección de una pérdida vista.
+
 ## [0.30.32-beta]
 
 ### Corregido

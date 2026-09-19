@@ -108,8 +108,21 @@ public sealed class WorkspaceEditCoordinator
         }
 
         // Paso 3: el checkpoint primero. Si la escritura falla a medias, la vuelta atrás ya existe.
-        var (existed, previousContent) = _writer.ReadForCheckpoint(
+        var (existed, readable, previousContent) = _writer.ReadForCheckpoint(
             settings.AuthorizedPath, edit!.RelativePath);
+
+        // Si no se pudo LEER, no se sabe si el archivo existía: tratarlo como «nuevo» lo reemplazaba
+        // y, al deshacer, lo borraba. Se rechaza antes de guardar ningún checkpoint. Sin rutas ni
+        // mensajes del sistema: solo el nombre relativo, que ya está en el Audit Log.
+        if (!readable)
+        {
+            var unreadable =
+                $"No pude leer «{edit.RelativePath}» para guardar la copia previa, así que no lo " +
+                "modifiqué.";
+
+            RecordRefusal(edit.RelativePath, unreadable, settings);
+            return WorkspaceWriteResult.Refused(unreadable);
+        }
 
         var checkpoint = new WorkspaceCheckpoint
         {
@@ -147,7 +160,7 @@ public sealed class WorkspaceEditCoordinator
         }
 
         // Paso 4: verificar releyendo.
-        var (_, actual) = _writer.ReadForCheckpoint(settings.AuthorizedPath, edit.RelativePath);
+        var (_, _, actual) = _writer.ReadForCheckpoint(settings.AuthorizedPath, edit.RelativePath);
         if (!string.Equals(actual, edit.NewContent, StringComparison.Ordinal))
         {
             // Paso 5: deshacer lo que quedó a medias.
@@ -243,8 +256,15 @@ public sealed class WorkspaceEditCoordinator
     {
         if (verifyUnchanged)
         {
-            var (existsNow, currentContent) = _writer.ReadForCheckpoint(
+            var (existsNow, readableNow, currentContent) = _writer.ReadForCheckpoint(
                 settings.AuthorizedPath, checkpoint.RelativePath);
+
+            // «No pude leerlo» no es «ya no existe»: decir lo segundo sería afirmar algo que no se sabe.
+            if (!readableNow)
+            {
+                return WorkspaceStepResult.Failed(
+                    $"No pude comprobar «{checkpoint.RelativePath}» en este momento, así que no lo toco.");
+            }
 
             if (!existsNow)
             {
@@ -271,8 +291,15 @@ public sealed class WorkspaceEditCoordinator
             // Verificar también al deshacer. Que la llamada no fallara no significa que el archivo
             // ya no esté, y "lo dejé como estaba" es justo la frase que no puede decirse a la
             // ligera.
-            var (stillThere, _) = _writer.ReadForCheckpoint(
+            var (stillThere, readableAfter, _) = _writer.ReadForCheckpoint(
                 settings.AuthorizedPath, checkpoint.RelativePath);
+
+            if (!readableAfter)
+            {
+                return WorkspaceStepResult.Failed(
+                    $"Pedí borrar {checkpoint.RelativePath} pero no pude comprobar si sigue ahí, " +
+                    "así que no lo doy por hecho.");
+            }
 
             return stillThere
                 ? WorkspaceStepResult.Failed(
@@ -288,7 +315,7 @@ public sealed class WorkspaceEditCoordinator
             return restored;
         }
 
-        var (_, actual) = _writer.ReadForCheckpoint(settings.AuthorizedPath, checkpoint.RelativePath);
+        var (_, _, actual) = _writer.ReadForCheckpoint(settings.AuthorizedPath, checkpoint.RelativePath);
 
         return string.Equals(actual, checkpoint.PreviousContent, StringComparison.Ordinal)
             ? WorkspaceStepResult.Ok($"Devolví {checkpoint.RelativePath} a como estaba.")
