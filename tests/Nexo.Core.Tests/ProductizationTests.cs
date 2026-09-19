@@ -85,6 +85,17 @@ public sealed class ProductizationTests
     }
 
     [Fact]
+    public void HabitsAreInTheInventory_SoTheyAreBackedUpAndKeptOnUninstall()
+    {
+        // Se escribían desde el 2026-09-16 y la copia previa a actualizar no los copiaba.
+        Assert.Contains(SakuraDataInventory.ToBackUp, item => item.FileName == "habits.json");
+        Assert.Contains(SakuraDataInventory.Personal, item => item.FileName == "habits.json");
+        Assert.Contains(
+            UninstallPlanner.Build(UninstallDataChoice.Conservar).WillBeKept,
+            item => item.FileName == "habits.json");
+    }
+
+    [Fact]
     public void TheOnlyEncryptedThingIsTheMemory() =>
         Assert.Equal(
             ["memory.dat"],
