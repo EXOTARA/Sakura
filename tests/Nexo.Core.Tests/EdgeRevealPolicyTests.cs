@@ -69,6 +69,45 @@ public sealed class EdgeRevealPolicyTests
         Assert.False(EdgeRevealPolicy.IsInHotZone(At(Left - 1, 500, SidebarPosition.Left)));
     }
 
+    [Fact]
+    public void OnTheOuterDesktopEdge_TheStripIsNarrow()
+    {
+        // 2026-09-18 — solo cuenta el borde extremo: seis píxeles, justo dentro y justo fuera.
+        var w = EdgeRevealPolicy.ExteriorHotZoneWidth;
+        Assert.True(EdgeRevealPolicy.IsInHotZone(At(Left + w - 1, 500, SidebarPosition.Left)));
+        Assert.False(EdgeRevealPolicy.IsInHotZone(At(Left + w, 500, SidebarPosition.Left)));
+        // Right es exclusivo: los píxeles reales son Right-w .. Right-1, w en total, como a la izquierda.
+        Assert.True(EdgeRevealPolicy.IsInHotZone(At(Right - w, 500, SidebarPosition.Right)));
+        Assert.False(EdgeRevealPolicy.IsInHotZone(At(Right - w - 1, 500, SidebarPosition.Right)));
+    }
+
+    [Fact]
+    public void OnASharedEdge_TheStripKeepsTheWideD38Width()
+    {
+        // D38: entre dos monitores el cursor cruza sin frenar; estrechar aquí lo haría inservible.
+        var w = EdgeRevealPolicy.HotZoneWidth;
+        var left = At(Left + w - 1, 500, SidebarPosition.Left) with { OnDesktopEdge = false };
+        var beyondLeft = At(Left + w, 500, SidebarPosition.Left) with { OnDesktopEdge = false };
+        Assert.True(EdgeRevealPolicy.IsInHotZone(left));
+        Assert.False(EdgeRevealPolicy.IsInHotZone(beyondLeft));
+
+        var right = At(Right - w, 500, SidebarPosition.Right) with { OnDesktopEdge = false };
+        Assert.True(EdgeRevealPolicy.IsInHotZone(right));
+        Assert.False(EdgeRevealPolicy.IsInHotZone(right with { CursorX = Right - w - 1 }));
+    }
+
+    [Fact]
+    public void TheOuterStripIsNarrowerThanTheSharedOne() =>
+        Assert.True(EdgeRevealPolicy.ExteriorHotZoneWidth < EdgeRevealPolicy.HotZoneWidth);
+
+    [Fact]
+    public void TheCornersAndMiddleAreUnchangedOnTheOuterEdge()
+    {
+        Assert.False(EdgeRevealPolicy.IsInHotZone(At(Left, 99, SidebarPosition.Left)));
+        Assert.False(EdgeRevealPolicy.IsInHotZone(At(Left, 901, SidebarPosition.Left)));
+        Assert.True(EdgeRevealPolicy.IsInHotZone(At(Left, 500, SidebarPosition.Left)));
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(50)]
@@ -138,4 +177,27 @@ public sealed class EdgeRevealPolicyTests
         // el ratón todavía en el borde la volvería a abrir sola.
         Assert.True(EdgeRevealPolicy.CooldownAfterHide > EdgeRevealPolicy.Dwell);
     }
+
+    // Monitor 0..1920 x 0..1080. La barra de tareas reserva 48 px en un borde: rcWork se mete.
+    [Theory]
+    [InlineData("arriba", false, true, true)]
+    [InlineData("izquierda", true, false, true)]
+    [InlineData("derecha", true, true, false)]
+    [InlineData("abajo", true, true, true)]
+    [InlineData("ninguna", true, true, true)]
+    public void TaskbarOnAnEdge_OnlyDisablesTheNarrowStripOnThatEdge(
+        string taskbar, bool topNarrow, bool leftNarrow, bool rightNarrow)
+    {
+        double workTop = taskbar == "arriba" ? 48 : 0;
+        double workLeft = taskbar == "izquierda" ? 48 : 0;
+        double workRight = taskbar == "derecha" ? 1872 : 1920;
+
+        Assert.Equal(topNarrow, EdgeRevealPolicy.UsesNarrowStrip(true, 0, workTop));
+        Assert.Equal(leftNarrow, EdgeRevealPolicy.UsesNarrowStrip(true, 0, workLeft));
+        Assert.Equal(rightNarrow, EdgeRevealPolicy.UsesNarrowStrip(true, 1920, workRight));
+    }
+
+    [Fact]
+    public void ANarrowStripNeverAppliesOnASharedDesktopEdge() =>
+        Assert.False(EdgeRevealPolicy.UsesNarrowStrip(false, 0, 0));
 }

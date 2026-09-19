@@ -23,13 +23,20 @@ public sealed class WindowsTopRevealWatcher : IDisposable
     private readonly System.Timers.Timer _timer;
     private readonly object _sync = new();
 
-    private DateTimeOffset? _insideSince;
+    private readonly RevealDwellGate _gate;
     private DateTimeOffset _suppressedUntil = DateTimeOffset.MinValue;
     private bool _enabled;
     private bool _disposed;
 
     public WindowsTopRevealWatcher()
+        : this(MouseButtons.AnyDown)
     {
+    }
+
+    /// <summary>El acceso a los botones va por un delegado para poder sustituirlo en pruebas.</summary>
+    public WindowsTopRevealWatcher(Func<bool> mouseButtonDown)
+    {
+        _gate = new RevealDwellGate(mouseButtonDown);
         _timer = new System.Timers.Timer(PollInterval.TotalMilliseconds) { AutoReset = true };
         _timer.Elapsed += (_, _) => Poll();
     }
@@ -46,7 +53,7 @@ public sealed class WindowsTopRevealWatcher : IDisposable
         lock (_sync)
         {
             _enabled = enabled;
-            _insideSince = null;
+            _gate.Reset();
 
             if (_disposed)
             {
@@ -66,7 +73,7 @@ public sealed class WindowsTopRevealWatcher : IDisposable
         lock (_sync)
         {
             _suppressedUntil = DateTimeOffset.UtcNow + TopRevealPolicy.CooldownAfterHide;
-            _insideSince = null;
+            _gate.Reset();
         }
     }
 
@@ -114,20 +121,18 @@ public sealed class WindowsTopRevealWatcher : IDisposable
             return null;
         }
 
-        if (!TryReadProbe(out var probe, out var area) || !TopRevealPolicy.IsInHotZone(probe))
+        var read = TryReadProbe(out var probe, out var area);
+        var inZone = read && TopRevealPolicy.IsInHotZone(probe);
+        var nearZone = read && TopRevealPolicy.IsNearHotZone(probe);
+
+        // 2026-09-18 — con un botón pulsado se está arrastrando o pulsando algo, no llamando al
+        // panel; el propio gate consulta el botón y desarma el borde hasta que el cursor se aparte
+        // (soltar una ventana maximizada en y=0 y quedarse quieto no lo abre).
+        if (!_gate.Observe(now, inZone, nearZone, TopRevealPolicy.Dwell))
         {
-            _insideSince = null;
             return null;
         }
 
-        _insideSince ??= now;
-
-        if (now - _insideSince.Value < TopRevealPolicy.Dwell)
-        {
-            return null;
-        }
-
-        _insideSince = null;
         _suppressedUntil = now + TopRevealPolicy.CooldownAfterHide;
         return area;
     }
@@ -154,7 +159,9 @@ public sealed class WindowsTopRevealWatcher : IDisposable
             return false;
         }
 
-        probe = new TopRevealProbe(cursor.X, cursor.Y, info.Work.Left, info.Work.Right, info.Work.Top);
+        probe = new TopRevealProbe(cursor.X, cursor.Y, info.Work.Left, info.Work.Right, info.Work.Top,
+            EdgeRevealPolicy.UsesNarrowStrip(
+                DesktopEdges.IsOuterTop(info.Monitor.Top), info.Monitor.Top, info.Work.Top));
         area = new TopRevealArea(info.Work.Left, info.Work.Top, info.Work.Right - info.Work.Left);
         return true;
     }

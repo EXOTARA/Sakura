@@ -10,7 +10,8 @@ public sealed record EdgeRevealProbe(
     double WorkAreaRight,
     double WorkAreaTop,
     double WorkAreaBottom,
-    SidebarPosition Side);
+    SidebarPosition Side,
+    bool OnDesktopEdge = true);
 
 /// <summary>
 /// Diseño D27 — llevar el ratón al borde donde vive Sakura la hace aparecer, sin atajo ni clic.
@@ -40,6 +41,19 @@ public static class EdgeRevealPolicy
     /// tanto el ancho como la permanencia, que exige quedarse y no solo pasar.
     /// </summary>
     public const double HotZoneWidth = 18;
+
+    /// <summary>
+    /// 2026-09-18 — franja estrecha para el borde EXTERIOR del escritorio (izquierda del monitor más
+    /// a la izquierda, derecha del más a la derecha, o cualquier lado con un solo monitor). Ahí el
+    /// cursor se frena contra el límite: el problema de D38 no existe, y seis píxeles bastan para
+    /// no exigir precisión. Se pidió que el panel salga lo más lejos posible de los bordes de
+    /// ventana, sin robar clics a la barra de desplazamiento ni a lo que se arrastra cerca.
+    ///
+    /// En un borde compartido entre dos monitores se mantiene <see cref="HotZoneWidth"/>: allí el
+    /// cursor cruza en vez de detenerse, y estrechar la franja devolvería el fallo de D38. Por eso
+    /// el ancho depende de <see cref="EdgeRevealProbe.OnDesktopEdge"/>.
+    /// </summary>
+    public const double ExteriorHotZoneWidth = 6;
 
     /// <summary>
     /// Proporción del alto que se excluye arriba y abajo. Las esquinas pertenecen a Windows: el
@@ -72,9 +86,20 @@ public static class EdgeRevealPolicy
     ///
     /// La regla es una aparición por visita al borde. Tras abrir algo, el borde no vuelve a abrir nada
     /// hasta que el ratón se aparta de verdad —fuera de esta franja, más ancha que la sensible para que
-    /// temblar en la frontera no cuente como irse y volver—.
+    /// temblar en la frontera no cuente como irse y volver—. Se calcula sobre la franja ancha: sigue
+    /// siendo mayor que la exterior (54 frente a 6 px), así que el margen solo crece.
     /// </summary>
     public const double RearmDistance = HotZoneWidth * 3;
+
+    /// <summary>
+    /// Si en este borde vale la franja estrecha. Exige dos cosas: que sea el límite exterior del
+    /// escritorio virtual, y que el área de trabajo llegue hasta el borde del monitor. Si hay una
+    /// barra de tareas (u otra reserva) en ese borde, rcWork empieza más adentro y una franja de
+    /// 4-6 px desde ahí sería mucho más difícil de alcanzar que los 18-20 px de antes; en ese
+    /// caso se usa la franja ancha. Una reserva en OTRO borde (p. ej. barra abajo) no afecta.
+    /// </summary>
+    public static bool UsesNarrowStrip(bool outerDesktopEdge, double monitorEdge, double workEdge) =>
+        outerDesktopEdge && monitorEdge == workEdge;
 
     /// <summary>Si el ratón está lo bastante lejos del borde como para que la próxima llegada cuente como nueva.</summary>
     public static bool HasLeftEdge(EdgeRevealProbe probe)
@@ -103,13 +128,17 @@ public static class EdgeRevealPolicy
             return false;
         }
 
+        // WorkAreaRight es exclusivo (el último píxel es Right - 1), así que con enteros la franja
+        // derecha usa >= para contar el ancho real y no uno menos que la izquierda.
         // El borde exterior se incluye y el interior no: la franja es [borde, borde + ancho) por la
         // izquierda y (borde - ancho, borde] por la derecha. Así una franja de 3 píxeles son
         // exactamente 3 píxeles, y el píxel que está justo fuera nunca cuenta como dentro.
+        var width = probe.OnDesktopEdge ? ExteriorHotZoneWidth : HotZoneWidth;
+
         return probe.Side == SidebarPosition.Right
-            ? probe.CursorX > probe.WorkAreaRight - HotZoneWidth &&
+            ? probe.CursorX >= probe.WorkAreaRight - width &&
               probe.CursorX <= probe.WorkAreaRight
             : probe.CursorX >= probe.WorkAreaLeft &&
-              probe.CursorX < probe.WorkAreaLeft + HotZoneWidth;
+              probe.CursorX < probe.WorkAreaLeft + width;
     }
 }
