@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.30.34-beta]
+
+### Corregido
+
+- **El panel de arriba y el lateral ya no se abren mientras arrastras una ventana.** Antes, al llevar una ventana hacia el borde superior para maximizarla, el panel bajaba solo. Ahora, con cualquier botón del ratón pulsado, los bordes no abren nada.
+  - Si sueltas la ventana con el cursor pegado al borde y te quedas quieto, el panel **tampoco** se abre: el borde solo vuelve a estar activo cuando apartas el cursor de la zona y regresas.
+  - El gesto normal (llevar el cursor al borde sin pulsar nada y quedarte) funciona igual que antes.
+- **Los bordes solo responden en el extremo de la pantalla.** La franja de arriba pasa de 20 a 4 píxeles y la lateral de 18 a 6, en el límite exterior del escritorio y sin barra de tareas en ese borde. Donde el borde se comparte con otro monitor (uno apilado encima, o el lateral entre dos pantallas) se conserva la franja de antes, porque ahí el cursor cruza sin detenerse y una más estrecha sería imposible de acertar.
+- La franja de la derecha medía un píxel menos que la de la izquierda; ahora miden lo mismo.
+
+### Lo que este cambio NO cubre
+
+- No se ha probado arrastrando ventanas con la app en marcha ni con varios monitores reales; está cubierto por pruebas automáticas de la lógica de decisión. La lectura de los botones y la detección del borde exterior del escritorio dependen de Windows y no tienen prueba automática.
+- Si la barra de tareas está en ese borde (arriba, o al lado donde vive el panel), la franja estrecha no se aplica y se usa la de antes (20 px arriba, 18 px en el lateral), porque el área de trabajo empieza debajo o al lado de la barra. No se ha probado con una barra de tareas real.
+- Un clic más rápido que el intervalo de sondeo (40 ms) puede no verse; se considera marginal.
+
 ## [0.30.33-beta]
 
 ### Corregido
