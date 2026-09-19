@@ -216,7 +216,12 @@ public sealed class NexoDiagnosticService : IDisposable
             var detail = $"{existing} archivo(s) de datos encontrado(s).";
             if (backups > 0)
             {
-                detail += $" {backups} respaldo(s) de recuperación disponible(s).";
+                // Un .corrupt-* es la copia de un archivo que no se pudo leer, guardada al lado. Sakura no
+                // la restaura sola: llamarla «respaldo de recuperación disponible» prometía algo que
+                // ningún código cumple. No lleva la ruta: este texto va al paquete de soporte y la ruta
+                // trae el nombre de usuario de Windows.
+                detail += $" {backups} copia(s) de archivos dañados guardada(s) junto a tus datos; " +
+                    "Sakura no las restaura sola.";
             }
 
             return new DiagnosticItem(

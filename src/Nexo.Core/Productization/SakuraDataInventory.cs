@@ -43,6 +43,14 @@ public static class SakuraDataInventory
             "Historial de sesiones de enfoque y descansos.",
             IsPersonal: true, IsEncrypted: false),
 
+        // 2026-09-18 — habits.json se escribía desde el 2026-09-16 y nadie lo añadió aquí, así que la
+        // copia previa a actualizar no lo copiaba. workspace.json NO está: NexoDataPaths.Workspace
+        // existe pero ningún código lo escribe (la carpeta autorizada vive en settings.json), y
+        // describir un archivo que nunca existe sería inventar datos.
+        new("habits.json", "Tus hábitos",
+            "Los hábitos que sigues y los días que los marcaste.",
+            IsPersonal: true, IsEncrypted: false),
+
         new("routines.json", "Tus rutinas",
             "Las rutinas que has definido y sus pasos.",
             IsPersonal: true, IsEncrypted: false),

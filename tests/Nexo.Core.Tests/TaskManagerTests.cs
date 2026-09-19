@@ -1,3 +1,4 @@
+using Nexo.Core.Storage;
 using Nexo.Core.Tasks;
 
 namespace Nexo.Core.Tests;
@@ -165,6 +166,98 @@ public sealed class TaskManagerTests
         Assert.False(result.Success);
     }
 
+    // ---------- Lectura fallida: no se escribe encima ----------
+
+    [Theory]
+    [InlineData(DataLoadStatus.Unreadable)]
+    [InlineData(DataLoadStatus.Corrupt)]
+    public void WhenTheFileCouldNotBeRead_NothingIsEverSavedOverIt(DataLoadStatus status)
+    {
+        // El defecto: la lectura fallida devolvía una lista vacía y el primer clic la escribía
+        // encima de lo que la persona sí tenía. Ahora se puede trabajar, pero en memoria.
+        var store = new MemoryTaskStore { Outcome = new DataLoadOutcome(status, "no se pudo leer") };
+        var manager = new TaskManager(store);
+        manager.Load();
+
+        var created = manager.Create("Tarea de esta sesión");
+        var completed = manager.Complete(created.Id);
+        var deleted = manager.Delete(created.Id);
+
+        Assert.True(manager.IsPersistenceSuspended);
+        Assert.Equal(status, manager.LoadOutcome.Status);
+        Assert.True(completed.Success);
+        Assert.True(deleted.Success);
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
+    public void WhenTheFileCouldNotBeRead_TheWorkStaysInMemory()
+    {
+        var store = new MemoryTaskStore { Outcome = DataLoadOutcome.Unreadable("bloqueado") };
+        var manager = new TaskManager(store);
+        manager.Load();
+
+        manager.Create("Sigue en pantalla");
+
+        Assert.Single(manager.GetAll());
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Theory]
+    [InlineData(DataLoadStatus.Ok)]
+    [InlineData(DataLoadStatus.Missing)]
+    public void WhenThereWasNothingToLose_SavingWorksAsBefore(DataLoadStatus status)
+    {
+        var store = new MemoryTaskStore { Outcome = new DataLoadOutcome(status) };
+        var manager = new TaskManager(store);
+        manager.Load();
+
+        manager.Create("Normal");
+
+        Assert.False(manager.IsPersistenceSuspended);
+        Assert.Equal(1, store.SaveCount);
+    }
+
+    [Fact]
+    public void ReloadingReevaluatesTheMode()
+    {
+        // Restaurar una copia recarga: si el archivo ya se lee, vuelve a guardarse.
+        var store = new MemoryTaskStore { Outcome = DataLoadOutcome.Unreadable("bloqueado") };
+        var manager = new TaskManager(store);
+        manager.Load();
+        Assert.True(manager.IsPersistenceSuspended);
+
+        store.Outcome = DataLoadOutcome.Ok;
+        manager.Load();
+        manager.Create("Ya guarda");
+
+        Assert.False(manager.IsPersistenceSuspended);
+        Assert.Equal(1, store.SaveCount);
+    }
+
+    [Fact]
+    public void AWriteFailure_KeepsTheChangeAndWarnsOnlyOnce()
+    {
+        var store = new MemoryTaskStore { FailWrites = true };
+        var manager = new TaskManager(store);
+        manager.Load();
+        var warnings = new List<DataWriteFailure>();
+        manager.WriteFailed += (_, failure) => warnings.Add(failure);
+
+        manager.Create("Uno");
+        manager.Create("Dos");
+
+        Assert.Equal(2, manager.GetAll().Count);
+        Assert.Single(warnings);
+
+        // Cuando vuelve a funcionar se rearma: el siguiente fallo vuelve a avisar.
+        store.FailWrites = false;
+        manager.Create("Tres");
+        store.FailWrites = true;
+        manager.Create("Cuatro");
+        Assert.Equal(2, warnings.Count);
+    }
+
     private sealed class MemoryTaskStore : ITaskStore
     {
         public MemoryTaskStore(IEnumerable<NexoTask>? tasks = null)
@@ -174,11 +267,25 @@ public sealed class TaskManagerTests
 
         public List<NexoTask> Tasks { get; private set; }
 
+        public DataLoadOutcome Outcome { get; set; } = DataLoadOutcome.Ok;
+
+        public bool FailWrites { get; set; }
+
+        public int SaveCount { get; private set; }
+
+        public DataLoadOutcome LastLoad => Outcome;
+
         public IReadOnlyList<NexoTask> Load() =>
             Tasks.Select(task => task.Copy()).ToArray();
 
         public void Save(IReadOnlyCollection<NexoTask> tasks)
         {
+            if (FailWrites)
+            {
+                throw new SakuraDataWriteException("tasks.json", "disco lleno");
+            }
+
+            SaveCount++;
             Tasks = tasks.Select(task => task.Copy()).ToList();
         }
     }

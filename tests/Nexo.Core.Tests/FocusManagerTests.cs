@@ -1,4 +1,5 @@
 using Nexo.Core.Focus;
+using Nexo.Core.Storage;
 
 namespace Nexo.Core.Tests;
 
@@ -371,6 +372,89 @@ public sealed class FocusManagerTests
         return manager;
     }
 
+    // ---------- Lectura fallida y recuperación tras cierre ----------
+
+    [Theory]
+    [InlineData(DataLoadStatus.Unreadable)]
+    [InlineData(DataLoadStatus.Corrupt)]
+    public void WhenTheFileCouldNotBeRead_NothingIsEverSavedOverIt(DataLoadStatus status)
+    {
+        var store = new MemoryFocusStore { Outcome = new DataLoadOutcome(status, "no se pudo leer") };
+        var manager = new FocusManager(store);
+        manager.Load();
+
+        var started = manager.Start(
+            TimeSpan.FromMinutes(25), null, FocusSessionKind.Focus, ReferenceNow);
+        var cancelled = manager.Cancel();
+
+        Assert.True(manager.IsPersistenceSuspended);
+        Assert.True(started.Success);
+        Assert.True(cancelled.Success);
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
+    public void AWriteFailure_KeepsTheStateAndWarnsOnlyOnce()
+    {
+        var store = new MemoryFocusStore { FailWrites = true };
+        var manager = new FocusManager(store);
+        manager.Load();
+        var warnings = new List<DataWriteFailure>();
+        manager.WriteFailed += (_, failure) => warnings.Add(failure);
+
+        manager.Start(TimeSpan.FromMinutes(5), null, FocusSessionKind.Focus, ReferenceNow);
+        manager.Pause(ReferenceNow.AddMinutes(1));
+
+        Assert.NotNull(manager.GetSnapshot(ReferenceNow).ActiveTimer);
+        Assert.Single(warnings);
+    }
+
+    [Fact]
+    public void RecoverAfterRestart_KeepsASessionThatEndedWhileClosed_AndMarksItRecovered()
+    {
+        var store = new MemoryFocusStore(new FocusState
+        {
+            ActiveTimer = new FocusTimer
+            {
+                Id = Guid.NewGuid(),
+                Label = "Estudio",
+                Kind = FocusSessionKind.Study,
+                StartedAt = ReferenceNow.AddHours(-3),
+                EndsAt = ReferenceNow.AddHours(-3).AddMinutes(25),
+                Duration = TimeSpan.FromMinutes(25),
+                PausedRemaining = TimeSpan.FromMinutes(25),
+                Status = FocusTimerStatus.Running
+            }
+        });
+        var manager = new FocusManager(store);
+        manager.Load();
+
+        var recovery = manager.RecoverAfterRestart(ReferenceNow);
+
+        Assert.NotNull(recovery);
+        Assert.Equal(TimeSpan.FromMinutes(25), recovery!.Completion.Duration);
+        Assert.Single(manager.GetHistory());
+        Assert.Null(manager.GetSnapshot(ReferenceNow).ActiveTimer);
+
+        // Ya no queda nada que el temporizador de la ventana pueda celebrar después.
+        Assert.Null(manager.CollectCompletion(ReferenceNow));
+    }
+
+    [Fact]
+    public void RecoverAfterRestart_LeavesARunningSessionAlone()
+    {
+        var store = new MemoryFocusStore();
+        var manager = new FocusManager(store);
+        manager.Load();
+        manager.Start(TimeSpan.FromMinutes(25), null, FocusSessionKind.Focus, ReferenceNow);
+
+        var recovery = manager.RecoverAfterRestart(ReferenceNow.AddMinutes(5));
+
+        Assert.Null(recovery);
+        Assert.NotNull(manager.GetSnapshot(ReferenceNow).ActiveTimer);
+        Assert.Empty(manager.GetHistory());
+    }
+
     private sealed class MemoryFocusStore : IFocusStore
     {
         public MemoryFocusStore(FocusState? state = null)
@@ -380,10 +464,24 @@ public sealed class FocusManagerTests
 
         public FocusState State { get; private set; }
 
+        public DataLoadOutcome Outcome { get; set; } = DataLoadOutcome.Ok;
+
+        public bool FailWrites { get; set; }
+
+        public int SaveCount { get; private set; }
+
+        public DataLoadOutcome LastLoad => Outcome;
+
         public FocusState Load() => State.Copy();
 
         public void Save(FocusState state)
         {
+            if (FailWrites)
+            {
+                throw new SakuraDataWriteException("focus.json", "disco lleno");
+            }
+
+            SaveCount++;
             State = state.Copy();
         }
     }

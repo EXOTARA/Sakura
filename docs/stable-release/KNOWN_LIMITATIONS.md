@@ -288,14 +288,14 @@ aunque no bloquee el build.
 
 ### L7 — Sin recuperación de settings semánticamente corruptos
 **Qué:** La escritura es atómica, pero no hay `.bak`. Un JSON válido con contenido inválido no se
-puede revertir. Se le suma el defecto **D3** medido en 1.1: `JsonSettingsStore.Load` **no llama a
-`Normalize()`** en las rutas de archivo ausente o corrupto, así que devuelve `SchemaVersion = 0` y
-el siguiente `Save` reejecuta todas las migraciones desde cero. Tras una corrupción, el shell no
-puede marcar el onboarding como completado en ese mismo arranque. La degradación dura un ciclo y
-no pierde datos del usuario, porque ya eran ilegibles.
+puede revertir. Tras una corrupción, `JsonSettingsStore.Load` parte de preferencias nuevas
+(`CreateFreshPreferences`, que fija `SchemaVersion = CurrentSchemaVersion`); el defecto D3 de 1.1
+—no normalizar en las rutas de archivo ausente o corrupto— **ya está arreglado**. Sigue siendo
+cierto que no hay recuperación semántica: los ajustes anteriores quedan en el `.corrupt-*` y nadie
+los restaura.
 **Aislamiento:** cubierto por `SettingsStoreCharacterizationTests` (escenario 4 de `TEST_MATRIX`).
 **No bloquea la fase 1.2.**
-**Para estable:** añadir copia previa `.bak` y normalizar también en las rutas de recuperación.
+**Para estable:** añadir copia previa `.bak` y recuperación semántica.
 
 ### L12 — La propiedad del mutex de instancia única es por hilo (D5)
 **Qué:** Dos `SingleInstanceCoordinator` en el **mismo hilo** se consideran ambos primarios: el
@@ -337,6 +337,42 @@ uso salvo que se pase a «Permitido» en Personalizar.
 **No se ha comprobado que pasen:** Optimización y el resto de rutas de Memoria y Proyecto; no se afirma
 cobertura general.
 **Para estable:** decidir cómo preguntar en Flow sin perder el foco y auditar cada capacidad restante.
+
+### L16 — La persistencia de Hoy y Enfoque es más segura, no está resuelta (0.30.32, 2026-09-18)
+**Qué se cubre:** tareas y enfoque distinguen «dañado» y «no se pudo abrir» de «vacío», avisan, y no
+escriben encima de un archivo que no pudieron leer (se sigue trabajando solo en memoria, y se dice).
+Un fallo al escribir avisa una vez en lugar de cerrar la app. Restaurar una copia recarga tareas,
+enfoque, rutinas y la píldora en el sitio. Los hábitos entran en la copia previa a actualizar.
+**Qué NO se cubre:**
+- Los otros siete almacenes JSON (ajustes, conversación, rutinas, checkpoints del proyecto y las
+  instantáneas de Computer Use, optimización y packs) comparten el patrón y el defecto de fondo:
+  siguen sin distinguir «no pude leer» de «vacío». Los hábitos y las solicitudes ambientales solo
+  dejan de renombrar un archivo que no pudieron abrir; su gestor no tiene modo de solo memoria.
+- Un `.corrupt-*` **no se restaura desde la app**: es una copia que se guarda al lado. Restaurar
+  desde una copia de seguridad sí funciona.
+- No hay `fsync`/`WriteThrough`: tras un corte de luz justo al guardar, NTFS puede dejar el archivo
+  en ceros. Se detecta como dañado y se avisa, pero no se evita. Es una hipótesis, no un caso visto.
+- Tras restaurar una copia con un temporizador en curso, no se ha comprobado que el mini temporizador
+  y la vista de Enfoque se actualicen bien.
+- Un archivo dañado sigue significando sesión sin guardar: tras reiniciar, Sakura empieza en blanco y
+  los datos viejos quedan en el `.corrupt-*`.
+- Una sesión de enfoque que terminó con el equipo apagado se cuenta con su duración programada: es
+  una estimación.
+- `workspace.json` figura como ruta en `NexoDataPaths` pero ningún código lo escribe; no está en el
+  inventario de datos.
+- Un archivo vacío, de solo espacios o con una forma inesperada (por ejemplo `[null]`) se trata como
+  dañado: se aparta y se avisa, aunque no destruya nada. Es deliberado, no se cambia.
+- **Segundo arranque tras un archivo dañado:** el archivo ya se apartó, así que sale «no existe», no
+  salta ningún aviso y Sakura guarda en blanco. Solo el aviso del primer arranque dice el nombre de la
+  copia `.corrupt-*` y que está en la carpeta de datos de Sakura (sin ruta, a propósito).
+- Los avisos de este bloque son mensajes normales del asistente: no existe un mecanismo de mensajes
+  «solo de interfaz», así que entran en el historial de la conversación (y en lo que se manda al
+  proveedor de IA, si se usa uno en la nube). Por eso no llevan rutas ni el mensaje crudo de Windows,
+  solo el nombre del archivo y un motivo genérico.
+- Una sesión de enfoque vencida hace más de 90 días no se recupera: queda fuera de la ventana del
+  historial y no se avisa de ella.
+- **Nada de esto se reprodujo ejecutando la app**: hay pruebas automáticas de los almacenes y los
+  gestores, pero no una prueba en vivo.
 
 ## Fuera de alcance de 1.0 (decidido, no es limitación)
 

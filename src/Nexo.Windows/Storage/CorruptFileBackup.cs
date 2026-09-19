@@ -15,7 +15,8 @@ public static class CorruptFileBackup
             File.Move(filePath, backupPath, overwrite: true);
             return backupPath;
         }
-        catch
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
         {
             return null;
         }

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.30.32-beta]
+
+### Corregido
+
+- **Si Sakura no puede leer tus tareas o tu enfoque, te lo dice y no escribe encima.** Antes arrancaba en blanco sin decir nada, y tu primer cambio guardaba esa lista vacía sobre lo que tenías.
+  - Puedes seguir usando Sakura, pero se te dice con claridad que lo que hagas **no se está guardando** y se perderá al cerrarla.
+  - Si el archivo está ocupado por otro programa, no se toca: cierra ese programa, reinicia Sakura y tus datos siguen ahí.
+  - Si el archivo estaba dañado, se aparta una copia y se te dice dónde quedó. Al reiniciar, Sakura empieza en blanco: **esa copia no se recupera sola**.
+  - Queda anotado en el registro de actividad.
+- **Si el disco está lleno o el archivo está ocupado al guardar, Sakura te avisa en lugar de cerrarse.** Lo que apuntaste sigue en pantalla, pero se te dice que no está en disco. El aviso sale una vez, no en cada pulsación.
+- **Restaurar una copia ya no se deshace solo.** Tus tareas, tu enfoque, tus rutinas y la píldora quedan puestos al momento; antes la app seguía con lo anterior y el siguiente cambio escribía encima de lo restaurado. Tus ajustes y tu conversación siguen pidiendo reiniciar, y ahora se dice así.
+- **La copia previa a actualizar ya incluye tus hábitos.** Antes se quedaban fuera, y también de la lista de lo que se conserva al desinstalar. Ahora cuentan como datos tuyos.
+- **Una sesión de enfoque que terminó con Sakura cerrada ya no se anuncia como si acabara de terminar.** Se conserva en tu historial y se te dice que se interrumpió; sin cápsula de éxito, sin sonido y sin voz. El tiempo es una estimación: cuenta lo que tenías programado aunque el equipo haya estado apagado.
+- **Los textos prometen menos y dicen más verdad.** «Ver qué guarda Sakura» ya no dice «todo», y el diagnóstico deja de hablar de «respaldos de recuperación disponibles»: un archivo dañado apartado es una copia que Sakura no restaura sola.
+
+### Lo que este cambio NO cubre
+
+- No se ha reproducido ninguno de los casos ejecutando la app; están cubiertos por pruebas automáticas, no por una prueba en vivo.
+- Solo Hoy y Enfoque tienen esta protección. Ajustes, conversación, rutinas y los demás archivos siguen igual, y los hábitos siguen sin modo «solo en memoria».
+- No se fuerza el volcado a disco: un corte de luz justo al guardar puede dejar un archivo dañado. Ahora se detecta y se dice, pero no se evita.
+
 ## [0.30.31-beta]
 
 ### Corregido

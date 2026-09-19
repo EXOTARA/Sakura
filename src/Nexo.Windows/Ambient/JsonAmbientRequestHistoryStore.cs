@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Nexo.Core.Ambient;
 using Nexo.Core.Diagnostics;
+using Nexo.Windows.Storage;
 
 namespace Nexo.Windows.Ambient;
 
@@ -35,10 +36,15 @@ public sealed class JsonAmbientRequestHistoryStore : IAmbientRequestHistoryStore
                 return JsonSerializer.Deserialize<AmbientRequestState>(json, JsonOptions)
                     ?? new AmbientRequestState();
             }
-            catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException or JsonException)
+            catch (JsonException)
             {
-                PreserveCorruptFile();
+                CorruptFileBackup.TryPreserve(_filePath);
+                return new AmbientRequestState();
+            }
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException)
+            {
+                // No se pudo abrir: no se aparta un archivo que puede estar sano.
                 return new AmbientRequestState();
             }
         }
@@ -58,19 +64,6 @@ public sealed class JsonAmbientRequestHistoryStore : IAmbientRequestHistoryStore
             var json = JsonSerializer.Serialize(state, JsonOptions);
             File.WriteAllText(temporaryPath, json);
             File.Move(temporaryPath, _filePath, overwrite: true);
-        }
-    }
-
-    private void PreserveCorruptFile()
-    {
-        try
-        {
-            var backupPath = _filePath + $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}";
-            File.Move(_filePath, backupPath, overwrite: true);
-        }
-        catch
-        {
-            // Un archivo dañado no debe impedir que Nexo abra.
         }
     }
 }

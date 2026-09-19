@@ -1,4 +1,5 @@
 using Nexo.Core.Commands;
+using Nexo.Core.Storage;
 
 namespace Nexo.Core.Tasks;
 
@@ -7,18 +8,51 @@ public sealed class TaskManager
     private readonly object _sync = new();
     private readonly ITaskStore _store;
     private readonly List<NexoTask> _tasks = [];
+    private bool _persistenceSuspended;
+    private bool _writeFailing;
 
     public TaskManager(ITaskStore store)
     {
         _store = store;
     }
 
+    /// <summary>
+    /// Cómo salió la última lectura del archivo. Quien arranca la app la consulta para avisar a la
+    /// persona si no se pudo leer.
+    /// </summary>
+    public DataLoadOutcome LoadOutcome { get; private set; } = DataLoadOutcome.Ok;
+
+    /// <summary>
+    /// Verdadero cuando el archivo existía pero no se pudo leer: se puede seguir trabajando, pero
+    /// solo en memoria, porque guardar escribiría la lista vacía que la lectura fallida fabricó
+    /// encima de lo que la persona sí tenía.
+    /// </summary>
+    public bool IsPersistenceSuspended
+    {
+        get { lock (_sync) { return _persistenceSuspended; } }
+    }
+
+    /// <summary>
+    /// Se dispara solo al pasar de «guardaba bien» a «falla»: con el disco lleno cada pulsación
+    /// fallaría y el aviso sería una plaga. Se rearma en cuanto un guardado vuelve a funcionar.
+    /// </summary>
+    public event EventHandler<DataWriteFailure>? WriteFailed;
+
     public void Load()
     {
         lock (_sync)
         {
             _tasks.Clear();
-            _tasks.AddRange(_store.Load().Select(Normalize).OrderBy(task => task.CreatedAt));
+            _tasks.AddRange(_store.Load()
+                .Where(task => task is not null)
+                .Select(Normalize)
+                .OrderBy(task => task.CreatedAt));
+
+            // Se consulta después de cargar: es la carga la que fija el resultado. Recargar (por
+            // ejemplo tras restaurar una copia) reevalúa el modo con el archivo nuevo.
+            LoadOutcome = _store.LastLoad;
+            _persistenceSuspended = !LoadOutcome.IsSafeToOverwrite;
+            _writeFailing = false;
         }
     }
 
@@ -403,8 +437,31 @@ public sealed class TaskManager
     /// <summary>Las tareas que no se soltaron.</summary>
     private IEnumerable<NexoTask> Active => _tasks.Where(task => task.ArchivedAt is null);
 
-    private void SaveLocked() =>
-        _store.Save(_tasks.Select(task => task.Copy()).ToArray());
+    private void SaveLocked()
+    {
+        if (_persistenceSuspended)
+        {
+            // No se escribe: el archivo que no se pudo leer podría ser lo único que queda de las
+            // tareas. El cambio se queda en memoria y la ventana ya avisó de que no se guarda.
+            return;
+        }
+
+        try
+        {
+            _store.Save(_tasks.Select(task => task.Copy()).ToArray());
+            _writeFailing = false;
+        }
+        catch (SakuraDataWriteException exception)
+        {
+            // El cambio se queda en memoria para que la persona no pierda lo que acaba de apuntar
+            // en esta sesión; lo que se avisa es que no está en disco.
+            if (!_writeFailing)
+            {
+                _writeFailing = true;
+                WriteFailed?.Invoke(this, new DataWriteFailure(exception.Path, exception.Reason));
+            }
+        }
+    }
 
     private static NexoTask Normalize(NexoTask task)
     {

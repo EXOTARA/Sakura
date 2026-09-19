@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Nexo.Core.Diagnostics;
 using Nexo.Core.Habits;
+using Nexo.Windows.Storage;
 
 namespace Nexo.Windows.Habits;
 
@@ -34,16 +35,16 @@ public sealed class JsonHabitStore : IHabitStore
             {
                 return JsonSerializer.Deserialize<List<Habit>>(File.ReadAllText(_filePath), JsonOptions) ?? [];
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+            catch (JsonException)
             {
-                try
-                {
-                    File.Move(_filePath, _filePath + $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true);
-                }
-                catch (Exception moveException) when (moveException is IOException or UnauthorizedAccessException)
-                {
-                }
-
+                CorruptFileBackup.TryPreserve(_filePath);
+                return [];
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // No se pudo abrir: no se aparta nada, el archivo puede estar sano. HabitManager no
+                // tiene modo de solo memoria (los hábitos vienen apagados de fábrica), así que un
+                // guardado posterior sí lo sobrescribiría: queda anotado en KNOWN_LIMITATIONS.
                 return [];
             }
         }

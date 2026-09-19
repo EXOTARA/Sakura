@@ -54,6 +54,7 @@ using Nexo.Core.Metrics;
 using Nexo.Core.Optimization;
 using Nexo.Core.Permissions;
 using Nexo.Core.Productization;
+using Nexo.Core.Storage;
 using Nexo.Core.SelfCheck;
 using Nexo.Core.Sequences;
 using Nexo.Core.Resources;
@@ -178,6 +179,7 @@ public partial class MainWindow : Window
     private readonly TaskManager _taskManager;
     private readonly JsonFocusStore _focusStore = new();
     private readonly NexoFocusManager _focusManager;
+    private FocusRecovery? _startupFocusRecovery;
     private readonly JsonRoutineStore _routineStore = new();
     private readonly RoutineManager _routineManager;
     private readonly RoutineRunner _routineRunner;
@@ -515,10 +517,21 @@ public partial class MainWindow : Window
         _managedOllamaSupervisor = managedOllamaSupervisor;
         _preferences = _settingsStore.Load();
         _preferences.StartWithWindows = _startupService.IsEnabled();
+        // Los avisos de fallo al guardar se suscriben ANTES de cualquier Load o recuperación que
+        // pueda guardar: si ese primer guardado fallara sin nadie escuchando, el gestor daría el
+        // fallo por avisado y los siguientes ya no se mostrarían. El manejador pasa al hilo de la
+        // ventana con BeginInvoke, así que corre cuando el constructor ya terminó.
         _taskManager = new TaskManager(_taskStore);
+        _taskManager.WriteFailed += (_, failure) => ReportDataWriteFailed("tus tareas", "tasks.json", failure);
         _taskManager.Load();
         _focusManager = new NexoFocusManager(_focusStore);
+        _focusManager.WriteFailed += (_, failure) => ReportDataWriteFailed("tu enfoque", "focus.json", failure);
         _focusManager.Load();
+
+        // Si el temporizador guardado venció con Sakura cerrada, se cierra aquí, antes de que el
+        // primer CheckFocusTimer lo encuentre y lo celebre con cápsula, sonido y voz como si
+        // acabara de terminar. El aviso honesto sale desde Window_Loaded, cuando ya hay ventana.
+        _startupFocusRecovery = _focusManager.RecoverAfterRestart(DateTimeOffset.Now);
         _routineManager = new RoutineManager(_routineStore);
         _routineManager.Load();
         _routineRunner = new RoutineRunner(new NexoAutomationActionExecutor(
@@ -3263,7 +3276,9 @@ public partial class MainWindow : Window
     private void ShowDataInventory()
     {
         var message = new StringBuilder();
-        message.AppendLine($"Todo lo que guardo está en {NexoDataPaths.RootDirectory}:");
+        // «Todo» prometía de más: junto a estos archivos pueden quedar copias de archivos dañados
+        // (*.corrupt-*) y temporales de una escritura interrumpida (*.tmp), que no se listan.
+        message.AppendLine($"Estos son los archivos de datos que guardo en {NexoDataPaths.RootDirectory}:");
 
         foreach (var item in SakuraDataInventory.All)
         {
@@ -3277,6 +3292,11 @@ public partial class MainWindow : Window
                 .Append(item.IsPersonal ? "Contiene datos tuyos." : "No contiene datos personales.")
                 .AppendLine(item.IsEncrypted ? " Cifrado." : string.Empty);
         }
+
+        message.AppendLine();
+        message.AppendLine(
+            "Además, en esa carpeta pueden quedar copias de archivos dañados (su nombre termina en " +
+            ".corrupt- y la fecha) y archivos temporales (.tmp).");
 
         _assistantView.AddSakuraMessage(message.ToString().TrimEnd());
         NavigateTo("Assistant", animate: true);
@@ -3337,12 +3357,150 @@ public partial class MainWindow : Window
 
         if (result.Success)
         {
+            // Antes solo se decía «reinicia», pero la app seguía con lo anterior en memoria y el
+            // siguiente cambio de una tarea escribía encima de lo recién restaurado. Se recarga en
+            // el sitio lo que se puede; los ajustes y la conversación viven en objetos que la
+            // ventana entera comparte y siguen pidiendo reiniciar.
+            _taskManager.Load();
+            _focusManager.Load();
+            _routineManager.Load();
+            _ambientRequestManager.Load();
+            _habitManager?.Load();
+            var restoredFocus = _focusManager.RecoverAfterRestart(DateTimeOffset.Now);
+
+            _tasksView.Refresh();
+            _routinesView.Refresh();
+            RefreshHomeView();
+            CheckFocusTimer();
+            CheckAmbientRequest();
+            ReportDataLoadProblems();
+            ReportFocusRecovery(restoredFocus);
+
             _assistantView.AddSakuraMessage(
-                "Reinicia Sakura para que use los datos restaurados.");
+                "Tus tareas, tu enfoque, tus rutinas y la píldora ya usan los datos restaurados. " +
+                "Tus ajustes y tu conversación no cambian hasta que reinicies Sakura.");
         }
 
         RefreshAuditPanel();
     }
+
+    /// <summary>
+    /// Si tareas o enfoque no se pudieron leer al cargar, lo dice con claridad y sin bloquear: se
+    /// puede seguir trabajando, pero en memoria. Lo que no puede significar «avisar sin bloquear» es
+    /// escribir encima del archivo que no se pudo leer, y los managers ya se niegan a hacerlo.
+    /// </summary>
+    private void ReportDataLoadProblems()
+    {
+        ReportDataLoadProblem("tus tareas", "tasks.json", _taskManager.LoadOutcome);
+        ReportDataLoadProblem("tu enfoque", "focus.json", _focusManager.LoadOutcome);
+    }
+
+    private void ReportDataLoadProblem(string what, string fileName, DataLoadOutcome outcome)
+    {
+        if (outcome.IsSafeToOverwrite)
+        {
+            return;
+        }
+
+        var message = new StringBuilder();
+        if (outcome.Status == DataLoadStatus.Unreadable)
+        {
+            message.Append($"No pude leer {what}: el archivo {fileName} está ocupado por otro programa o no tengo permiso. ")
+                .Append("No lo he tocado. ")
+                .Append("Puedes seguir usando Sakura, pero lo que hagas ahora NO se está guardando y se perderá al cerrarla. ")
+                .Append("Cierra el programa que lo tenga abierto y reinicia Sakura: tus datos siguen ahí.");
+        }
+        else if (!string.IsNullOrWhiteSpace(outcome.PreservedPath))
+        {
+            message.Append($"El archivo de {what} ({fileName}) estaba dañado y no pude leerlo. ")
+                // Solo el nombre del archivo y «la carpeta de datos»: estos mensajes viajan en el
+                // historial de la conversación (proveedor de IA, exportación) y una ruta trae el
+                // nombre de usuario de Windows. Es también lo que hay que decir en el segundo
+                // arranque, cuando ya no salta ningún aviso y Sakura guarda en blanco.
+                .Append($"Guardé una copia aparte, «{Path.GetFileName(outcome.PreservedPath)}», en la carpeta de datos de Sakura; no la he tocado. ")
+                .Append("Puedes seguir usando Sakura, pero lo que hagas ahora NO se está guardando y se perderá al cerrarla. ")
+                .Append("Si reinicias, Sakura empezará en blanco: esa copia no la recupera sola. ")
+                .Append("Si tienes una copia de seguridad, puedes restaurarla desde la paleta de comandos.");
+        }
+        else
+        {
+            message.Append($"El archivo de {what} ({fileName}) estaba dañado y no pude leerlo ni apartarlo. ")
+                .Append("No lo he tocado. ")
+                .Append("Puedes seguir usando Sakura, pero lo que hagas ahora NO se está guardando y se perderá al cerrarla. ")
+                .Append("Si tienes una copia de seguridad, puedes restaurarla desde la paleta de comandos.");
+        }
+
+        _assistantView.AddSakuraMessage(message.ToString());
+        ShowFlowNotice(
+            CapsuleKind.Warning,
+            $"No pude leer {what}",
+            "Lo que hagas ahora no se está guardando. Abre el asistente para ver el detalle.");
+        RecordDataAudit(
+            $"No se pudo leer {what}",
+            // Solo el nombre del archivo: la ruta trae el usuario de Windows y el registro se puede
+            // exportar en el paquete de soporte.
+            $"{fileName}: {(outcome.Status == DataLoadStatus.Unreadable ? "no legible" : "dañado")}. No se escribe encima; se trabaja en memoria.");
+    }
+
+    /// <summary>
+    /// Guardar empezó a fallar (disco lleno, archivo ocupado). Antes la excepción subía hasta el
+    /// manejador del clic y cerraba la app. Puede llegar desde cualquier hilo, y el manager la
+    /// invoca con su cerrojo tomado: se pasa al hilo de la ventana para no cruzar los dos.
+    /// </summary>
+    private void ReportDataWriteFailed(string what, string fileName, DataWriteFailure failure)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _assistantView.AddSakuraMessage(
+                // failure.Reason ya es un motivo genérico, sin ruta ni mensaje crudo de Windows.
+                $"No pude guardar {what} ({fileName}): {failure.Reason} " +
+                "Lo que apuntaste en esta sesión sigue en pantalla, pero no está en disco. " +
+                "Si el disco está lleno o el archivo está ocupado, resuélvelo: el siguiente cambio volverá a intentar guardar.");
+            ShowFlowNotice(
+                CapsuleKind.Warning,
+                $"No pude guardar {what}",
+                "Sigue en pantalla, pero no está en disco. Abre el asistente para ver el detalle.");
+            RecordDataAudit($"No se pudo guardar {what}", $"{fileName}: {failure.Reason}");
+        });
+    }
+
+    /// <summary>
+    /// Sesión de enfoque que terminó con Sakura cerrada: se conserva en el historial, pero sin
+    /// cápsula de éxito, sin sonido y sin voz. El tiempo es la duración programada, no medida: si el
+    /// equipo se apagó a los dos minutos, se cuentan igual los programados, y se dice.
+    /// </summary>
+    private void ReportFocusRecovery(FocusRecovery? recovery)
+    {
+        if (recovery is null)
+        {
+            return;
+        }
+
+        var completion = recovery.Completion;
+        var minutes = Math.Max(1, (int)Math.Round(completion.Duration.TotalMinutes));
+        _assistantView.AddSakuraMessage(
+            // Sin la etiqueta: es texto libre de la persona y este mensaje entra en el historial
+            // que se manda al proveedor de IA.
+            "Tu sesión de enfoque se interrumpió: Sakura se cerró mientras estaba en curso. " +
+            $"Cuento {minutes} minuto{(minutes == 1 ? string.Empty : "s")} en tu historial; es una estimación, " +
+            "porque cuenta lo que tenías programado aunque el equipo haya estado apagado.");
+
+        // Cápsula informativa: un aviso, no una celebración.
+        ShowFlowNotice(
+            CapsuleKind.Information,
+            "Sesión interrumpida",
+            $"Cuento {minutes} min en tu historial (estimado).");
+    }
+
+    private void RecordDataAudit(string action, string detail) =>
+        _auditLog.Append(new AuditEntry
+        {
+            At = DateTimeOffset.Now,
+            Capability = AuditCapability.Permisos,
+            Action = action,
+            Detail = detail,
+            Permission = "Mantenimiento de la aplicación"
+        });
 
     /// <summary>
     /// Diseño D21 — genera el paquete de soporte y deja que la persona elija dónde guardarlo.
@@ -4813,6 +4971,9 @@ public partial class MainWindow : Window
         _focusTickTimer.Start();
         CheckTaskReminders();
         CheckFocusTimer();
+        ReportDataLoadProblems();
+        ReportFocusRecovery(_startupFocusRecovery);
+        _startupFocusRecovery = null;
 
         if (_startHidden)
         {

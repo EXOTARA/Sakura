@@ -1,3 +1,5 @@
+using Nexo.Core.Storage;
+
 namespace Nexo.Core.Focus;
 
 public sealed class FocusManager
@@ -8,17 +10,62 @@ public sealed class FocusManager
     private readonly object _sync = new();
     private readonly IFocusStore _store;
     private FocusState _state = new();
+    private bool _persistenceSuspended;
+    private bool _writeFailing;
 
     public FocusManager(IFocusStore store)
     {
         _store = store;
     }
 
+    /// <summary>Cómo salió la última lectura del archivo. Ver <see cref="Tasks.TaskManager.LoadOutcome"/>.</summary>
+    public DataLoadOutcome LoadOutcome { get; private set; } = DataLoadOutcome.Ok;
+
+    /// <summary>
+    /// Verdadero cuando el archivo existía pero no se pudo leer: Enfoque sigue funcionando en memoria
+    /// y no se guarda nada, para no escribir un historial vacío encima del que la persona tenía.
+    /// </summary>
+    public bool IsPersistenceSuspended
+    {
+        get { lock (_sync) { return _persistenceSuspended; } }
+    }
+
+    /// <summary>Solo al pasar de «guardaba bien» a «falla»; ver <see cref="Tasks.TaskManager.WriteFailed"/>.</summary>
+    public event EventHandler<DataWriteFailure>? WriteFailed;
+
     public void Load()
     {
         lock (_sync)
         {
             _state = Normalize(_store.Load());
+            LoadOutcome = _store.LastLoad;
+            _persistenceSuspended = !LoadOutcome.IsSafeToOverwrite;
+            _writeFailing = false;
+        }
+    }
+
+    /// <summary>
+    /// Se llama una vez justo después de <see cref="Load"/>. Si el temporizador guardado ya había
+    /// vencido mientras Sakura estaba cerrada (cierre forzado, apagado del equipo), la sesión pasa al
+    /// historial con la duración programada, pero se devuelve marcada como recuperada para que nadie
+    /// la celebre como si acabara de terminar: Sakura no sabe cuánto rato estuvo la persona.
+    /// </summary>
+    public FocusRecovery? RecoverAfterRestart(DateTimeOffset now)
+    {
+        lock (_sync)
+        {
+            var timerId = _state.ActiveTimer?.Id;
+            var completion = CollectCompletionLocked(now);
+
+            // CollectCompletionLocked recorta el historial a 90 días: una sesión más vieja se
+            // descarta en la misma llamada. Solo se devuelve una recuperación si de verdad quedó en
+            // el historial, para que el aviso no prometa «cuento N minutos» sobre algo que no está.
+            if (completion is null || timerId is null || !_state.History.Any(entry => entry.Id == timerId))
+            {
+                return null;
+            }
+
+            return new FocusRecovery(completion);
         }
     }
 
@@ -226,39 +273,44 @@ public sealed class FocusManager
     {
         lock (_sync)
         {
-            var timer = _state.ActiveTimer;
-            if (timer is null ||
-                timer.Status != FocusTimerStatus.Running ||
-                !timer.EndsAt.HasValue ||
-                timer.EndsAt.Value > now)
-            {
-                return null;
-            }
-
-            var completedAt = timer.EndsAt.Value;
-            var historyEntry = new FocusHistoryEntry
-            {
-                Id = timer.Id,
-                Label = timer.Label,
-                Kind = timer.Kind,
-                StartedAt = timer.StartedAt,
-                CompletedAt = completedAt,
-                Duration = timer.Duration,
-                TaskId = timer.TaskId
-            };
-
-            _state.History.Add(historyEntry);
-            _state.ActiveTimer = null;
-            TrimHistoryLocked(now);
-            SaveLocked();
-
-            return new FocusCompletion(
-                historyEntry.Label,
-                historyEntry.Kind,
-                historyEntry.Duration,
-                historyEntry.CompletedAt,
-                historyEntry.TaskId);
+            return CollectCompletionLocked(now);
         }
+    }
+
+    private FocusCompletion? CollectCompletionLocked(DateTimeOffset now)
+    {
+        var timer = _state.ActiveTimer;
+        if (timer is null ||
+            timer.Status != FocusTimerStatus.Running ||
+            !timer.EndsAt.HasValue ||
+            timer.EndsAt.Value > now)
+        {
+            return null;
+        }
+
+        var completedAt = timer.EndsAt.Value;
+        var historyEntry = new FocusHistoryEntry
+        {
+            Id = timer.Id,
+            Label = timer.Label,
+            Kind = timer.Kind,
+            StartedAt = timer.StartedAt,
+            CompletedAt = completedAt,
+            Duration = timer.Duration,
+            TaskId = timer.TaskId
+        };
+
+        _state.History.Add(historyEntry);
+        _state.ActiveTimer = null;
+        TrimHistoryLocked(now);
+        SaveLocked();
+
+        return new FocusCompletion(
+            historyEntry.Label,
+            historyEntry.Kind,
+            historyEntry.Duration,
+            historyEntry.CompletedAt,
+            historyEntry.TaskId);
     }
 
     /// <summary>
@@ -292,7 +344,29 @@ public sealed class FocusManager
         }
     }
 
-    private void SaveLocked() => _store.Save(_state.Copy());
+    private void SaveLocked()
+    {
+        if (_persistenceSuspended)
+        {
+            // No se escribe encima de un archivo que no se pudo leer; ver Load.
+            return;
+        }
+
+        try
+        {
+            _store.Save(_state.Copy());
+            _writeFailing = false;
+        }
+        catch (SakuraDataWriteException exception)
+        {
+            // El estado queda en memoria; se avisa una sola vez de que no está en disco.
+            if (!_writeFailing)
+            {
+                _writeFailing = true;
+                WriteFailed?.Invoke(this, new DataWriteFailure(exception.Path, exception.Reason));
+            }
+        }
+    }
 
     private void TrimHistoryLocked(DateTimeOffset now)
     {
@@ -309,8 +383,13 @@ public sealed class FocusManager
         state ??= new FocusState();
         state.History ??= [];
         state.History = state.History
-            .Where(entry => entry.Duration > TimeSpan.Zero)
-            .Select(entry => entry.Copy())
+            .Where(entry => entry is not null && entry.Duration > TimeSpan.Zero)
+            .Select(entry =>
+            {
+                var copy = entry.Copy();
+                copy.Label ??= string.Empty;
+                return copy;
+            })
             .ToList();
 
         if (state.ActiveTimer is { } timer)
