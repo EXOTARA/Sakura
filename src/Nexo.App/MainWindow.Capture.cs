@@ -135,6 +135,19 @@ public partial class MainWindow
         _capturing = true;
         try
         {
+            // El permiso se pregunta ANTES de la cuenta atrás: si se preguntara al final, el
+            // diálogo le robaría el foco a la aplicación y cerraría el menú que la persona acaba
+            // de preparar. Una vez concedido, la captura de abajo no vuelve a preguntar.
+            if (!TryGetLensPermission(
+                    "Capturar la pantalla con cuenta atrás.",
+                    targetApp: null,
+                    out var delayedDenial))
+            {
+                _capsuleWindow.ShowMessage(
+                    CapsuleKind.Warning, "Lens no permitido", delayedDenial, _preferences.Position, force: true);
+                return;
+            }
+
             await GetShellOutOfTheWayAsync();
             for (var remaining = seconds; remaining > 0; remaining--)
             {
@@ -153,7 +166,7 @@ public partial class MainWindow
             var target = new VisionCaptureTarget(
                 "screen", 0, "Pantalla", string.Empty, VisionCaptureKind.Region,
                 bounds.Left, bounds.Top, bounds.Right - bounds.Left, bounds.Bottom - bounds.Top);
-            await CaptureAndOfferAsync(target);
+            await CaptureAndOfferAsync(target, permissionAlreadyGranted: true);
         }
         catch (OperationCanceledException)
         {
@@ -174,8 +187,29 @@ public partial class MainWindow
         }
     }
 
-    private async Task CaptureAndOfferAsync(VisionCaptureTarget target)
+    private async Task CaptureAndOfferAsync(VisionCaptureTarget target, bool permissionAlreadyGranted = false)
     {
+        // Una captura de pantalla es «ver la pantalla» igual que Lens: pasa por el mismo permiso.
+        // Una zona o la pantalla entera no dicen qué aplicación hay debajo, así que aquí solo
+        // cuentan el nivel y no las exclusiones por aplicación. La captura con cuenta atrás ya
+        // preguntó antes de empezar y no repite el diálogo.
+        if (!permissionAlreadyGranted)
+        {
+            if (!TryGetLensPermission(
+                    $"Capturar la pantalla ({target.Title}).",
+                    targetApp: null,
+                    out var captureDenial))
+            {
+                _capsuleWindow.ShowMessage(
+                    CapsuleKind.Warning, "Lens no permitido", captureDenial, _preferences.Position, force: true);
+                return;
+            }
+
+            // Se acaba de cerrar el cuadro: se le da un instante a desaparecer para que no salga
+            // en la imagen.
+            await Task.Delay(150, _lifetimeCancellation.Token);
+        }
+
         var capture = await _screenCaptureService.CaptureAsync(target, _lifetimeCancellation.Token);
         if (!capture.IsSuccess || capture.PngBytes is null)
         {
