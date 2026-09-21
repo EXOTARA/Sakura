@@ -885,7 +885,7 @@
                               VerticalAlignment="Center"
                               Fill="{DynamicResource BrushSurfaceRaised}">
                             <Path.Effect>
-                                <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.4" Color="Black" />
+                                <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.4" Color="{DynamicResource ColorShadow}" />
                             </Path.Effect>
                         </Path>
 

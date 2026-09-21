@@ -11,4 +11,20 @@
         archivo; se conserva vacío en vez de eliminarse porque ThemeResources.xaml y las pruebas
         de estructura del Design System ya lo esperan como parte del orden de fusión.
     -->
+
+    <!--
+        Auditoría de estilo 2026-09-20 — este degradado de fondo y este de borde estaban escritos
+        letra por letra, con los mismos seis GradientStop, en CommandCenterWindow y
+        CommandPaletteWindow (comparten el mismo marco de cristal). Un solo recurso para las dos.
+    -->
+    <LinearGradientBrush x:Key="BrushCommandSurfaceBackground" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#F2111620" Offset="0" />
+        <GradientStop Color="#F2151B27" Offset="0.64" />
+        <GradientStop Color="#F21B1826" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrushCommandSurfaceBorder" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#70FFFFFF" Offset="0" />
+        <GradientStop Color="#1FFFFFFF" Offset="0.42" />
+        <GradientStop Color="#4A8B6CFF" Offset="1" />
+    </LinearGradientBrush>
 </ResourceDictionary>
