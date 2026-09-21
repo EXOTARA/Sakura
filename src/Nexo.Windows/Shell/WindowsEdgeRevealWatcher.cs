@@ -30,7 +30,7 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
     private readonly System.Timers.Timer _timer;
     private readonly object _sync = new();
 
-    private DateTimeOffset? _insideSince;
+    private readonly RevealDwellGate _gate;
     private DateTimeOffset _suppressedUntil = DateTimeOffset.MinValue;
     private SidebarPosition _side = SidebarPosition.Right;
     private bool _enabled;
@@ -44,7 +44,14 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
     private bool _armed = true;
 
     public WindowsEdgeRevealWatcher()
+        : this(MouseButtons.AnyDown)
     {
+    }
+
+    /// <summary>El acceso a los botones va por un delegado para poder sustituirlo en pruebas.</summary>
+    public WindowsEdgeRevealWatcher(Func<bool> mouseButtonDown)
+    {
+        _gate = new RevealDwellGate(mouseButtonDown);
         _timer = new System.Timers.Timer(PollInterval.TotalMilliseconds)
         {
             AutoReset = true
@@ -64,7 +71,7 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
         {
             _side = side;
             _enabled = enabled;
-            _insideSince = null;
+            _gate.Reset();
 
             if (_disposed)
             {
@@ -85,7 +92,7 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
         lock (_sync)
         {
             _suppressedUntil = DateTimeOffset.UtcNow + EdgeRevealPolicy.CooldownAfterHide;
-            _insideSince = null;
+            _gate.Reset();
         }
     }
 
@@ -135,7 +142,7 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
 
         if (!TryReadProbe(_side, out var probe))
         {
-            _insideSince = null;
+            _gate.Reset();
             return false;
         }
 
@@ -144,22 +151,17 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
             _armed = true;
         }
 
-        if (!_armed || !EdgeRevealPolicy.IsInHotZone(probe))
-        {
-            _insideSince = null;
-            return false;
-        }
+        var inZone = _armed && EdgeRevealPolicy.IsInHotZone(probe);
+        var nearZone = !EdgeRevealPolicy.HasLeftEdge(probe);
 
-        _insideSince ??= now;
-
-        if (now - _insideSince.Value < EdgeRevealPolicy.Dwell)
+        // 2026-09-18 — con un botón pulsado se está arrastrando una ventana o seleccionando, no
+        // llamando a Sakura; el propio gate consulta el botón y desarma el borde hasta que el
+        // cursor se aparte.
+        if (!_gate.Observe(now, inZone, nearZone, EdgeRevealPolicy.Dwell))
         {
             return false;
         }
 
-        // Se reinicia el contador al emitir: sin esto, mantener el ratón en el borde dispararía la
-        // apertura en cada vuelta del temporizador, diez veces por segundo.
-        _insideSince = null;
         _suppressedUntil = now + EdgeRevealPolicy.CooldownAfterHide;
         _armed = false;
         return true;
@@ -198,7 +200,12 @@ public sealed class WindowsEdgeRevealWatcher : IDisposable
             info.Work.Right,
             info.Work.Top,
             info.Work.Bottom,
-            side);
+            side,
+            side == SidebarPosition.Left
+                ? EdgeRevealPolicy.UsesNarrowStrip(
+                    DesktopEdges.IsOuterLeft(info.Monitor.Left), info.Monitor.Left, info.Work.Left)
+                : EdgeRevealPolicy.UsesNarrowStrip(
+                    DesktopEdges.IsOuterRight(info.Monitor.Right), info.Monitor.Right, info.Work.Right));
         return true;
     }
 
