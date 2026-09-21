@@ -266,7 +266,10 @@ public static class SakuraMotion
             "MotionBase" => new Duration(TimeSpan.FromMilliseconds(200)),
             "MotionSlow" => new Duration(TimeSpan.FromMilliseconds(350)),
             "MotionEmphasizedDuration" => new Duration(TimeSpan.FromMilliseconds(450)),
-            "MotionExitDuration" => new Duration(TimeSpan.FromMilliseconds(160)),
+            // Auditoría de estilo 2026-09-20 — el respaldo decía 160 ms, pero Motion.xaml (Diseño
+            // D58) usa 220 ms desde siempre. Solo afecta a pruebas y al diseñador, donde no hay
+            // Application; en producción normal el recurso real ya se encuentra siempre.
+            "MotionExitDuration" => new Duration(TimeSpan.FromMilliseconds(220)),
             "MotionRevealDuration" => new Duration(TimeSpan.FromMilliseconds(300)),
             "MotionSpring" => new CubicBezierEase { X1 = 0.34, Y1 = 1.56, X2 = 0.64, Y2 = 1 },
             "MotionSpringSubtle" => new CubicBezierEase { X1 = 0.34, Y1 = 1.24, X2 = 0.64, Y2 = 1 },

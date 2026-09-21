@@ -24,7 +24,7 @@
             BorderBrush="#40FFFFFF"
             BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4" Color="#000000" />
+            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4" Color="{DynamicResource ColorShadow}" />
         </Border.Effect>
         <StackPanel Orientation="Horizontal">
             <Ellipse Width="10"

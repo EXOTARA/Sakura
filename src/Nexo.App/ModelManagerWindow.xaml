@@ -121,38 +121,15 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          SelectionChanged="ModelsListBox_SelectionChanged"
                          MouseDoubleClick="ModelsListBox_MouseDoubleClick">
+                    <!--
+                        Auditoría de estilo 2026-09-20 — esta plantilla de ListBoxItem era una
+                        copia letra por letra de la de VisionTargetPickerWindow. Ahora comparten
+                        SakuraListBoxItemStyle (Controls.xaml); el padding y el radio de aquí ya
+                        eran los mismos que trae el estilo base, así que no hace falta sobrescribir
+                        nada.
+                    -->
                     <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Margin" Value="0,2" />
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="ItemSurface"
-                                                Padding="10,8"
-                                                Background="Transparent"
-                                                BorderBrush="Transparent"
-                                                BorderThickness="1"
-                                                CornerRadius="14">
-                                            <ContentPresenter />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource BrushSurfaceHover}" />
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource BrushAccentSoft}" />
-                                                <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}" />
-                                            </Trigger>
-                                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                                <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource SakuraListBoxItemStyle}" />
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -165,8 +142,8 @@
                                 <Border Width="38"
                                         Height="38"
                                         CornerRadius="12"
-                                        Background="#66222938"
-                                        BorderBrush="#20FFFFFF"
+                                        Background="{DynamicResource BrushAvatarIconBackground}"
+                                        BorderBrush="{DynamicResource BrushAvatarIconBorder}"
                                         BorderThickness="1">
                                     <Path Width="18"
                                           Height="18"

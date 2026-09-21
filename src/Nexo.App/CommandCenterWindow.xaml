@@ -30,21 +30,9 @@
             Padding="12"
             RenderTransformOrigin="0.5,0"
             BorderThickness="1"
-            SnapsToDevicePixels="True">
-        <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#F2111620" Offset="0" />
-                <GradientStop Color="#F2151B27" Offset="0.64" />
-                <GradientStop Color="#F21B1826" Offset="1" />
-            </LinearGradientBrush>
-        </Border.Background>
-        <Border.BorderBrush>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#70FFFFFF" Offset="0" />
-                <GradientStop Color="#1FFFFFFF" Offset="0.42" />
-                <GradientStop Color="#4A8B6CFF" Offset="1" />
-            </LinearGradientBrush>
-        </Border.BorderBrush>
+            SnapsToDevicePixels="True"
+            Background="{DynamicResource BrushCommandSurfaceBackground}"
+            BorderBrush="{DynamicResource BrushCommandSurfaceBorder}">
         <Border.RenderTransform>
             <TransformGroup>
                 <ScaleTransform x:Name="SurfaceScale" ScaleX="1" ScaleY="1" />
@@ -62,10 +50,10 @@
             <!-- Campo de búsqueda -->
             <Border Grid.Row="0"
                     Padding="9,8"
-                    Background="#B20D121B"
+                    Background="{DynamicResource BrushCommandSearchSurface}"
                     BorderBrush="#2DFFFFFF"
                     BorderThickness="1"
-                    CornerRadius="20">
+                    CornerRadius="{DynamicResource RadiusCommandSurface}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -151,12 +139,20 @@
                      Focusable="True"
                      MouseLeftButtonUp="ResultsList_MouseLeftButtonUp"
                      AutomationProperties.Name="Resultados">
+                <!--
+                    Auditoría de estilo 2026-09-20 — plantilla parecida a la de ModelManagerWindow
+                    y VisionTargetPickerWindow, pero con radio distinto (16, no 14) y atada a
+                    IsAvailable por fila, así que no adopta SakuraListBoxItemStyle entera: parte de
+                    ella (BasedOn) para no repetir Margin/FocusVisualStyle.
+
+                    Corrección de manager (2026-09-20) — el hover SÍ se queda con su propio
+                    "#14FFFFFF" (blanco al 8%, BrushGlassHover): es la superficie de cristal de
+                    esta ventana, distinta de BrushSurfaceHover (sólido) que usa la base. Migrarlo
+                    a BrushSurfaceHover cambiaba el aspecto en pantalla, así que no se comparte.
+                -->
                 <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource SakuraListBoxItemStyle}">
                         <Setter Property="Padding" Value="0" />
-                        <Setter Property="Margin" Value="0,2" />
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                         <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
                         <Setter Property="Template">
                             <Setter.Value>
@@ -173,7 +169,7 @@
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="ItemSurface"
                                                     Property="Background"
-                                                    Value="#14FFFFFF" />
+                                                    Value="{DynamicResource BrushGlassHover}" />
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
                                             <Setter TargetName="ItemSurface"
@@ -205,8 +201,8 @@
                             <Border Width="38"
                                     Height="38"
                                     VerticalAlignment="Center"
-                                    Background="#66222938"
-                                    BorderBrush="#20FFFFFF"
+                                    Background="{DynamicResource BrushAvatarIconBackground}"
+                                    BorderBrush="{DynamicResource BrushAvatarIconBorder}"
                                     BorderThickness="1"
                                     CornerRadius="12">
                                 <Path Width="17"

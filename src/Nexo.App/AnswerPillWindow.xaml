@@ -47,7 +47,7 @@
                               Direction="270"
                               ShadowDepth="10"
                               Opacity="0.42"
-                              Color="#000000" />
+                              Color="{DynamicResource ColorShadow}" />
         </Border.Effect>
         <!--
             El contenido se mide con este StackPanel para calcular a qué altura crecer. Va anclado

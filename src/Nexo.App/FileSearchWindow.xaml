@@ -15,13 +15,11 @@
     <Border x:Name="Card"
             Margin="24"
             Padding="16,12"
-            CornerRadius="22"
+            CornerRadius="{DynamicResource RadiusPill}"
             Background="{DynamicResource BrushSurface}"
             BorderBrush="{DynamicResource BrushBorder}"
-            BorderThickness="1">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.35" Color="Black" />
-        </Border.Effect>
+            BorderThickness="1"
+            Effect="{StaticResource PillWindowShadowEffect}">
         <StackPanel>
             <TextBlock Text="BUSCAR ARCHIVOS"
                        FontSize="{DynamicResource FontSizeCaption}"

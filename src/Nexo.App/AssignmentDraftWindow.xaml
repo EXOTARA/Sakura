@@ -18,13 +18,11 @@
     -->
     <Border Margin="24"
             Padding="18,16"
-            CornerRadius="22"
+            CornerRadius="{DynamicResource RadiusPill}"
             Background="{DynamicResource BrushSurface}"
             BorderBrush="{DynamicResource BrushBorder}"
-            BorderThickness="1">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.35" Color="Black" />
-        </Border.Effect>
+            BorderThickness="1"
+            Effect="{StaticResource PillWindowShadowEffect}">
         <StackPanel>
             <TextBlock Text="BORRADOR DE TAREA"
                        FontSize="{DynamicResource FontSizeCaption}"

@@ -18,14 +18,12 @@
     <Border x:Name="Card"
             Margin="24"
             Padding="16,12"
-            CornerRadius="22"
+            CornerRadius="{DynamicResource RadiusPill}"
             Background="{DynamicResource BrushSurface}"
             BorderBrush="{DynamicResource BrushBorder}"
             BorderThickness="1"
-            RenderTransformOrigin="0.5,0">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.35" Color="Black" />
-        </Border.Effect>
+            RenderTransformOrigin="0.5,0"
+            Effect="{StaticResource PillWindowShadowEffect}">
         <Border.RenderTransform>
             <ScaleTransform x:Name="CardScale" />
         </Border.RenderTransform>

@@ -31,7 +31,7 @@
                 <DropShadowEffect BlurRadius="24"
                                   ShadowDepth="6"
                                   Opacity="0.38"
-                                  Color="#000000" />
+                                  Color="{DynamicResource ColorShadow}" />
             </Border.Effect>
 
             <Grid Margin="16,13,16,14">

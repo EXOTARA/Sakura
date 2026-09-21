@@ -21,6 +21,41 @@
     <Color x:Key="ColorDanger">#DF7E8A</Color>
     <Color x:Key="ColorSidebarSurface">#10131C</Color>
 
+    <!--
+        Auditoría de estilo 2026-09-20 — el negro de sombra se escribía como "Black" en algunos
+        sitios y "#000000" en otros (17 sitios, mismo color, dos formas de escribirlo). Un solo
+        token evita esa deriva sin cambiar el valor.
+    -->
+    <Color x:Key="ColorShadow">#000000</Color>
+
+    <!--
+        Auditoría de estilo 2026-09-20 — CommandCenterWindow y CommandPaletteWindow usan fondos hex
+        fijos en vez de BrushSidebarSurface (que sí reacciona al tema) a propósito: son superficies
+        de cristal translúcidas sobre el degradado del marco, un efecto distinto del panel lateral
+        sólido. Se nombran para dejar constancia de que la diferencia es intencional, sin migrarlas
+        a BrushSidebarSurface ni fundirlas entre sí (los tres colores son distintos).
+    -->
+    <Color x:Key="ColorCommandSearchSurface">#B20D121B</Color>
+    <Color x:Key="ColorCommandExpandedSurface">#B20F141E</Color>
+    <Color x:Key="ColorCommandCustomizationSurface">#E0181E29</Color>
+
+    <!--
+        Auditoría de estilo 2026-09-20 — fondo y borde del icono circular de avatar, repetidos
+        letra por letra en CommandCenterWindow, CommandPaletteWindow, ModelManagerWindow y
+        VisionTargetPickerWindow.
+    -->
+    <Color x:Key="ColorAvatarIconBackground">#66222938</Color>
+    <Color x:Key="ColorAvatarIconBorder">#20FFFFFF</Color>
+
+    <!--
+        Auditoría de estilo 2026-09-20 (corrección de manager) — al pasar el ListBoxItem de
+        CommandCenterWindow a compartir SakuraListBoxItemStyle por BasedOn, su hover se fue detrás
+        con BrushSurfaceHover (sólido) y sustituyó al blanco al 8% translúcido que llevaba, pensado
+        para la superficie de cristal de esa ventana. Sí era un cambio visual real, no una
+        unificación neutra, así que se nombra aparte en vez de compartirse.
+    -->
+    <Color x:Key="ColorGlassHover">#14FFFFFF</Color>
+
     <SolidColorBrush x:Key="BrushBackground" Color="{StaticResource ColorBackground}" />
     <SolidColorBrush x:Key="BrushSurface" Color="{StaticResource ColorSurface}" />
     <SolidColorBrush x:Key="BrushSurfaceRaised" Color="{StaticResource ColorSurfaceRaised}" />
@@ -40,6 +75,12 @@
     <SolidColorBrush x:Key="BrushDanger" Color="{StaticResource ColorDanger}" />
     <SolidColorBrush x:Key="BrushSakuraGlow" Color="#E4BBC7" />
     <SolidColorBrush x:Key="BrushSidebarSurface" Color="{StaticResource ColorSidebarSurface}" />
+    <SolidColorBrush x:Key="BrushCommandSearchSurface" Color="{StaticResource ColorCommandSearchSurface}" />
+    <SolidColorBrush x:Key="BrushCommandExpandedSurface" Color="{StaticResource ColorCommandExpandedSurface}" />
+    <SolidColorBrush x:Key="BrushCommandCustomizationSurface" Color="{StaticResource ColorCommandCustomizationSurface}" />
+    <SolidColorBrush x:Key="BrushAvatarIconBackground" Color="{StaticResource ColorAvatarIconBackground}" />
+    <SolidColorBrush x:Key="BrushAvatarIconBorder" Color="{StaticResource ColorAvatarIconBorder}" />
+    <SolidColorBrush x:Key="BrushGlassHover" Color="{StaticResource ColorGlassHover}" />
 
     <!--
         Diseño D1.1 (hotfix) — BrushTextMuted, BrushError y BrushFocusRing vivían en Brushes.xaml

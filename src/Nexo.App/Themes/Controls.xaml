@@ -68,7 +68,7 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="12">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.35" Color="#000000" />
+                            <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.35" Color="{DynamicResource ColorShadow}" />
                         </Border.Effect>
                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
                     </Border>
@@ -659,7 +659,7 @@
                                     CornerRadius="{DynamicResource RadiusMedium}"
                                     SnapsToDevicePixels="True">
                                 <Border.Effect>
-                                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.35" Color="Black" />
+                                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.35" Color="{DynamicResource ColorShadow}" />
                                 </Border.Effect>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -839,7 +839,7 @@
                             <DropShadowEffect BlurRadius="8"
                                               ShadowDepth="1"
                                               Opacity="0.35"
-                                              Color="#000000" />
+                                              Color="{DynamicResource ColorShadow}" />
                         </Border.Effect>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -1259,6 +1259,13 @@
         Todas las referencias entre diccionarios usan DynamicResource, nunca StaticResource:
         una referencia StaticResource entre archivos distintos fue exactamente la causa del
         crash de navegación de D1.1.
+
+        Auditoría de estilo 2026-09-20 — ninguna vista los consume hoy (0 usos por grep en
+        src/*.xaml y *.cs), pero WorkspaceComponentStyleTests.cs (tests/Nexo.App.Tests) ejercita
+        uno por uno los que están en su TheoryData para evitar justo el crash de D1.1 que
+        describe el párrafo de arriba. Esos 15 no se borran: el audit que pidió esta limpieza no
+        vio ese archivo de pruebas. WorkspaceToolbarStyle sí se borró: no está en ese TheoryData
+        ni lo usa ninguna vista, así que es el caso A genuino que el audit original pedía.
         ================================================================================
     -->
 
@@ -1397,11 +1404,6 @@
         <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
 
-    <Style x:Key="WorkspaceToolbarStyle" TargetType="StackPanel">
-        <Setter Property="Orientation" Value="Horizontal" />
-        <Setter Property="Margin" Value="0,0,0,12" />
-    </Style>
-
     <Style x:Key="WorkspaceDividerStyle" TargetType="Border">
         <Setter Property="Height" Value="1" />
         <Setter Property="Background" Value="{DynamicResource BrushBorder}" />
@@ -1412,5 +1414,60 @@
         <Setter Property="Height" Value="36" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
+
+    <!--
+        Auditoría de estilo 2026-09-20 — este ControlTemplate de ListBoxItem (superficie con
+        hover, selección y foco de teclado) estaba copiado letra por letra en ModelManagerWindow y
+        VisionTargetPickerWindow, y una tercera vez, ligeramente distinta, en CommandCenterWindow.
+        Se comparte aquí. CommandCenterWindow no adopta la plantilla entera: necesita un radio
+        distinto (16, no 14), depende de IsEnabled por fila y su hover es el cristal translúcido
+        BrushGlassHover en vez del BrushSurfaceHover sólido de aquí, así que mantiene su propio
+        ControlTemplate y solo parte de este Style (BasedOn) para no repetir
+        Margin/FocusVisualStyle.
+    -->
+    <Style x:Key="SakuraListBoxItemStyle" TargetType="ListBoxItem">
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="ItemSurface"
+                            Padding="{TemplateBinding Padding}"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusMedium}">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource BrushSurfaceHover}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource BrushAccentSoft}" />
+                            <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="ItemSurface" Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Auditoría de estilo 2026-09-20 — el mismo DropShadowEffect (BlurRadius 24, ShadowDepth 6,
+        Opacity 0.35, negro) estaba escrito literal en las cinco ventanas "píldora"
+        (AssignmentDraftWindow, FeedbackWindow, FileSearchWindow, QuickCaptureWindow,
+        SelectionActionsWindow). Un solo recurso compartido para las cinco.
+    -->
+    <DropShadowEffect x:Key="PillWindowShadowEffect"
+                       BlurRadius="24"
+                       ShadowDepth="6"
+                       Opacity="0.35"
+                       Color="{DynamicResource ColorShadow}" />
 
 </ResourceDictionary>

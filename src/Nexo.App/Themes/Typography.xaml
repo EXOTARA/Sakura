@@ -16,6 +16,11 @@
         El suelo sube a 11.5: por debajo de eso, en una pantalla normal a distancia de escritorio,
         el texto deja de leerse y pasa a adivinarse. Los 10.5 de antes se usaban en quince sitios.
     -->
+    <!--
+        Auditoría de estilo 2026-09-20 — FontFamilyPrimary no lo usa ninguna vista (0 usos por
+        grep), pero DesignSystemResourceTests.RequiredSemanticResources_AreDefined lo exige como
+        token de fundación obligatorio. Se conserva por eso, no por uso real.
+    -->
     <FontFamily x:Key="FontFamilyPrimary">Segoe UI Variable Text, Segoe UI</FontFamily>
 
     <!-- La cifra grande de un reloj o de un medidor. -->
@@ -54,18 +59,4 @@
     <sys:Double x:Key="LineHeightTitle">26</sys:Double>
     <sys:Double x:Key="LineHeightBody">20</sys:Double>
     <sys:Double x:Key="LineHeightCompact">17</sys:Double>
-
-    <!--
-        Alias de la escala anterior. Se conservan porque las vistas los usan en decenas de sitios y
-        migrarlos todos de golpe sería un cambio a ciegas; apuntan al nivel nuevo que les
-        corresponde, así que adoptar la escala nueva no exige tocarlos primero.
-    -->
-    <sys:Double x:Key="FontSizeMicro">11.5</sys:Double>
-    <sys:Double x:Key="FontSizeXSmall">11.5</sys:Double>
-    <sys:Double x:Key="FontSizeSmall">12</sys:Double>
-    <sys:Double x:Key="FontSizeBase">13</sys:Double>
-    <sys:Double x:Key="FontSizeBodyLarge">16</sys:Double>
-    <sys:Double x:Key="FontSizeSubtitle">16</sys:Double>
-    <sys:Double x:Key="FontSizeTitle">19</sys:Double>
-    <sys:Double x:Key="FontSizeTitleLarge">19</sys:Double>
 </ResourceDictionary>

@@ -21,7 +21,7 @@
     <Border x:Name="CapsuleBorder"
             Margin="24"
             Padding="14,12"
-            CornerRadius="22"
+            CornerRadius="{DynamicResource RadiusPill}"
             Background="{DynamicResource BrushSurfaceRaised}"
             BorderBrush="{DynamicResource BrushBorder}"
             BorderThickness="1"
@@ -31,7 +31,7 @@
                               Direction="270"
                               ShadowDepth="8"
                               Opacity="0.38"
-                              Color="#000000" />
+                              Color="{DynamicResource ColorShadow}" />
         </Border.Effect>
         <Grid>
             <Grid.ColumnDefinitions>

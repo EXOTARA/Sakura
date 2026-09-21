@@ -9,43 +9,16 @@
         las fichas guardando exactamente lo que estaba apretado, así que adoptarlas no mejoraba
         nada. Esta versión es una escala diseñada, y los valores SÍ cambian.
 
-        La base es la rejilla de 8, con el 4 como único medio paso. Los números que no caen en la
-        rejilla (6, 10) se conservan como alias para no romper lo que ya los usa, pero no se deben
-        usar en nada nuevo.
-    -->
-    <sys:Double x:Key="Space2">2</sys:Double>
-    <sys:Double x:Key="Space4">4</sys:Double>
-    <sys:Double x:Key="Space8">8</sys:Double>
-    <sys:Double x:Key="Space12">12</sys:Double>
-    <sys:Double x:Key="Space16">16</sys:Double>
-    <sys:Double x:Key="Space20">20</sys:Double>
-    <sys:Double x:Key="Space24">24</sys:Double>
-    <sys:Double x:Key="Space32">32</sys:Double>
-    <sys:Double x:Key="Space40">40</sys:Double>
-    <sys:Double x:Key="Space48">48</sys:Double>
-
-    <!-- Fuera de la rejilla; solo para código que ya los usaba. -->
-    <sys:Double x:Key="Space6">6</sys:Double>
-    <sys:Double x:Key="Space10">10</sys:Double>
-
-    <!--
-        Espaciado con nombre por función, que es la parte que se toma de cómo organiza Apple: lo
-        que decide una pantalla no es qué número usas sino que el mismo papel tenga siempre el
-        mismo hueco. Con estos, «respirar más» es cambiar un valor aquí y no visitar cuarenta
-        tarjetas.
-
-        La jerarquía importa y es deliberada: separar dos secciones (32) tiene que ser
-        visiblemente más que separar dos tarjetas (12), y eso más que separar dos líneas dentro de
-        una tarjeta (4). Cuando esos tres huecos se parecen, todo se lee como una lista plana y es
-        exactamente la sensación de «está muy pegado».
+        La base era la rejilla de 8 (Space2 a Space48, más los alias fuera de rejilla Space6 y
+        Space10) y un set de huecos con nombre por función (InsetCardCompact, InsetPane, GapText,
+        GapRelated, GapCard, GapSection). Se retiraron en la auditoría de 2026-09-20: ninguno tenía
+        un solo uso real en las vistas, así que no documentaban nada que existiera en pantalla.
+        InsetCard sí sigue en uso y se conserva. Space12 también se conserva, sin uso en vistas
+        pero exigido como token de fundación obligatorio por
+        DesignSystemResourceTests.RequiredSemanticResources_AreDefined.
     -->
     <Thickness x:Key="InsetCard">20</Thickness>
-    <Thickness x:Key="InsetCardCompact">16</Thickness>
-    <Thickness x:Key="InsetPane">24</Thickness>
-    <sys:Double x:Key="GapText">4</sys:Double>
-    <sys:Double x:Key="GapRelated">8</sys:Double>
-    <sys:Double x:Key="GapCard">12</sys:Double>
-    <sys:Double x:Key="GapSection">32</sys:Double>
+    <sys:Double x:Key="Space12">12</sys:Double>
 
     <!--
         Radios. La escala anterior tenía cuatro valores en ocho píxeles de rango (9, 12, 13, 20):
@@ -61,6 +34,16 @@
     <CornerRadius x:Key="RadiusShell">28</CornerRadius>
     <!-- El borde exterior del shell, igual que las esquinas del panel superior (DashboardWindow). -->
     <CornerRadius x:Key="RadiusShellWindow">34</CornerRadius>
+
+    <!--
+        Auditoría de estilo 2026-09-20 — las cuatro ventanas "flotantes" (DashboardWindow,
+        QuickControlsWindow, CommandPaletteWindow, CommandCenterWindow) redondean su borde con
+        valores distintos y a propósito: no son la misma silueta, así que no se unifican. Tres de
+        los cuatro valores eran literales sueltos sin nombre; se nombran aquí sin cambiar ninguno.
+    -->
+    <CornerRadius x:Key="RadiusQuickPanel">30</CornerRadius>
+    <!-- Radio del campo de búsqueda y de los paneles desplegables del centro/paleta de comandos. -->
+    <CornerRadius x:Key="RadiusCommandSurface">20</CornerRadius>
 
     <!--
         Diseño D64 — aquí vivía RadiusFull, con valor 999 y un comentario que aseguraba que WPF

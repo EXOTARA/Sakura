@@ -33,16 +33,16 @@
 
         <!-- Diseño D69 — metido hacia dentro para que no asome por las esquinas. -->
         <Border Margin="2"
-                CornerRadius="30"
+                CornerRadius="{DynamicResource RadiusQuickPanel}"
                 Background="{DynamicResource BrushSidebarSurface}"
                 CacheMode="BitmapCache">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="26" ShadowDepth="8" Opacity="0.4" Color="#000000" />
+                <DropShadowEffect BlurRadius="26" ShadowDepth="8" Opacity="0.4" Color="{DynamicResource ColorShadow}" />
             </Border.Effect>
         </Border>
 
         <Border Padding="12,14,8,10"
-                CornerRadius="30"
+                CornerRadius="{DynamicResource RadiusQuickPanel}"
                 Background="{DynamicResource BrushSidebarSurface}"
                 BorderBrush="{DynamicResource BrushAccentBorder}"
                 BorderThickness="1">
