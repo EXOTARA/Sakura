@@ -445,8 +445,8 @@ public partial class QuickControlsWindow : Window
     }
 
     /// <summary>
-    /// Se va si nadie lo está usando: ni arrastrando una barra, ni con el ratón encima, ni con el
-    /// teclado dentro. Si alguien lo usa, se espera otra vuelta.
+    /// Se va si nadie lo está usando: ni arrastrando una barra ni con el ratón encima. Si alguien lo
+    /// usa, se espera otra vuelta.
     /// </summary>
     private void DismissIfIdle()
     {
@@ -456,10 +456,7 @@ public partial class QuickControlsWindow : Window
             : 0;
         _lastCursor = cursorOver ? cursor : null;
 
-        var handle = new WindowInteropHelper(this).Handle;
-        var keyboardInside = IsKeyboardFocusWithin && handle != IntPtr.Zero && GetForegroundWindow() == handle;
-
-        if (QuickControlsPolicy.ShouldStay(_dragging is not null, keyboardInside, cursorOver, _stillTicks))
+        if (QuickControlsPolicy.ShouldStay(_dragging is not null, cursorOver, _stillTicks))
         {
             return;
         }
@@ -469,9 +466,6 @@ public partial class QuickControlsWindow : Window
 
     private int _stillTicks;
     private CursorPoint? _lastCursor;
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
 
     /// <summary>
     /// Dónde está el ratón según Windows, no según los eventos de WPF, que en una ventana que no se

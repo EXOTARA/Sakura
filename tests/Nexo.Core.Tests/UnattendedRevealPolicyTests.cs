@@ -6,7 +6,8 @@ namespace Nexo.Core.Tests;
 /// Diseño D58 — lo que se abre por roce tiene que saber irse solo.
 ///
 /// Adler lo dijo así: pasar el ratón sin querer deja Sakura abierta «a pesar de que ya no pasó
-/// nada», y eso es invasivo.
+/// nada», y eso es invasivo. 2026-10: también pidió quitar la excepción por «atención» — tocar
+/// algo ya no debe dejarlo pegado para siempre, solo importa si el puntero está fuera.
 /// </summary>
 public sealed class UnattendedRevealPolicyTests
 {
@@ -19,8 +20,7 @@ public sealed class UnattendedRevealPolicyTests
         Assert.True(UnattendedRevealPolicy.ShouldRetract(
             openedByHover: true,
             outsideSince: LeftAgo(TimeSpan.FromSeconds(3)),
-            Now,
-            hasUserAttention: false));
+            Now));
 
     [Fact]
     public void WithinTheGrace_ItStays()
@@ -29,8 +29,7 @@ public sealed class UnattendedRevealPolicyTests
         Assert.False(UnattendedRevealPolicy.ShouldRetract(
             openedByHover: true,
             outsideSince: LeftAgo(TimeSpan.FromSeconds(1)),
-            Now,
-            hasUserAttention: false));
+            Now));
     }
 
     [Fact]
@@ -38,19 +37,17 @@ public sealed class UnattendedRevealPolicyTests
         Assert.False(UnattendedRevealPolicy.ShouldRetract(
             openedByHover: true,
             outsideSince: null,
-            Now,
-            hasUserAttention: false));
+            Now));
 
     [Fact]
-    public void ReadingWithoutTouchingTheMouse_IsNotAbandonment()
+    public void AfterTheGrace_EvenIfItWasTouched_ItRetracts()
     {
-        // El caso que hace que una retirada automática sea peor que el fallo: una respuesta larga
-        // se lee con las manos quietas, y cerrarla a media lectura es imperdonable.
-        Assert.False(UnattendedRevealPolicy.ShouldRetract(
+        // 2026-10 — Adler pidió quitar la excepción: haber tocado algo (escribir, foco) ya no
+        // mantiene el panel abierto si el puntero lleva fuera más que la gracia.
+        Assert.True(UnattendedRevealPolicy.ShouldRetract(
             openedByHover: true,
             outsideSince: LeftAgo(TimeSpan.FromMinutes(5)),
-            Now,
-            hasUserAttention: true));
+            Now));
     }
 
     [Fact]
@@ -60,8 +57,7 @@ public sealed class UnattendedRevealPolicyTests
         Assert.False(UnattendedRevealPolicy.ShouldRetract(
             openedByHover: false,
             outsideSince: LeftAgo(TimeSpan.FromMinutes(5)),
-            Now,
-            hasUserAttention: false));
+            Now));
     }
 
     [Fact]
@@ -69,6 +65,5 @@ public sealed class UnattendedRevealPolicyTests
         Assert.False(UnattendedRevealPolicy.ShouldRetract(
             openedByHover: true,
             outsideSince: Now + TimeSpan.FromSeconds(30),
-            Now,
-            hasUserAttention: false));
+            Now));
 }
