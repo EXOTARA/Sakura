@@ -1,3 +1,4 @@
+using System.IO.Enumeration;
 using Nexo.Core.Workspace;
 
 namespace Nexo.Windows.Workspace;
@@ -18,8 +19,14 @@ public sealed class FileSystemWorkspaceReader : IWorkspaceReader
     {
         RecurseSubdirectories = true,
         IgnoreInaccessible = true,
-        AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System | FileAttributes.Hidden
+        // ReparsePoint ya no se salta por atributo: los archivos «Files On-Demand» de OneDrive lo llevan
+        // y un proyecto en Escritorio/Documentos sincronizados quedaría sin leer. Los enlaces reales se
+        // saltan en EnumerateSafely con LinkTarget.
+        AttributesToSkip = FileAttributes.System | FileAttributes.Hidden
     };
+
+    private static bool IsRealLink(ref FileSystemEntry entry) =>
+        (entry.Attributes & FileAttributes.ReparsePoint) != 0 && entry.ToFileSystemInfo().LinkTarget is not null;
 
     /// <summary>
     /// Diseño D41 — tope de entradas EXAMINADAS, no solo de devueltas.
@@ -170,7 +177,11 @@ public sealed class FileSystemWorkspaceReader : IWorkspaceReader
     {
         try
         {
-            return Directory.EnumerateFiles(root, "*", Enumeration);
+            return new FileSystemEnumerable<string>(root, (ref FileSystemEntry entry) => entry.ToFullPath(), Enumeration)
+            {
+                ShouldIncludePredicate = (ref FileSystemEntry entry) => !entry.IsDirectory && !IsRealLink(ref entry),
+                ShouldRecursePredicate = (ref FileSystemEntry entry) => !IsRealLink(ref entry)
+            };
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)

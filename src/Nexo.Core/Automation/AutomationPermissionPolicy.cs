@@ -10,7 +10,7 @@ public static class AutomationPermissionPolicy
         // y ejecutar un comando arbitrario a través de ella no son la misma acción, aunque
         // compartan el tipo. Ver `ShellExecutionPolicy` y el defecto D2 de la fase 1.1.
         if (action.Type == AutomationActionType.OpenApplication &&
-            ShellExecutionPolicy.RequiresConfirmation(action.Target, action.Arguments))
+            ShellExecutionPolicy.RequiresConfirmationToOpen(action.Target, action.Arguments))
         {
             return AutomationRiskLevel.Sensitive;
         }

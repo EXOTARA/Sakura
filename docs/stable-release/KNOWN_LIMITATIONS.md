@@ -184,12 +184,32 @@ ningún temporizador.
 **Resuelto:** `RoutineMatchConfidence` + `PromptDispatchPolicy` (commit `667a873`).
 Verificado en la aplicación real.
 
-### ~~L10 — Ejecución arbitraria sin confirmación vía `OpenApplication`~~ ✅
+### L10 — Ejecución arbitraria sin confirmación vía `OpenApplication` ⚠️ (reabierta el 2026-09-28, 0.30.38)
 **Qué era:** `OpenApplication` reenviaba `Arguments` al proceso y estaba clasificada como
 `Reversible`. Una rutina con `powershell.exe -Command ...` se ejecutaba sin preguntar,
 incumpliendo el escenario 22 de `TEST_MATRIX`.
-**Resuelto:** `ShellExecutionPolicy` + `RoutineExecutionApproval` aplicado en `RoutineRunner`
-(commit `4e3524d`). Verificado en la aplicación real: el diálogo aparece y cancelar no ejecuta nada.
+**Lo que se resolvió en 1.1.1:** `ShellExecutionPolicy` + `RoutineExecutionApproval` aplicado en
+`RoutineRunner` (commit `4e3524d`). Verificado en la aplicación real para `powershell.exe -Command`.
+**Lo que NO estaba resuelto (auditoría de seguridad, 2026-09-28):** la política solo miraba una lista
+corta de intérpretes con argumentos. Seguían sin pedir confirmación `forfiles … /c calc.exe`,
+`msiexec /i https://… /qn`, `schtasks /create`, `reg add …\Run`, scripts sueltos (`.vbs`, `.js`,
+`.hta`), `x.bat` (al quitarle `.bat` dejaba de parecer un intérprete) y rutas de red `\\host\share\x`
+(que además entregan el hash NTLM). Se comprobó con `GetRisk`, no ejecutando nada.
+**Corregido en 0.30.38:** `OpenApplication` pide confirmación si el destino es una
+ruta de red o una URL (`http`, `https`, `ftp`, `ftps`, `file`, `ms-msdt`, `search-ms`,
+`ms-appinstaller`, `javascript`, `ms-officecmd`, `ms-word`, `ms-excel`, `ms-powerpoint`, `vbscript`,
+`shell`), si la extensión es de script, instalador o acceso directo (`.bat .cmd .ps1 .vbs .vbe .js
+.jse .wsf .hta .msi .scr .lnk .url .reg .cpl .pif .application .appref-ms .jar .py .pyw .wsh .sct .msp
+.settingcontent-ms .diagcab`), si el nombre parece un nombre corto 8.3 (`~` y un dígito) o si es un
+binario del sistema que ejecuta o instala cosas (`forfiles`, `msiexec`, `schtasks`, `reg`, `rundll32`,
+`regsvr32`, `mshta`, `wscript`, `cscript`, `certutil`, `bitsadmin`, `cmstp`, `installutil`), con o sin
+argumentos. Los argumentos pasan por las mismas comprobaciones de extensión, UNC y esquema (salvo
+http/https/`www.`), así que `explorer.exe x.bat` pregunta. Los shells (`powershell`, `pwsh`, `cmd`,
+`conhost`, `wt`) piden confirmación solo con argumentos: abrirlos sin argumentos sigue siendo abrir la
+terminal (decisión F). Un programa ordinario (Spotify, el Bloc de notas, `code .`, un esquema como
+`spotify:`) sigue sin preguntar aunque lleve argumentos: las rutinas solo las crea la persona (no hay
+importación ni creación desde la IA). Efecto lateral: `code build.bat` (abrir un script en un editor)
+pregunta. Pendiente de lo que quede: ver L20.
 
 ### ~~L11 — `Dispose` no idempotente~~ ✅
 **Qué era:** el segundo `Dispose` de `SingleInstanceCoordinator` lanzaba
@@ -449,6 +469,45 @@ dice qué pasa de verdad con las capturas y los dos números de espacio de la IA
   (`UpdateHelperScriptRealPowerShellTests`: archivo bloqueado, acentos, comilla tipográfica); una
   actualización real de una versión a otra, el ciclo instalar → actualizar → desinstalar en Windows Sandbox y la lectura con
   Narrador del texto nuevo siguen pendientes.
+
+### L20 — Auditoría de seguridad: lo que 0.30.38 arregla y lo que deja abierto (2026-09-28)
+**Qué se cubre:** «Reemplazar selección» pasa por los permisos de Flow (Bloqueado y aplicaciones
+excluidas) y no escribe en una terminal si el texto de la IA tiene saltos de línea; las escrituras y
+borrados del proyecto rechazan uniones y enlaces simbólicos entre la raíz autorizada y el destino;
+«Abrir terminal» ya no construye un comando con el nombre de la carpeta; `OpenApplication` pide
+confirmación en los casos de L10.
+**Qué NO se cubre:**
+- **La lectura de la selección sigue sin pasar por Lens** (es lo anotado en L15, decidido para otro
+  bloque). Solo se protegió la escritura del resultado.
+- **Flow «Preguntar» sigue sin preguntar** también al reemplazar la selección (mismo motivo que L15).
+- **La terminal se detecta por el nombre del proceso** (WindowsTerminal, cmd, powershell, pwsh, conhost,
+  OpenConsole, wsl, bash, mintty, alacritty, wezterm-gui, putty, kitty, ConEmu64, ConEmuC64, Hyper,
+  Tabby, ttermpro, MobaXterm, Terminus, cmder). Si el nombre del proceso no se puede leer, con texto de
+  varias líneas tampoco se escribe (fallo cerrado). **El terminal integrado de un IDE (VS Code,
+  JetBrains) es el mismo proceso que el editor y NO se distingue:** ahí un texto de varias líneas sigue
+  pulsando Enter. Lo mismo con una terminal que no esté en la lista. El **dictado** de Flow no cambió:
+  dictar en una terminal sigue escribiendo lo dictado, saltos de línea incluidos.
+- Cuando se deniega el reemplazo, el resultado **no** se copia al portapapeles (la ventana pudo ser una
+  que se quiso proteger); la persona lo pierde salvo que lo copie desde la ventana de Sakura.
+- **Enlaces en el proyecto:** la comprobación ocurre justo antes de escribir; entre la comprobación y la
+  escritura alguien podría cambiar una carpeta por una unión (carrera). No se cubren los enlaces duros.
+  Solo se revisó el escritor del proyecto, no el resto de escrituras a carpetas personales. Solo
+  cuentan los enlaces reales (`LinkTarget` no nulo): los archivos de OneDrive «solo en la nube» llevan
+  el atributo de reparse point pero se dejan pasar, y el lector de proyectos usa el mismo criterio. **No
+  se ha probado con un archivo real de OneDrive** (no se puede crear en una prueba). Leer uno descarga
+  el archivo, como lo haría abrirlo.
+- **`OpenApplication` sigue siendo una lista de casos conocidos.** Abrir un `.exe` por su ruta sin
+  argumentos, o extensiones fuera de la lista (`.msix`, `.docm`…), no pide confirmación; y un
+  ejecutable ordinario sigue sin pedirla por llevar argumentos. Los esquemas peligrosos también son
+  una lista corta. El nombre corto 8.3 se detecta por «`~` y un dígito» en el destino (no en los
+  argumentos), sin resolver el nombre real.
+- El resumen de una rutina ya no incluye el mensaje de excepción de un paso que falla (traía rutas):
+  dice solo «No se pudo completar este paso.»
+- Los avisos del ejecutor de rutinas («Abrí …», «No encontré …») ya solo nombran la carpeta final,
+  no la ruta completa. La descripción «Abrir {destino}» que arma `MainWindow` para la confirmación de
+  una rutina no se revisó.
+- **Nada de esto se probó ejecutando la app**: hay pruebas automáticas (incluida una unión real en una
+  carpeta temporal), no una prueba en vivo.
 
 ## Fuera de alcance de 1.0 (decidido, no es limitación)
 

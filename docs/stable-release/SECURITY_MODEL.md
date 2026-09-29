@@ -12,7 +12,7 @@ Aplica **solo** cuando la petición viene directamente del usuario (voz, paleta 
 
 | Acción | Reversible | Nota |
 |---|---|---|
-| Abrir aplicaciones | Sí | |
+| Abrir aplicaciones | Sí | Un programa ordinario, con o sin argumentos (`code .`). Scripts, instaladores, accesos directos, rutas de red, URL, o binarios que ejecutan cosas (`forfiles`, `msiexec`, `schtasks`, `reg`…), o un shell con argumentos → `Preguntar` (0.30.38). Los argumentos también pasan por las comprobaciones de extensión, UNC y esquema |
 | Abrir carpetas conocidas | Sí | Lista blanca; rutas arbitrarias → `Preguntar` |
 | Mostrar configuraciones | Sí | |
 | Cambiar volumen general | Sí | |
@@ -22,7 +22,7 @@ Aplica **solo** cuando la petición viene directamente del usuario (voz, paleta 
 | Ejecutar rutinas **previamente aprobadas** | Sí | La aprobación ocurrió al crearla |
 | Captura bajo demanda | Sí | Sujeta a `PRIVACY_BOUNDARIES` |
 | Consultar estado del sistema | Sí | |
-| **Abrir PowerShell** | Sí | **Abrir la terminal ≠ ejecutar en ella** |
+| **Abrir PowerShell** | Sí | **Abrir la terminal ≠ ejecutar en ella.** Vale para la orden directa y para abrirlo sin argumentos como paso de rutina (`OpenApplication`); con argumentos (`-Command …`) pide confirmación |
 
 ### Nivel `Preguntar` — siempre requiere confirmación explícita
 
@@ -40,8 +40,11 @@ Aplica **solo** cuando la petición viene directamente del usuario (voz, paleta 
 | Elevar privilegios | Escalada |
 
 > **La distinción PowerShell es normativa y debe estar cubierta por una prueba de regresión.**
-> `AutomationActionType.OpenTerminal` pasa de `Sensitive` a `Reversible`.
-> Se introduce `ExecuteShellCommand` como acción distinta, siempre `Preguntar`.
+> **Estado real del código:** `AutomationActionType.OpenTerminal` sigue siendo `Sensitive` (como paso
+> de rutina pide confirmación); la orden directa «abre PowerShell» no pasa por esa ruta y no pregunta.
+> El objetivo de pasarlo a `Reversible` no se ha aplicado. `ExecuteShellCommand` **no existe**: no hay
+> acción de ejecutar comandos. `OpenTerminal` abre `powershell.exe -NoExit` con la carpeta como
+> directorio de trabajo y no reenvía argumentos del llamador.
 
 ### Nivel `Bloqueado`
 Todo lo no declarado explícitamente. El default de un tipo de acción desconocido es **bloquear**,

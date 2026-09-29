@@ -38,4 +38,27 @@ public static class FlowExclusionCheck
         string description,
         string? targetApp) =>
         PermissionBroker.Decide(BuildRequest(description, targetApp), settings);
+
+    /// <summary>
+    /// 2026-09-28 (auditoría de seguridad) — «Reemplazar selección» escribe con el mismo insertor que
+    /// el dictado, así que pasa por las mismas negativas (Flow bloqueado, app excluida). Además, el
+    /// texto viene de la IA y no de la persona: en una terminal, sus saltos de línea serían Enter y
+    /// ejecutarían órdenes, así que ahí no se escribe. Devuelve el motivo, o null si se puede escribir.
+    /// El motivo nunca lleva rutas ni el texto.
+    /// </summary>
+    public static string? DenyAiReplacement(
+        PermissionSettings settings,
+        AmbientContextSnapshot? context,
+        string text)
+    {
+        var decision = Evaluate(settings, "Reemplazar el texto seleccionado", DescribeTarget(context));
+        if (decision.IsDenied)
+        {
+            return decision.Reason;
+        }
+
+        return TerminalWindowPolicy.WouldRunCommands(context?.ProcessName, text)
+            ? "Esa ventana es una terminal (o no pude saber cuál es) y el texto tiene varias líneas: escribirlo podría ejecutar órdenes sin que las revises."
+            : null;
+    }
 }

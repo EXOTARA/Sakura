@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.30.38-beta]
+
+### Corregido (auditoría de seguridad)
+
+- **«Reemplazar» el texto seleccionado ya respeta tus permisos de Flow.** Antes escribía aunque Flow estuviera en «Bloqueado» o la aplicación estuviera excluida. Ahora no escribe, te dice el motivo y deja constancia en el registro de actividad. El resultado no se copia al portapapeles, por si esa ventana era una que querías proteger.
+- **Sakura ya no escribe texto de varias líneas de la IA en una terminal.** Cada salto de línea se escribe como Enter, y en una terminal eso habría ejecutado órdenes sin que las leyeras. Si la ventana es una terminal (o Sakura no puede saber qué programa es) y el resultado tiene varias líneas, no se escribe y se explica por qué. Dictar con Flow no cambió.
+- **Los archivos de tu proyecto ya no se escriben ni se borran a través de enlaces.** Una carpeta del proyecto que en realidad apuntara a otro sitio (unión o enlace simbólico) dejaba escribir fuera de la carpeta que autorizaste. Ahora Sakura se niega si cualquier carpeta del camino, o el propio archivo, es un enlace. Los archivos de OneDrive «solo en la nube» no cuentan como enlace, así que un proyecto en Escritorio o Documentos sincronizados se sigue pudiendo leer y editar (el lector de proyectos también tenía ese problema y se corrigió).
+- **«Abrir terminal» ya no puede ejecutar código escondido en el nombre de una carpeta.** Una carpeta con comillas tipográficas en el nombre se coló en el comando de PowerShell. Ahora la carpeta solo se usa como lugar de trabajo y no se interpreta como texto.
+- **Las rutinas que abren programas piden confirmación en más casos.** Además de PowerShell con argumentos, ahora preguntan al abrir rutas de red, direcciones web, scripts, accesos directos e instaladores (`.bat`, `.vbs`, `.js`, `.hta`, `.lnk`, `.py`, `.jar`, `.cpl`…), esquemas que lanzan o descargan cosas, nombres cortos de archivo (`POWERS~1.EXE`) y programas del sistema que ejecutan o instalan cosas (`forfiles`, `msiexec`, `schtasks`, `reg`…). También miran los argumentos: `explorer.exe x.bat` o `explorer \\servidor\carpeta\x.exe` preguntan. `conhost` y `wt` con argumentos también. Abrir Spotify, el Bloc de notas, VS Code en una carpeta, un navegador con una dirección, o una terminal sin argumentos, sigue sin preguntar.
+  - **Cambio que se nota:** una rutina que abre un archivo de script o de Python en su editor (por ejemplo `code build.bat`) ahora pregunta, porque abrir el archivo y ejecutarlo no se distinguen por el nombre.
+- **Los avisos de las rutinas ya no enseñan la ruta completa de tus carpetas.** «Abrí PowerShell en …» y similares solo nombran la carpeta final, porque esos mensajes pueden acabar en el historial del asistente. Y si un paso de una rutina falla con un error inesperado, el resumen ya no copia el mensaje técnico de Windows (que traía rutas): dice solo que no se pudo completar.
+
+### Lo que este cambio NO cubre
+
+- **No se probó con la app en marcha**: hay pruebas automáticas (incluida una unión real en una carpeta temporal), no una prueba en vivo.
+- La **lectura** del texto seleccionado sigue sin pasar por el permiso de Lens (L15, decidido para otro bloque). Y Flow en «Preguntar» sigue sin preguntar.
+- La terminal se reconoce por el nombre del programa. Un panel de terminal dentro de un editor (VS Code, JetBrains) es el mismo programa que el editor y no se reconoce.
+- Abrir un `.exe` por su ruta sin argumentos, o extensiones menos comunes que no estén en la lista (`.msix`, `.docm`…), sigue sin pedir confirmación, y un programa ordinario tampoco la pide por llevar argumentos: las listas son de casos conocidos. Los nombres cortos se detectan por un `~` seguido de un dígito, sin resolver el nombre real.
+- No se ha comprobado con archivos reales de OneDrive «solo en la nube» (no se pueden crear en una prueba); la comprobación se apoya en que Windows los marca distinto de un enlace.
+- Los enlaces se comprueban justo antes de escribir; no se cubre que alguien los cambie en ese instante, ni los enlaces duros.
+- La descripción «Abrir …» que se enseña al confirmar una rutina no se revisó en busca de rutas.
+- Detalle en `docs/stable-release/KNOWN_LIMITATIONS.md` (L10 reabierta, L20 nueva).
+
 ## [0.30.37-beta]
 
 ### Corregido

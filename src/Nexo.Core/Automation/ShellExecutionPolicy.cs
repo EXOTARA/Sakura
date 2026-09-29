@@ -53,6 +53,10 @@ public static class ShellExecutionPolicy
         "pwsh",
         "cmd",
         "command",
+        // Lanzadores de terminal: con argumentos ejecutan lo que se les pase (conhost calc.exe,
+        // wt new-tab calc.exe); sin argumentos solo abren la terminal.
+        "conhost",
+        "wt",
         // Hosts de scripts
         "wscript",
         "cscript",
@@ -97,6 +101,142 @@ public static class ShellExecutionPolicy
 
         // Un programa cualquiera que invoque un intérprete desde sus argumentos.
         return MentionsInterpreter(arguments);
+    }
+
+    /// <summary>
+    /// Binarios del sistema que ejecutan o instalan otras cosas aunque su nombre no parezca un
+    /// intérprete (<c>forfiles /c calc.exe</c>, <c>msiexec /i https://… /qn</c>, <c>schtasks /create</c>,
+    /// <c>reg add …\Run</c>). Abrirlos, con o sin argumentos, no es «abrir una aplicación». Los shells
+    /// (powershell, pwsh, cmd) NO están aquí a propósito: abrir la terminal sin argumentos no es
+    /// ejecutar en ella (decisión F de PRODUCT_VISION), y con argumentos ya los cubre la regla del
+    /// intérprete.
+    /// </summary>
+    private static readonly HashSet<string> SystemExecutors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "forfiles", "msiexec", "schtasks", "reg", "rundll32", "regsvr32", "mshta", "wscript",
+        "cscript", "certutil", "bitsadmin", "cmstp", "installutil"
+    };
+
+    /// <summary>
+    /// Extensiones que ejecutan código, instalan o lanzan otra cosa al abrirse con el shell.
+    /// <see cref="NormalizeExecutableName"/> le quita «.bat», «.cmd» y «.ps1» al nombre, así que
+    /// <c>x.bat</c> dejaba de parecer un intérprete: se comprueban aparte, sobre el nombre completo.
+    /// </summary>
+    private static readonly string[] RiskyExtensions =
+    [
+        ".bat", ".cmd", ".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".hta", ".msi", ".scr",
+        ".lnk", ".url", ".reg", ".cpl", ".pif", ".application", ".appref-ms", ".jar", ".py", ".pyw",
+        ".wsh", ".sct", ".msp", ".settingcontent-ms", ".diagcab"
+    ];
+
+    // ponytail: lista de esquemas conocidos por lanzar o descargar cosas; los esquemas de aplicaciones
+    // (spotify:, ms-settings:, steam://) siguen sin pedir confirmación. Si aparece otro esquema
+    // peligroso, se añade aquí.
+    private static readonly HashSet<string> RiskySchemes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "http", "https", "ftp", "ftps", "file", "ms-msdt", "search-ms", "ms-appinstaller", "javascript",
+        "ms-officecmd", "ms-word", "ms-excel", "ms-powerpoint", "vbscript", "shell"
+    };
+
+    /// <summary>
+    /// Auditoría 2026-09-28 — decide si <c>OpenApplication</c> necesita confirmación. Antes solo
+    /// contaban los intérpretes con argumentos, y quedaban fuera <c>forfiles … /c calc.exe</c>,
+    /// <c>msiexec /i https://…</c>, <c>schtasks</c>, <c>reg add</c>, los scripts sueltos
+    /// (<c>.vbs</c>, <c>.js</c>, <c>.hta</c>), <c>x.bat</c> y las rutas UNC, que además entregan el
+    /// hash NTLM de la persona al servidor remoto. Un programa ordinario (Spotify, el Bloc de notas,
+    /// <c>code .</c>, un esquema como <c>spotify:</c>) sigue sin preguntar, con o sin argumentos: las
+    /// rutinas solo las crea la persona y preguntar cada vez no protegería de nada. Los argumentos
+    /// pasan por las mismas comprobaciones de extensión, UNC y esquema que el destino
+    /// (<c>explorer.exe x.bat</c> abre el script con el shell), salvo http/https/www, que en un
+    /// argumento es un navegador con una dirección.
+    /// </summary>
+    public static bool RequiresConfirmationToOpen(string? target, string? arguments)
+    {
+        if (RequiresConfirmation(target, arguments))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(arguments) &&
+            Tokenize(arguments).Any(fragment => IsRiskyReference(fragment, isArgument: true)))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            return false;
+        }
+
+        if (IsRiskyReference(target, isArgument: false))
+        {
+            return true;
+        }
+
+        var expanded = Environment.ExpandEnvironmentVariables(target.Trim()).Trim('"', '\'').Trim();
+        return HasShortName(expanded) || SystemExecutors.Contains(NormalizeExecutableName(expanded));
+    }
+
+    private static bool IsRiskyReference(string value, bool isArgument)
+    {
+        // ShellExecute expande variables de entorno: %COMSPEC% o una variable que apunte a un UNC
+        // tienen que verse tal como se ejecutarán.
+        var name = Environment.ExpandEnvironmentVariables(value.Trim()).Trim('"', '\'').Trim()
+            .TrimEnd(' ', '.');
+
+        // Un navegador con una dirección («chrome https://…/app.js») es normal; la dirección no se
+        // trata como archivo.
+        if (isArgument &&
+            (name.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+             name.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+             name.StartsWith("www.", StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (name.StartsWith(@"\\", StringComparison.Ordinal) ||
+            name.StartsWith("//", StringComparison.Ordinal) ||
+            (!isArgument && name.StartsWith("www.", StringComparison.OrdinalIgnoreCase)) ||
+            HasRiskyScheme(name, allowWeb: isArgument))
+        {
+            return true;
+        }
+
+        return RiskyExtensions.Any(extension => name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // ponytail: nombre corto 8.3 («POWERS~1.EXE») = un «~» seguido de dígito en el último tramo. Es una
+    // heurística: un archivo normal con «~1» en el nombre pedirá confirmación de más, y no se resuelve
+    // el nombre largo real (haría falta tocar el disco). Solo se mira el destino, no los argumentos.
+    private static bool HasShortName(string path)
+    {
+        var separator = path.LastIndexOfAny(['\\', '/']);
+        var last = separator >= 0 ? path[(separator + 1)..] : path;
+        for (var index = 0; index < last.Length - 1; index++)
+        {
+            if (last[index] == '~' && char.IsAsciiDigit(last[index + 1]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasRiskyScheme(string target, bool allowWeb)
+    {
+        var colon = target.IndexOf(':');
+
+        // Una sola letra antes de «:» es una unidad («C:\…»), no un esquema.
+        if (colon <= 1)
+        {
+            return false;
+        }
+
+        var scheme = target[..colon].Trim();
+        return RiskySchemes.Contains(scheme) &&
+               !(allowWeb && (scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ||
+                              scheme.Equals("https", StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>
