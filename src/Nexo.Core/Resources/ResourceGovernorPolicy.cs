@@ -67,7 +67,7 @@ public static class ResourceGovernorPolicy
         return ResourceGovernorDecision.Normal;
     }
 
-    private static bool IsIgnoredFullScreenProcess(string? processName)
+    public static bool IsIgnoredFullScreenProcess(string? processName)
     {
         if (string.IsNullOrWhiteSpace(processName))
         {

@@ -150,6 +150,10 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _taskReminderTimer;
     private readonly DispatcherTimer _focusTickTimer;
     private readonly DispatcherTimer _visualContextExpiryTimer = new();
+    private readonly DispatcherTimer _hotkeyReconcileTimer = new();
+    private readonly HashSet<int> _hotkeysReportedBusy = [];
+    private bool _globalHotkeysReleased;
+    private readonly HashSet<int> _registeredHotkeys = [];
     private readonly JsonSettingsStore _settingsStore = new();
     private readonly WindowsStartupService _startupService = new();
     private readonly JsonConversationStore _conversationStore = new();
@@ -4907,69 +4911,168 @@ public partial class MainWindow : Window
 
         ApplySystemBackdrop(windowHandle);
 
-        if (!RegisterHotKey(windowHandle, ShellHotkeyId, ModAlt, VirtualKeyA))
+        // Reconcilia en vez de registrar a pelo: si Sakura arranca con un juego ya en pantalla completa,
+        // los atajos ni llegan a registrarse.
+        ReconcileGlobalHotkeys();
+
+        // 2026-09-28 — al cambiar la ventana activa se reconcilia al instante, y otra vez un momento
+        // después: un juego avisa de que es la ventana activa antes de ocupar la pantalla entera.
+        _ambientForegroundTracker.ForegroundChanged += () =>
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                ReconcileGlobalHotkeys();
+                _hotkeyReconcileTimer.Stop();
+                _hotkeyReconcileTimer.Start();
+            }));
+        _hotkeyReconcileTimer.Interval = TimeSpan.FromSeconds(1.5);
+        _hotkeyReconcileTimer.Tick += (_, _) =>
         {
-            _assistantView.AddSakuraMessage("Alt + A ya está siendo utilizado por otra aplicación.");
+            _hotkeyReconcileTimer.Stop();
+            ReconcileGlobalHotkeys();
+        };
+    }
+
+    /// <summary>Todos los atajos globales salvo Flow (que depende de un ajuste) y Escape (ciclo propio).</summary>
+    private static readonly int[] AlwaysWantedHotkeyIds =
+    [
+        ShellHotkeyId, PeekHotkeyId, CommandPaletteHotkeyId, LookHotkeyId, VoiceHotkeyId,
+        TranslateHotkeyId, RegionCaptureHotkeyId, RecordHotkeyId, FileSearchHotkeyId,
+        SelectionHotkeyId, QuickCaptureHotkeyId
+    ];
+
+    private bool RegisterOrReport(IntPtr windowHandle, int id, uint modifiers, uint key, string busyMessage)
+    {
+        if (RegisterHotKey(windowHandle, id, modifiers, key))
+        {
+            return true;
         }
 
-        if (!RegisterHotKey(windowHandle, PeekHotkeyId, ModAlt | ModShift, VirtualKeyA))
-        {
-            _assistantView.AddSakuraMessage("Alt + Shift + A ya está siendo utilizado por otra aplicación.");
-        }
+        ReportHotkeyBusy(id, busyMessage);
+        return false;
+    }
 
-        if (!RegisterHotKey(
-                windowHandle,
-                CommandPaletteHotkeyId,
-                ModControl,
-                VirtualKeySpace))
-        {
-            _assistantView.AddSakuraMessage(
-                "Ctrl + Espacio ya está siendo utilizado por otra aplicación.");
-        }
-
-        if (!RegisterHotKey(
-                windowHandle,
-                LookHotkeyId,
-                ModControl | ModShift,
-                VirtualKeySpace))
-        {
-            _assistantView.AddSakuraMessage(
-                "Ctrl + Shift + Espacio ya está siendo utilizado por otra aplicación.");
-        }
-
-        if (!RegisterHotKey(windowHandle, VoiceHotkeyId, ModAlt, VirtualKeyV))
-        {
-            _assistantView.AddSakuraMessage(
-                "Alt + V ya está siendo utilizado por otra aplicación; el atajo de voz no quedó disponible.");
-        }
-
-        if (!RegisterHotKey(
-                windowHandle, TranslateHotkeyId, ModControl | ModShift, VirtualKeyT))
-        {
-            _assistantView.AddSakuraMessage(
-                "Ctrl + Shift + T ya está siendo utilizado por otra aplicación; " +
-                "el traductor de pantalla no quedó disponible.");
-        }
-
-        RegisterCaptureHotkeys(windowHandle);
-
-        RegisterSelectionHotkey(windowHandle);
-
-        if (!RegisterHotKey(windowHandle, QuickCaptureHotkeyId, ModAlt | ModShift, VirtualKeyN))
-        {
-            _assistantView.AddSakuraMessage(
-                "Alt + Shift + N ya está siendo utilizado por otra aplicación; apuntar rápido no quedó disponible.");
-        }
-
+    /// <summary>
+    /// Registra un atajo global por id y dice si quedó registrado de verdad. Reutilizable: sirve al
+    /// arrancar, al recuperarlos tras un juego y para reintentar en silencio uno que falló.
+    /// </summary>
+    private bool TryRegisterGlobalHotkey(IntPtr windowHandle, int id) => id switch
+    {
+        ShellHotkeyId => RegisterOrReport(
+            windowHandle, id, ModAlt, VirtualKeyA,
+            "Alt + A ya está siendo utilizado por otra aplicación."),
+        PeekHotkeyId => RegisterOrReport(
+            windowHandle, id, ModAlt | ModShift, VirtualKeyA,
+            "Alt + Shift + A ya está siendo utilizado por otra aplicación."),
+        CommandPaletteHotkeyId => RegisterOrReport(
+            windowHandle, id, ModControl, VirtualKeySpace,
+            "Ctrl + Espacio ya está siendo utilizado por otra aplicación."),
+        LookHotkeyId => RegisterOrReport(
+            windowHandle, id, ModControl | ModShift, VirtualKeySpace,
+            "Ctrl + Shift + Espacio ya está siendo utilizado por otra aplicación."),
+        VoiceHotkeyId => RegisterOrReport(
+            windowHandle, id, ModAlt, VirtualKeyV,
+            "Alt + V ya está siendo utilizado por otra aplicación; el atajo de voz no quedó disponible."),
+        TranslateHotkeyId => RegisterOrReport(
+            windowHandle, id, ModControl | ModShift, VirtualKeyT,
+            "Ctrl + Shift + T ya está siendo utilizado por otra aplicación; " +
+            "el traductor de pantalla no quedó disponible."),
+        RegionCaptureHotkeyId => RegisterOrReport(
+            windowHandle, id, ModAlt | ModShift, VirtualKeyS,
+            "Alt + Shift + S ya está siendo utilizado por otra aplicación; la captura de región sigue en la pestaña Captura."),
+        RecordHotkeyId => RegisterOrReport(
+            windowHandle, id, ModAlt | ModShift, VirtualKeyG,
+            "Alt + Shift + G ya está siendo utilizado por otra aplicación; la grabación sigue en la pestaña Captura."),
+        FileSearchHotkeyId => RegisterOrReport(
+            windowHandle, id, ModAlt | ModShift, VirtualKeyF,
+            "Alt + Shift + F ya está siendo utilizado por otra aplicación; la búsqueda de archivos sigue en la paleta."),
+        SelectionHotkeyId => RegisterSelectionHotkey(windowHandle),
+        QuickCaptureHotkeyId => RegisterOrReport(
+            windowHandle, id, ModAlt | ModShift, VirtualKeyN,
+            "Alt + Shift + N ya está siendo utilizado por otra aplicación; apuntar rápido no quedó disponible."),
         // Diseño D6.3 — el dictado global se registra igual que los demás atajos: como atajo de
         // sistema, para que funcione con Sakura sin foco (que es todo el sentido de dictar en otra
         // aplicación).
-        if (_preferences.FlowEnabled &&
-            !RegisterHotKey(windowHandle, FlowHotkeyId, ModControl | ModShift, VirtualKeyD))
+        FlowHotkeyId => RegisterOrReport(
+            windowHandle, id, ModControl | ModShift, VirtualKeyD,
+            "Ctrl + Shift + D ya está siendo utilizado por otra aplicación; el dictado global no quedó disponible."),
+        _ => false
+    };
+
+    private void UnregisterGlobalHotkeys(IntPtr windowHandle)
+    {
+        UnregisterHotKey(windowHandle, ShellHotkeyId);
+        UnregisterHotKey(windowHandle, PeekHotkeyId);
+        UnregisterHotKey(windowHandle, CommandPaletteHotkeyId);
+        UnregisterHotKey(windowHandle, LookHotkeyId);
+        UnregisterHotKey(windowHandle, VoiceHotkeyId);
+        UnregisterHotKey(windowHandle, TranslateHotkeyId);
+        UnregisterHotKey(windowHandle, QuickCaptureHotkeyId);
+        UnregisterHotKey(windowHandle, SelectionHotkeyId);
+        UnregisterHotKey(windowHandle, FileSearchHotkeyId);
+        UnregisterHotKey(windowHandle, FlowHotkeyId);
+        UnregisterCaptureHotkeys(windowHandle);
+    }
+
+    /// <summary>
+    /// Un aviso de «ya lo usa otra aplicación» por atajo y sesión: al recuperar los atajos tras un
+    /// juego, si la combinación sigue ocupada no se repite el aviso cada vez que se entra y sale.
+    /// </summary>
+    private void ReportHotkeyBusy(int hotkeyId, string message)
+    {
+        if (_hotkeysReportedBusy.Add(hotkeyId))
         {
-            _assistantView.AddSakuraMessage(
-                "Ctrl + Shift + D ya está siendo utilizado por otra aplicación; el dictado global no quedó disponible.");
+            _assistantView.AddSakuraMessage(message);
         }
+    }
+
+    /// <summary>
+    /// 2026-09-28 — Adler jugaba a pantalla completa y Alt + A abría el panel: un atajo registrado
+    /// con <c>RegisterHotKey</c> nunca le llega al juego. Mientras la ventana en primer plano sea una
+    /// aplicación a pantalla completa, Sakura suelta sus atajos y los recupera al salir (la bandeja
+    /// sigue funcionando). Idempotente: solo toca Windows si el estado deseado cambió. Se lee la
+    /// ventana en vivo, no la decisión del gobernador, que puede tener segundos de retraso.
+    /// </summary>
+    private void ReconcileGlobalHotkeys()
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        var windowHandle = new WindowInteropHelper(this).Handle;
+        if (windowHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var release = WindowsResourceGovernorService.ShouldReleaseGlobalHotkeys(
+            _preferences.ResourceGovernorEnabled);
+
+        // Se compara con lo que de verdad está registrado, id por id: un atajo que otra aplicación
+        // nos quitó al volver del juego se reintenta en silencio en cada vuelta en vez de quedar muerto.
+        var plan = GlobalHotkeyReconciler.Plan(
+            release,
+            _registeredHotkeys,
+            AlwaysWantedHotkeyIds,
+            FlowHotkeyId,
+            _preferences.FlowEnabled);
+
+        foreach (var id in plan.Unregister)
+        {
+            UnregisterHotKey(windowHandle, id);
+            _registeredHotkeys.Remove(id);
+        }
+
+        foreach (var id in plan.Register)
+        {
+            if (TryRegisterGlobalHotkey(windowHandle, id))
+            {
+                _registeredHotkeys.Add(id);
+            }
+        }
+
+        // Al final: si algo de arriba lanza a medias, el estado no debe decir que ya se hizo.
+        _globalHotkeysReleased = release;
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -5117,17 +5220,7 @@ public partial class MainWindow : Window
         var windowHandle = new WindowInteropHelper(this).Handle;
         if (windowHandle != IntPtr.Zero)
         {
-            UnregisterHotKey(windowHandle, ShellHotkeyId);
-            UnregisterHotKey(windowHandle, PeekHotkeyId);
-            UnregisterHotKey(windowHandle, CommandPaletteHotkeyId);
-            UnregisterHotKey(windowHandle, LookHotkeyId);
-            UnregisterHotKey(windowHandle, VoiceHotkeyId);
-            UnregisterHotKey(windowHandle, TranslateHotkeyId);
-            UnregisterHotKey(windowHandle, QuickCaptureHotkeyId);
-            UnregisterHotKey(windowHandle, SelectionHotkeyId);
-            UnregisterHotKey(windowHandle, FileSearchHotkeyId);
-            UnregisterHotKey(windowHandle, FlowHotkeyId);
-            UnregisterCaptureHotkeys(windowHandle);
+            UnregisterGlobalHotkeys(windowHandle);
             UnregisterHotKey(windowHandle, EscapeHotkeyId);
         }
 
@@ -5155,6 +5248,20 @@ public partial class MainWindow : Window
         if (message != WmHotkey)
         {
             return IntPtr.Zero;
+        }
+
+        // Un WM_HOTKEY puede llegar cuando Sakura aún no sabe que hay algo a pantalla completa (un
+        // juego que cambia de modo sin cambiar de ventana activa) o encolado antes de soltar los
+        // atajos. Se mira en vivo y, si toca callarse, no se ejecuta la acción. Escape queda fuera:
+        // tiene su propio ciclo y solo existe con el panel visible.
+        if (wParam.ToInt32() != EscapeHotkeyId)
+        {
+            ReconcileGlobalHotkeys();
+            if (_globalHotkeysReleased)
+            {
+                handled = true;
+                return IntPtr.Zero;
+            }
         }
 
         if (wParam.ToInt32() == ShellHotkeyId)
@@ -8576,10 +8683,26 @@ public partial class MainWindow : Window
             return;
         }
 
-        UnregisterHotKey(windowHandle, FlowHotkeyId);
+        // Con los atajos soltados por un juego no se registra nada ahora: al recuperarlos, la
+        // reconciliación ya respeta FlowEnabled.
+        if (_globalHotkeysReleased)
+        {
+            return;
+        }
 
-        if (_preferences.FlowEnabled &&
-            !RegisterHotKey(windowHandle, FlowHotkeyId, ModControl | ModShift, VirtualKeyD))
+        UnregisterHotKey(windowHandle, FlowHotkeyId);
+        _registeredHotkeys.Remove(FlowHotkeyId);
+
+        if (!_preferences.FlowEnabled)
+        {
+            return;
+        }
+
+        if (RegisterHotKey(windowHandle, FlowHotkeyId, ModControl | ModShift, VirtualKeyD))
+        {
+            _registeredHotkeys.Add(FlowHotkeyId);
+        }
+        else
         {
             _assistantView.AddSakuraMessage(
                 "Ctrl + Shift + D ya está siendo utilizado por otra aplicación; el dictado global no quedó disponible.");
@@ -9967,6 +10090,11 @@ public partial class MainWindow : Window
 
         try
         {
+            // Red de seguridad del evento de ventana activa: entrar a pantalla completa sin cambiar de
+            // ventana (F11 en un vídeo) no dispara ningún evento. Va antes de leer el equipo para que
+            // una lectura lenta no la deje sin correr.
+            ReconcileGlobalHotkeys();
+
             // Con tope de tiempo, como la lectura del reproductor: leer el equipo es WMI y
             // contadores de rendimiento, que a veces no vuelven. Sin este corte, ese ciclo se quedaba
             // a medias con su cerrojo tomado y Sakura no volvía a mirar el equipo en toda la sesión.
