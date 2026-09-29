@@ -79,10 +79,12 @@ nunca permitir.
 | **Exfiltración silenciosa** | Toda salida a red es `Preguntar` + visible en "Actividad y privacidad". |
 | **Captura sensible** | `VisionPrivacyPolicy` bloquea gestores de contraseñas y ventanas sensibles. |
 | **Superficie de mensajería** | Eliminada por diseño: no hay canal WhatsApp/Telegram/Discord. |
-| **Actualización maliciosa** | Sin actualización silenciosa mientras no haya firma. Hash mostrado al usuario. |
+| **Actualización maliciosa** | Sin actualización silenciosa mientras no haya firma: la persona ve versión, notas y la carpeta que se reemplazará, y confirma. Se comprueba el SHA-256 del paquete contra el `.sha256` de la misma publicación de GitHub, pero **eso solo detecta corrupción o una descarga cortada**: quien controlara la cuenta de GitHub podría cambiar paquete y huella a la vez. La huella no se enseña en pantalla. Sin firma, no hay defensa contra ese caso. |
 
 ## Estado de firma
 
-**No existe certificado Authenticode.** La infraestructura queda preparada (scripts, verificación de
-hash, notas de versión). Hasta entonces: notificar, mostrar hash, exigir confirmación del usuario.
+**No existe certificado Authenticode.** Sakura comprueba el SHA-256 de lo descargado contra el
+`.sha256` que viene en la misma publicación: protege contra corrupción, no contra una cuenta de
+GitHub comprometida (paquete y huella cambiarían juntos). La huella se comprueba pero no se enseña.
+Hasta que haya firma: notificar, mostrar versión, notas y carpeta, y exigir confirmación de la persona.
 **Prohibida la actualización silenciosa.**

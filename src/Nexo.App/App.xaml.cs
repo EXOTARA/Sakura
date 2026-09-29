@@ -47,6 +47,19 @@ public partial class App : System.Windows.Application
             }
         }
 
+        // Bloque de instalación y actualización (0.30.36) — el candado de instancia única se toma
+        // antes de mover nada. `ConsolidateHeavyFolders` mueve `Models` y `Runtime`, que para quien
+        // viene de la etapa Nexo son varios gigabytes, y hasta ahora una segunda copia hacía ese
+        // movimiento **antes** de descubrir que sobraba. Desde que el ayudante de actualización
+        // vuelve a abrir Sakura siempre, una segunda copia es un escenario normal, no raro.
+        _singleInstance = new SingleInstanceCoordinator();
+        if (!_singleInstance.IsPrimaryInstance)
+        {
+            _singleInstance.SignalPrimaryInstance();
+            Shutdown();
+            return;
+        }
+
         // La migración es conservadora: copia datos de Nexo a Sakura sin borrar ni sobrescribir
         // la carpeta anterior. Un fallo no impide abrir la app. Cuando hay un perfil de
         // validación activo, NexoDataPaths.LegacyRootDirectory ya colapsa a la misma raíz que
@@ -64,13 +77,6 @@ public partial class App : System.Windows.Application
         catch (Exception)
         {
             // La configuración puede recrearse con valores seguros.
-        }
-        _singleInstance = new SingleInstanceCoordinator();
-        if (!_singleInstance.IsPrimaryInstance)
-        {
-            _singleInstance.SignalPrimaryInstance();
-            Shutdown();
-            return;
         }
 
         var settingsStore = new JsonSettingsStore();

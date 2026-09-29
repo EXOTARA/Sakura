@@ -50,6 +50,7 @@ No hay una suite de UI automatizada más allá de las pruebas WPF con `StaWpfFix
 
 - Usa `SAKURA_DATA_ROOT` (variable de entorno) para apuntar a una carpeta de datos aislada — nunca pruebes contra `%LOCALAPPDATA%\Sakura`, que son los datos reales de Adler.
 - Antes de lanzar una copia de prueba, comprueba y cierra cualquier Sakura/Ollama que ya esté corriendo con esa misma carpeta de datos si vas a reiniciarla, y al terminar limpia lo que hayas creado.
+- Para montar un perfil con `SAKURA_DATA_ROOT`, deja que Sakura cree el `settings.json` ella sola o copia uno completo (hay un guion: `scripts/New-SakuraValidationProfile.ps1`). Un archivo escrito a mano sin `SchemaVersion` se toma por una instalación prehistórica y vuelve a enseñar la bienvenida, con el resultado de que se «descubren» fallos que no existen.
 - La app instalada de Adler vive en `%LOCALAPPDATA%\Programs\Kohana` (nombre antiguo, no lo cambies: el desinstalador depende de esa ruta).
 
 ## Dónde está el contexto que no cabe aquí

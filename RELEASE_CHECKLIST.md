@@ -1,8 +1,8 @@
-# Checklist de lanzamiento de Kohana
+# Checklist de lanzamiento de Sakura
 
 ## Código
 
-- [ ] Kohana y Nexo están cerrados completamente.
+- [ ] Sakura (y las copias de los nombres anteriores, Kohana y Nexo) están cerradas completamente.
 - [ ] `dotnet restore .\Nexo.slnx` pasa.
 - [ ] `dotnet test .\Nexo.slnx -c Release` pasa.
 - [ ] `dotnet build .\Nexo.slnx -c Release` pasa.
@@ -12,34 +12,45 @@
 
 ## Identidad y migración
 
-- [ ] La ventana, Capsule, Peek, bandeja y onboarding muestran Kohana.
-- [ ] El ejecutable generado es `Kohana.exe`.
+- [ ] La ventana, Capsule, Peek, bandeja y onboarding muestran Sakura.
+- [ ] El ejecutable generado es `Sakura.exe`.
 - [ ] El icono de aplicación se ve a 16, 32 y 256 px.
-- [ ] `Oye Kohana`, `Kohana`, `Ey Kohana`, `cojana` y `kojana` funcionan según la frase seleccionada.
-- [ ] El modo Kohana no acepta `Nexo` por error.
+- [ ] `Oye Sakura`, `Sakura` y `Hey Sakura` funcionan según la frase seleccionada.
 - [ ] La prueba muestra exactamente lo que entendió Vosk.
 - [ ] Los aliases personales se guardan sin audio.
-- [ ] `%LocalAppData%\Nexo` se copia a `%LocalAppData%\Kohana` sin borrar el origen.
+- [ ] Los datos de `%LocalAppData%\Nexo` y `%LocalAppData%\Kohana` (la cadena de `ProductIdentity.PreviousDataDirectoryNames`) se copian a `%LocalAppData%\Sakura` sin borrar el origen.
 - [ ] Una segunda ejecución no duplica ni sobrescribe la migración.
 
 ## Runtime
 
 - [ ] Sistema muestra estado de voz, IA, Vision y rendimiento.
-- [ ] Reiniciar voz funciona sin reiniciar Kohana.
+- [ ] Reiniciar voz funciona sin reiniciar Sakura.
 - [ ] Diagnóstico abre desde el panel Runtime.
 
 ## Artefactos
 
-- [ ] `scripts\publish.ps1` genera `Kohana.exe`.
+- [ ] `scripts\publish.ps1` genera `Sakura.exe`.
 - [ ] `scripts\verify-release.ps1` no encuentra datos privados.
 - [ ] El SHA-256 del ZIP coincide.
 - [ ] El ZIP portable abre después de extraerse en otra carpeta.
 - [ ] El instalador se crea con Inno Setup 6.
 - [ ] El instalador funciona sin permisos de administrador.
-- [ ] Los accesos directos abren Kohana.
+- [ ] Los accesos directos abren Sakura.
 - [ ] La bandeja, `Alt + A`, Peek y Look Mode funcionan instalados.
 - [ ] La desinstalación elimina la aplicación.
-- [ ] El usuario puede conservar o borrar sus datos locales de Kohana.
+- [ ] El usuario puede conservar o borrar sus datos locales de Sakura.
+
+## Actualización de la versión anterior
+
+Es lo único que este bloque de la lista existe para asegurar: que actualizar de la versión anterior a la nueva funciona. Se ensaya en una copia aparte (zip portable de la versión anterior en una carpeta de al menos dos niveles, con `SAKURA_DATA_ROOT` aislado), nunca sobre la instalación real.
+
+- [ ] La publicación tiene sus **cuatro** adjuntos y cada `.sha256` se llama exactamente como su archivo más `.sha256`.
+- [ ] Instalada la versión **anterior**, «Buscar actualizaciones» encuentra la nueva.
+- [ ] Instalarla deja la versión nueva en la carpeta, **vuelve a abrir Sakura sola**, y `%LOCALAPPDATA%\Sakura\actualizaciones\ultima-actualizacion.log` termina en «Terminado.».
+- [ ] Tras actualizar, **no vuelve a salir la bienvenida** y se conservan tareas, rutinas, enfoque y el modelo de IA elegido.
+- [ ] Tras actualizar, «Aplicaciones instaladas» de Windows dice la versión nueva.
+- [ ] Tras actualizar, el desinstalador sigue existiendo y desinstalar deja la carpeta vacía.
+- [ ] No quedan `Sakura.new`, `Sakura.old` ni zips en la carpeta de actualizaciones.
 
 ## Prueba limpia
 

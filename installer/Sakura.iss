@@ -82,8 +82,17 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 ; Barrer {app} es correcto aquí porque {app} es una carpeta propia y exclusiva de Sakura
 ; (…\Programs\Sakura). Los datos de la persona viven en %LOCALAPPDATA%\Sakura, que es otra carpeta
 ; y esta línea no toca.
+;
+; Bloque de instalación y actualización (0.30.36) — también {app}.new y {app}.old. Son las carpetas
+; de trabajo del intercambio (sufijos de `UpdateSwapPathPolicy`, src/Nexo.Core/Updates/UpdateSwapPaths.cs):
+; una actualización fallida deja `.new` (unos 250 MB) y no se limpia hasta el siguiente intento, que no
+; llega si la persona desinstala. Son hermanas de {app}, no están dentro, así que la línea de arriba no
+; las alcanza. Las crea y destruye solo el actualizador de Sakura. Si los sufijos cambian allí, hay que
+; cambiarlos aquí: el compilador no lo avisa.
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+Type: filesandordirs; Name: "{app}.new"
+Type: filesandordirs; Name: "{app}.old"
 
 [Icons]
 Name: "{group}\Sakura"; Filename: "{app}\{#MyAppExeName}"

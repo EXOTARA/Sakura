@@ -47,7 +47,7 @@ public sealed class UpdateHelperScriptTests
         var script = Build();
 
         var stillOpen = script.IndexOf("if (Get-Process -Id $pid_", StringComparison.Ordinal);
-        var firstMove = script.IndexOf("Move-Item", StringComparison.Ordinal);
+        var firstMove = script.IndexOf("[IO.Directory]::Move(", StringComparison.Ordinal);
 
         Assert.True(stillOpen >= 0 && firstMove > stillOpen);
     }
@@ -59,7 +59,7 @@ public sealed class UpdateHelperScriptTests
 
         Assert.Contains("$moved = $true", script, StringComparison.Ordinal);
         Assert.Contains(
-            "Move-Item -LiteralPath $previous -Destination $install",
+            "[IO.Directory]::Move($previous, $install)",
             script,
             StringComparison.Ordinal);
     }
@@ -78,7 +78,7 @@ public sealed class UpdateHelperScriptTests
         var clear = script.IndexOf(
             "Remove-Item -LiteralPath $install -Recurse -Force", StringComparison.Ordinal);
         var restore = script.IndexOf(
-            "Move-Item -LiteralPath $previous -Destination $install", StringComparison.Ordinal);
+            "[IO.Directory]::Move($previous, $install)", StringComparison.Ordinal);
 
         Assert.True(clear >= 0, "La vuelta atrás tiene que quitar la promoción a medias.");
         Assert.True(restore > clear, "Hay que hacer hueco antes de devolver la versión anterior.");
@@ -90,7 +90,7 @@ public sealed class UpdateHelperScriptTests
         var script = Build();
 
         var promote = script.IndexOf(
-            "Move-Item -LiteralPath $staged -Destination $install", StringComparison.Ordinal);
+            "[IO.Directory]::Move($staged, $install)", StringComparison.Ordinal);
         var discard = script.LastIndexOf(
             "Remove-Item -LiteralPath $previous", StringComparison.Ordinal);
 
@@ -124,7 +124,7 @@ public sealed class UpdateHelperScriptTests
         var script = Build();
 
         var copy = script.IndexOf("-Filter 'unins*'", StringComparison.Ordinal);
-        var firstMove = script.IndexOf("Move-Item", StringComparison.Ordinal);
+        var firstMove = script.IndexOf("[IO.Directory]::Move(", StringComparison.Ordinal);
 
         Assert.True(copy >= 0, "El desinstalador tiene que conservarse.");
         Assert.True(firstMove > copy, "Copiarlo después de mover sería copiarlo de una carpeta que ya no está.");
@@ -158,6 +158,160 @@ public sealed class UpdateHelperScriptTests
         var script = UpdateHelperScript.Build(paths, 7, @"C:\Users\O'Brien\k.exe");
 
         Assert.Contains("O''Brien", script, StringComparison.Ordinal);
+    }
+
+    private static string BuildWithRollbackExecutable() =>
+        UpdateHelperScript.Build(
+            SafePaths(),
+            4242,
+            @"C:\Users\Alguien\AppData\Local\Programs\Sakura\Sakura.exe",
+            @"C:\Users\Alguien\AppData\Local\Programs\Sakura\Kohana.exe");
+
+    [Fact]
+    public void AfterAFailedPromotion_SakuraIsOpenedAgain_BeforeTheExit()
+    {
+        // Medido ejecutando el guion: la vuelta atrás dejaba la instalación anterior entera y aun así
+        // el resultado visible era «Sakura se cerró y no volvió». La reapertura tiene que estar
+        // dentro del catch, después de devolver la carpeta anterior y antes del `exit 1`.
+        var script = BuildWithRollbackExecutable();
+
+        var restore = script.IndexOf(
+            "[IO.Directory]::Move($previous, $install)", StringComparison.Ordinal);
+        var exit1 = script.IndexOf("exit 1", StringComparison.Ordinal);
+        var reopen = script.IndexOf("Reabre", restore, StringComparison.Ordinal);
+
+        Assert.True(restore >= 0 && exit1 > restore);
+        Assert.True(reopen > restore && reopen < exit1, "Hay que reabrir tras la vuelta atrás y antes de salir.");
+    }
+
+    [Fact]
+    public void WithNoPreparedFolder_SakuraIsOpenedAgain_BeforeTheExit()
+    {
+        var script = BuildWithRollbackExecutable();
+
+        var noFolder = script.IndexOf("No hay carpeta preparada", StringComparison.Ordinal);
+        var exit3 = script.IndexOf("exit 3", StringComparison.Ordinal);
+        var reopen = script.IndexOf("Reabre", noFolder, StringComparison.Ordinal);
+
+        Assert.True(noFolder >= 0 && exit3 > noFolder);
+        Assert.True(reopen > noFolder && reopen < exit3);
+    }
+
+    [Fact]
+    public void WhenSakuraNeverClosed_ItIsNotOpenedAgain()
+    {
+        // Ahí Sakura nunca se cerró: abrir otra copia sería pedirle al candado de instancia única
+        // que la eche. Nada entre la comprobación y su `exit 2` puede reabrir.
+        var script = BuildWithRollbackExecutable();
+
+        var stillOpen = script.IndexOf("if (Get-Process -Id $pid_", StringComparison.Ordinal);
+        var exit2 = script.IndexOf("exit 2", StringComparison.Ordinal);
+
+        Assert.True(stillOpen >= 0 && exit2 > stillOpen);
+        Assert.DoesNotContain("Reabre", script[stillOpen..exit2], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheHappyPathAlsoGoesThroughTheReopenFunction()
+    {
+        // Una sola manera de abrir Sakura: la función. Un `Start-Process` suelto en otro sitio sería
+        // volver a tener caminos que reabren y caminos que no.
+        var script = BuildWithRollbackExecutable();
+
+        Assert.Equal(1, CountOf(script, "Start-Process"));
+        Assert.True(
+            script.LastIndexOf("Reabre", StringComparison.Ordinal) >
+            script.LastIndexOf("Remove-Item -LiteralPath $previous", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheRollbackExecutableIsQuoted_AndAnApostropheCannotBreakTheScript()
+    {
+        var paths = UpdateSwapPathPolicy.Resolve(@"C:\Users\O'Brien\AppData\Local\Programs\Sakura");
+        Assert.True(paths.IsSafe, paths.Problem);
+
+        var script = UpdateHelperScript.Build(
+            paths, 7, @"C:\Users\O'Brien\n.exe", @"C:\Users\O'Brien\Sakura $(calc) `x.exe");
+
+        Assert.Contains("$exeAnterior = 'C:\\Users\\O''Brien\\Sakura $(calc) `x.exe'", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FolderMovesAreAtomicRenames_NotMoveItem()
+    {
+        // Move-Item sobre una carpeta, en PowerShell 5.1, mueve archivo a archivo y se para en el
+        // primero bloqueado: deja la instalación partida. Ver UpdateHelperScriptRealPowerShellTests.
+        Assert.DoesNotContain("Move-Item", Build(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheRollbackChecksAndRecordsThatTheOldInstallIsBackInPlace()
+    {
+        var script = Build();
+
+        var check = script.IndexOf("Instalacion anterior en su sitio.", StringComparison.Ordinal);
+        var exit1 = script.IndexOf("exit 1", StringComparison.Ordinal);
+
+        Assert.True(check >= 0 && check < exit1);
+    }
+
+    [Fact]
+    public void TheVersionBeingInstalledIsRecordedInTheLog()
+    {
+        var script = UpdateHelperScript.Build(SafePaths(), 1, @"C:\x.exe", "", "", "0.30.36-beta");
+
+        Assert.Contains("$versionNueva = '0.30.36-beta'", script, StringComparison.Ordinal);
+        Assert.Contains("Apunta ('Version que se instala: ' + $versionNueva)", script, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData('\u2018')]
+    [InlineData('\u2019')]
+    [InlineData('\u201A')]
+    [InlineData('\u201B')]
+    public void TypographicQuotesNeverReachTheScriptAsCharacters(char quote)
+    {
+        // PowerShell las trata como comilla simple: crudas cerrarían la cadena. Salen como [char]N.
+        var script = UpdateHelperScript.Build(SafePaths(), 1, $"C:\\D{quote}Angelo\\Sakura.exe");
+
+        Assert.DoesNotContain(quote, script);
+        Assert.Contains($"'C:\\D' + [char]{(int)quote} + 'Angelo\\Sakura.exe'", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheScriptIsPureAscii_SoNoEncodingCanMisreadAPath()
+    {
+        var paths = UpdateSwapPathPolicy.Resolve(@"C:\Users\José Muñoz\AppData\Local\Programs\Sakura");
+        Assert.True(paths.IsSafe, paths.Problem);
+
+        var script = UpdateHelperScript.Build(paths, 1, @"C:\Users\José Muñoz\x.exe");
+
+        Assert.Contains("'C:\\Users\\Jos' + [char]233 + ' Mu' + [char]241 + 'oz", script, StringComparison.Ordinal);
+        // Solo las rutas: los comentarios del guion son texto y pueden llevar acentos sin riesgo.
+        foreach (var line in script.Split('\n').Where(line => line.StartsWith('$')))
+        {
+            Assert.All(line, character => Assert.True(character <= 127, line));
+        }
+    }
+
+    [Fact]
+    public void WithoutARollbackExecutable_TheCandidateIsAnEmptyString()
+    {
+        // La función ya trata la cadena vacía como «no hay candidato».
+        Assert.Contains("$exeAnterior = ''", Build(), StringComparison.Ordinal);
+    }
+
+    private static int CountOf(string text, string value)
+    {
+        var count = 0;
+        for (var index = text.IndexOf(value, StringComparison.Ordinal);
+             index >= 0;
+             index = text.IndexOf(value, index + value.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
     }
 
     [Fact]

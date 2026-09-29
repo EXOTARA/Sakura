@@ -11,6 +11,9 @@ Release en frío 2.52 s — ver `IMPLEMENTATION_LOG.md`). **Siguen sin medir** e
 el tamaño del instalador y el SHA-256, porque requieren `dotnet publish` y compilar el instalador.
 **Aislamiento:** Presupuestos de latencia siguen marcados `PENDIENTE DE CALIBRAR`: el baseline de
 build/test **no** mide latencia de voz, wake word ni TTS, que exigen micrófono y escenarios reales.
+**Dato ya conocido (2026-09-20), sin cerrar L1:** la publicación 0.30.34-beta lleva un portable de
+100 788 001 bytes y un instalador de 67 695 548 bytes. Sigue faltando el SHA-256 medido en local y
+las latencias.
 **Para estable:** medir artefactos en Fase 10 y calibrar latencias en Fase 3 (Voice Lab).
 
 ### L2 — `MainWindow.xaml.cs` como God Object ⚠️ (en extracción desde el 2026-09-14)
@@ -297,7 +300,8 @@ los restaura.
 **No bloquea la fase 1.2.**
 **Para estable:** añadir copia previa `.bak` y recuperación semántica.
 
-### L12 — La propiedad del mutex de instancia única es por hilo (D5)
+### L19 — La propiedad del mutex de instancia única es por hilo (D5)
+_(Antes se numeraba L12, igual que la de «Aplicaciones instaladas»; se renumera en 0.30.36. Cualquier referencia anterior a «L12 del mutex» es esta.)_
 **Qué:** Dos `SingleInstanceCoordinator` en el **mismo hilo** se consideran ambos primarios: el
 segundo `WaitOne` es una adquisición recursiva del mismo dueño.
 **Impacto real:** ninguno en producción, donde cada instancia es un proceso distinto.
@@ -306,7 +310,11 @@ segundo `WaitOne` es una adquisición recursiva del mismo dueño.
 
 ### L8 — Sin firma Authenticode
 **Qué:** No hay certificado. SmartScreen avisa en cada instalación.
-**Aislamiento:** Sin actualización silenciosa. El usuario ve versión, notas y hash, y confirma.
+**Aislamiento:** Sin actualización silenciosa. El usuario ve versión, notas y la carpeta que se va a
+reemplazar, y confirma. La huella SHA-256 **se comprueba** (`WindowsUpdateDownloader`) pero no se
+enseña. Sale del mismo release que el paquete, así que solo protege contra corrupción o una descarga
+cortada, **no** contra una cuenta de GitHub comprometida: sin firma, quien la controlara cambiaría
+paquete y huella a la vez. La firma es una decisión pendiente (ver «Ruta abierta»).
 **Ruta abierta (2026-08-22):** SignPath Foundation firma gratis proyectos de código abierto que
 cumplan sus condiciones. Del lado del repositorio ya está todo: licencia MIT sin doble licencia
 comercial, sin componentes propietarios, artefactos construidos solo por CI, metadatos de producto y
@@ -403,6 +411,44 @@ pudo leer.
 - Si abrir el explorador tras exportar una conversación falla, ya no se dice «No pude guardarla»: la
   cápsula dice que se guardó y que no se pudo abrir la carpeta (corregido en 0.30.33).
 - **Nada de esto se reprodujo ejecutando la app**: hay pruebas automáticas, no una prueba en vivo.
+
+### L18 — Instalar y actualizar de extremo a extremo, solo el canal directo (0.30.36, 2026-09-28)
+**Qué se cubre:** el ayudante de actualización vuelve a abrir Sakura en toda salida por fallo (vuelta
+atrás y «no hay carpeta preparada»), no solo en el camino feliz; el intercambio mueve las carpetas con
+`[IO.Directory]::Move` (renombrado entero, o falla sin tocar nada) y no con `Move-Item`, que en
+PowerShell 5.1 mueve archivo a archivo y podía dejar la instalación partida; las rutas con
+acentos o comillas tipográficas («José», «D’Angelo») entran al guion como `[char]N`, que queda en ASCII
+puro, y además se escribe con BOM; Personalizar → Actualizaciones avisa
+de que la última actualización no se pudo aplicar (`UpdateHelperLog`, leyendo
+`ultima-actualizacion.log`), solo mientras la versión en marcha sea más antigua que la que se intentó
+(el guion apunta la versión en el registro) y sin prometer «te quedaste como estabas» si el guion no
+comprobó que la instalación anterior está en su sitio; el paquete se empareja con **su** huella (el `.zip` más grande y el
+`.sha256` que se llama igual) y sin ella no se instala; el candado de instancia única se toma antes
+de mover carpetas pesadas; el desinstalador borra también `{app}.new` y `{app}.old`; la bienvenida
+dice qué pasa de verdad con las capturas y los dos números de espacio de la IA local.
+**Qué NO se cubre:**
+- La ruta MSIX (Microsoft Store) no se ha ejercitado nunca y queda fuera: no hay paquete enviado.
+- El aviso de actualización fallida se repite en cada arranque mientras la versión en marcha sea más
+  antigua que la intentada; no se guarda un «ya avisé», a propósito. Un registro de un ayudante
+  anterior (sin la línea de versión) no avisa.
+- Si la vuelta atrás no pudiera devolver la instalación anterior, el siguiente intento borra `.old`
+  al empezar, que sería la única copia. No se cambió (el plan prohíbe reordenar el intercambio).
+- La huella sale del mismo release que el paquete: protege contra corrupción, no contra una cuenta de
+  GitHub comprometida. `SECURITY_MODEL.md` y L8 lo dicen así; la firma sigue pendiente de Adler.
+- `ultima-actualizacion.log` sigue siendo la única traza y no se enseña entero, a propósito: puede
+  llevar rutas y mensajes de Windows.
+- La oferta de actualización no dice el tamaño de la descarga ni enseña la huella.
+- Si el ayudante muere de golpe —el equipo se apaga a mitad del intercambio— puede quedar la carpeta a
+  medias y ahí no hay reapertura que valga.
+- Mover el candado antes de la migración arregla una carrera **no reproducida**.
+- Un `settings.json` escrito a mano sin `SchemaVersion` sigue enseñando la bienvenida otra vez, a
+  propósito (congelado en `AHandWrittenFileWithoutSchemaVersion_ShowsTheWelcomeAgain`).
+- Las capturas por pregunta sobre la pantalla o por Ctrl + Shift + Espacio siguen sin vista previa: se
+  cambió el texto de la bienvenida, no el comportamiento.
+- El ayudante se ejecutó de verdad con PowerShell 5.1 sobre una instalación de mentira
+  (`UpdateHelperScriptRealPowerShellTests`: archivo bloqueado, acentos, comilla tipográfica); una
+  actualización real de una versión a otra, el ciclo instalar → actualizar → desinstalar en Windows Sandbox y la lectura con
+  Narrador del texto nuevo siguen pendientes.
 
 ## Fuera de alcance de 1.0 (decidido, no es limitación)
 
