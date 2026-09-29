@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.30.35-beta]
+
+### Corregido
+
+- **Jugando o viendo algo a pantalla completa, Alt + A ya no abre Sakura.** Antes el atajo se lo quedaba Windows y el juego nunca recibía la tecla; a veces además el panel se abría encima de la partida. Ahora, mientras una aplicación ocupa la pantalla entera, Sakura suelta sus atajos (Alt + A, Alt + V, Ctrl + Espacio y el resto) para que el juego los reciba, y los recupera sola al salir.
+  - Se sueltan **todos** los atajos mientras dura la pantalla completa, incluidos el dictado (Ctrl + Shift + D) y la voz (Alt + V).
+  - La bandeja del reloj sigue funcionando: puedes abrir Sakura desde ahí.
+  - Se nota al instante al cambiar de ventana, sin esperar a la revisión periódica.
+  - El escritorio, el menú Inicio y la propia Sakura no cuentan como pantalla completa.
+  - Si tienes apagada en Personalizar la opción «Adaptar Sakura al uso de CPU, GPU y pantalla completa», Sakura no detecta la pantalla completa y no suelta nada.
+- **El panel ya no se abre encima de algo a pantalla completa**, aunque Sakura aún no hubiera soltado los atajos: cada vez que llega un atajo, Sakura mira en ese momento qué hay en primer plano.
+- Si al volver de un juego otra aplicación se había quedado con un atajo, Sakura lo reintenta en silencio y lo recupera cuando queda libre; antes se perdía hasta reiniciar.
+- Si un atajo lo usa otra aplicación, el aviso sale una vez por sesión, no cada vez que sales de un juego.
+
+### Lo que este cambio NO cubre
+
+- No se ha probado con juegos reales, ni con Fortnite; la decisión de cuándo soltar los atajos está cubierta por pruebas automáticas, pero soltarlos y recuperarlos en Windows no tiene prueba automática.
+- Si un juego pasa a pantalla completa sin cambiar de ventana activa, o la ocupa un instante después de recibir el foco (un lanzador que cambia de modo, por ejemplo), **puede que la primera pulsación de Alt + A no le llegue al juego**: Windows la entrega a Sakura, que entonces se calla y suelta los atajos, pero esa pulsación ya se perdió. Después ya le llegan.
+- Cualquier cosa a pantalla completa cuenta, no solo los juegos: un vídeo con F11 en el navegador o una presentación de PowerPoint también sueltan los atajos de Sakura hasta que salgas.
+- Con esa opción de Personalizar apagada, el arreglo no aplica.
+
 ## [0.30.34-beta]
 
 ### Corregido

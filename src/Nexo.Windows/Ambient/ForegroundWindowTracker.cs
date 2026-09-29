@@ -52,6 +52,12 @@ public sealed class ForegroundWindowTracker : IDisposable
     /// </summary>
     public long LastExternalWindowHandle => Interlocked.Read(ref _lastExternalWindowHandle);
 
+    /// <summary>
+    /// Se dispara en cada cambio de ventana activa (también a la propia). Quien lo escuche debe
+    /// volver a su hilo de interfaz: no se garantiza en cuál llega.
+    /// </summary>
+    public event Action? ForegroundChanged;
+
     private void OnForegroundChanged(
         IntPtr hookHandle,
         uint eventType,
@@ -59,7 +65,11 @@ public sealed class ForegroundWindowTracker : IDisposable
         int objectId,
         int childId,
         uint eventThreadId,
-        uint eventTimeMs) => RememberIfExternal(windowHandle);
+        uint eventTimeMs)
+    {
+        RememberIfExternal(windowHandle);
+        ForegroundChanged?.Invoke();
+    }
 
     private void RememberIfExternal(IntPtr windowHandle)
     {

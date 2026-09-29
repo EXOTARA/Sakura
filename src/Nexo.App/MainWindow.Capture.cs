@@ -55,21 +55,6 @@ public partial class MainWindow
         };
     }
 
-    private void RegisterCaptureHotkeys(IntPtr windowHandle)
-    {
-        if (!RegisterHotKey(windowHandle, RegionCaptureHotkeyId, ModAlt | ModShift, VirtualKeyS))
-        {
-            _assistantView.AddSakuraMessage(
-                "Alt + Shift + S ya está siendo utilizado por otra aplicación; la captura de región sigue en la pestaña Captura.");
-        }
-
-        if (!RegisterHotKey(windowHandle, RecordHotkeyId, ModAlt | ModShift, VirtualKeyG))
-        {
-            _assistantView.AddSakuraMessage(
-                "Alt + Shift + G ya está siendo utilizado por otra aplicación; la grabación sigue en la pestaña Captura.");
-        }
-    }
-
     private void UnregisterCaptureHotkeys(IntPtr windowHandle)
     {
         UnregisterHotKey(windowHandle, RegionCaptureHotkeyId);

@@ -42,14 +42,8 @@ public partial class MainWindow
         _fileSearchWindow.ShowAtTop();
     }
 
-    private void RegisterSelectionHotkey(IntPtr windowHandle)
+    private bool RegisterSelectionHotkey(IntPtr windowHandle)
     {
-        if (!RegisterHotKey(windowHandle, FileSearchHotkeyId, ModAlt | ModShift, VirtualKeyF))
-        {
-            _assistantView.AddSakuraMessage(
-                "Alt + Shift + F ya está siendo utilizado por otra aplicación; la búsqueda de archivos sigue en la paleta.");
-        }
-
         // 2026-09-16 — Alt+Shift+R lo tenía otra aplicación en el equipo de Adler. Se prueban varias
         // combinaciones y se usa la primera libre; la hoja de atajos enseña la que quedó.
         foreach (var (key, letter) in SelectionHotkeyCandidates)
@@ -58,15 +52,23 @@ public partial class MainWindow
             {
                 SelectionHotkeyLabel = $"Alt + Shift + {letter}";
                 _dashboardWindow.View.SetSelectionShortcut(letter);
-                return;
+                return true;
             }
         }
 
-        SelectionHotkeyLabel = null;
-        _dashboardWindow.View.SetSelectionShortcut(null);
-        _assistantView.AddSakuraMessage(
+        // Este método también se reintenta en silencio en cada reconciliación: solo se toca la
+        // interfaz cuando cambia (la primera vez o al perder una que tenía).
+        if (SelectionHotkeyLabel is not null || !_hotkeysReportedBusy.Contains(SelectionHotkeyId))
+        {
+            SelectionHotkeyLabel = null;
+            _dashboardWindow.View.SetSelectionShortcut(null);
+        }
+
+        ReportHotkeyBusy(
+            SelectionHotkeyId,
             "Las combinaciones para el texto seleccionado (Alt + Shift + E, W o Q) ya las usa otra aplicación. " +
             "Esa función sigue disponible desde la paleta: «Texto seleccionado».");
+        return false;
     }
 
     private static readonly (uint Key, string Letter)[] SelectionHotkeyCandidates =

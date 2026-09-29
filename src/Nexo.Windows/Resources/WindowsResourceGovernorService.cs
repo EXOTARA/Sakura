@@ -36,6 +36,25 @@ public sealed class WindowsResourceGovernorService
         return _stabilizer.Stabilize(candidate);
     }
 
+    /// <summary>
+    /// 2026-09-28 — lectura EN VIVO de la ventana en primer plano para decidir si Sakura suelta sus
+    /// atajos globales. No pasa por <see cref="Evaluate"/> a propósito: esa decisión se refresca cada
+    /// 2–8 s y, tras entrar a un juego, Alt + A seguía abriendo el panel durante ese intervalo. Sin
+    /// «ventana externa preferida»: si la que manda es la propia de Sakura, no hay nada que soltar.
+    /// </summary>
+    public static bool ShouldReleaseGlobalHotkeys(bool resourceGovernorEnabled)
+    {
+        var foreground = GetForegroundWindow();
+        var isOwnWindow = foreground != IntPtr.Zero && IsNexoWindow(foreground);
+        var state = ReadForegroundState(IntPtr.Zero, IntPtr.Zero);
+
+        return GlobalHotkeyReleasePolicy.ShouldRelease(
+            state.IsFullScreen,
+            state.ProcessName,
+            isOwnWindow,
+            resourceGovernorEnabled);
+    }
+
     private static ForegroundState ReadForegroundState(
         IntPtr preferredExternalWindow,
         IntPtr excludedWindow)
