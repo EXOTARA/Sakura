@@ -51,7 +51,9 @@ public static class UpdateHelperScript
         UpdateSwapPaths paths,
         int kohanaProcessId,
         string executableToLaunch,
-        string packagePath = "")
+        string executableIfRollback = "",
+        string packagePath = "",
+        string targetVersion = "")
     {
         if (!paths.IsSafe)
         {
@@ -77,13 +79,47 @@ public static class UpdateHelperScript
         script.AppendLine("Set-Content -LiteralPath $registro -Value '' -Encoding UTF8");
         script.AppendLine();
 
+        // Bloque de instalación y actualización (0.30.36) — el ayudante vuelve a abrir Sakura pase
+        // lo que pase, salvo cuando Sakura nunca llegó a cerrarse.
+        //
+        // Medido ejecutando este mismo guion sobre carpetas de mentira: cuando el intercambio
+        // fallaba (o no había carpeta preparada) la vuelta atrás dejaba la instalación anterior
+        // entera, con su desinstalador, y aun así el resultado visible era «Sakura se cerró para
+        // instalarse y no volvió». Es el mismo síntoma que ya se persiguió dos veces (ver
+        // `WaitForExitSeconds`) por otras causas: la única llamada a Start-Process estaba al final
+        // del camino feliz.
+        //
+        // Se prueba primero el ejecutable de la carpeta nueva y después el que estaba corriendo
+        // (que tras una vuelta atrás vuelve a existir). No se adivina ningún nombre aquí: una
+        // instalación que aún no saltó el cambio de nombre tiene Kohana.exe, y acertar por lista
+        // sería mantener dos listas. Si no hay ninguno, se apunta en el registro en vez de callar.
+        // Si abrirla fallara no se propaga: en la vuelta atrás, un error aquí se saltaría el `exit`.
+        script.AppendLine("function Reabre {");
+        script.AppendLine("    foreach ($c in @($exe, $exeAnterior)) {");
+        script.AppendLine("        if ($c -and (Test-Path -LiteralPath $c)) {");
+        script.AppendLine("            try { Start-Process -FilePath $c; Apunta 'Sakura abierta de nuevo.' }");
+        script.AppendLine("            catch { Apunta 'No se pudo abrir Sakura.' }");
+        script.AppendLine("            return");
+        script.AppendLine("        }");
+        script.AppendLine("    }");
+        script.AppendLine("    Apunta 'No se encontro ningun ejecutable que abrir.'");
+        script.AppendLine("}");
+        script.AppendLine();
+
         script.AppendLine($"$install = {Quote(paths.Install)}");
         script.AppendLine($"$staged = {Quote(paths.Staged)}");
         script.AppendLine($"$previous = {Quote(paths.Previous)}");
         script.AppendLine($"$exe = {Quote(executableToLaunch)}");
+        script.AppendLine($"$exeAnterior = {Quote(executableIfRollback)}");
         script.AppendLine($"$paquete = {Quote(packagePath)}");
         script.AppendLine($"$pid_ = {kohanaProcessId}");
+        script.AppendLine($"$versionNueva = {Quote(targetVersion)}");
         script.AppendLine();
+
+        // La versión que se intenta instalar queda en el registro: `UpdateHelperLog` solo avisa de
+        // un fallo mientras la Sakura en marcha sea más antigua que esta. Sin ella, quien después se
+        // actualizaba con el instalador o a mano veía «vuelve a intentarlo» para siempre.
+        script.AppendLine("Apunta ('Version que se instala: ' + $versionNueva)");
 
         // Esperar por identificador y no por nombre: otra instancia de Sakura abierta a la vez no
         // tiene por qué bloquear esta, y matar «todo lo que se llame Sakura» es de las cosas que
@@ -103,6 +139,7 @@ public static class UpdateHelperScript
 
         script.AppendLine("if (-not (Test-Path -LiteralPath $staged)) {");
         script.AppendLine("    Apunta 'No hay carpeta preparada que instalar.'");
+        script.AppendLine("    Reabre");
         script.AppendLine("    exit 3");
         script.AppendLine("}");
         script.AppendLine();
@@ -137,9 +174,16 @@ public static class UpdateHelperScript
 
         script.AppendLine("$moved = $false");
         script.AppendLine("try {");
-        script.AppendLine("    Move-Item -LiteralPath $install -Destination $previous");
+        // Los tres movimientos de carpeta son [IO.Directory]::Move y no Move-Item. En PowerShell 5.1,
+        // Move-Item sobre una carpeta mueve archivo por archivo y se detiene en el primero
+        // bloqueado (un antivirus, un archivo abierto con FileShare.ReadWrite): dejaba la
+        // instalación partida entre la carpeta y `.old` con `$moved` aún en falso, sin vuelta atrás
+        // posible, y el siguiente intento borraba `.old` al empezar. Directory.Move renombra la
+        // carpeta entera: o se mueve o falla sin tocar nada. Lo encontró ejecutar el guion de verdad
+        // con un archivo bloqueado, no leerlo.
+        script.AppendLine("    [IO.Directory]::Move($install, $previous)");
         script.AppendLine("    $moved = $true");
-        script.AppendLine("    Move-Item -LiteralPath $staged -Destination $install");
+        script.AppendLine("    [IO.Directory]::Move($staged, $install)");
         script.AppendLine("}");
         // La vuelta atrás tiene que limpiar antes de devolver, y esto lo encontró una prueba
         // ejecutando el intercambio de verdad: al fallar la promoción, Windows deja una carpeta
@@ -156,11 +200,16 @@ public static class UpdateHelperScript
         script.AppendLine("            Remove-Item -LiteralPath $install -Recurse -Force -ErrorAction SilentlyContinue");
         script.AppendLine("        }");
         script.AppendLine("        if (-not (Test-Path -LiteralPath $install)) {");
-        script.AppendLine("            Move-Item -LiteralPath $previous -Destination $install -ErrorAction SilentlyContinue");
+        script.AppendLine("            try { [IO.Directory]::Move($previous, $install) } catch { }");
         script.AppendLine("        }");
         script.AppendLine("    }");
         script.AppendLine("    Apunta (\"FALLO: \" + $_.Exception.Message)");
         script.AppendLine("    Apunta (\"se habia apartado la actual: \" + $moved)");
+        // Que la instalación anterior esté de verdad en su sitio se comprueba y se apunta: es lo que
+        // decide si el aviso puede decir que Sakura se quedó en la versión de antes.
+        script.AppendLine("    if (Test-Path -LiteralPath $install) { Apunta 'Instalacion anterior en su sitio.' }");
+        script.AppendLine("    else { Apunta 'La instalacion anterior NO esta en su sitio.' }");
+        script.AppendLine("    Reabre");
         script.AppendLine("    exit 1");
         script.AppendLine("}");
         script.AppendLine("Apunta 'Intercambio hecho.'");
@@ -171,7 +220,7 @@ public static class UpdateHelperScript
         script.AppendLine("Remove-Item -LiteralPath $previous -Recurse -Force -ErrorAction SilentlyContinue");
         script.AppendLine();
 
-        script.AppendLine("if (Test-Path -LiteralPath $exe) { Start-Process -FilePath $exe }");
+        script.AppendLine("Reabre");
         script.AppendLine();
 
         // El paquete descargado se borra al terminar. Son cien megas por actualización, y tras la
@@ -204,6 +253,35 @@ public static class UpdateHelperScript
     /// las rutas vengan ya validadas, un guion que se rompe según cómo te llames es el tipo de
     /// fallo que solo le pasa a una persona y nadie sabe reproducir.
     /// </summary>
-    private static string Quote(string value) =>
-        "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
+    private static string Quote(string value)
+    {
+        // Todo lo que no es ASCII sale como `[char]N` y no como el carácter: el guion queda en ASCII
+        // puro y ninguna codificación puede leerlo mal. Dos fallos medidos ejecutando el guion con
+        // powershell.exe 5.1:
+        //  - «José» en la ruta: un .ps1 UTF-8 sin BOM se lee como ANSI y la ruta llegaba mal escrita
+        //    (el ayudante salía sin instalar nada, siempre);
+        //  - PowerShell trata como comilla simple no solo «'» sino también U+2018, U+2019, U+201A y
+        //    U+201B, así que una ruta como «D’Angelo» cerraba la cadena y rompía el guion (y era un
+        //    vector de inyección).
+        // Se emite por unidades UTF-16 y siempre alternando con cadenas literales (`'a' + [char]233 +
+        // 'b'`): dos [char] seguidos se sumarían como números. Solo la comilla simple ASCII se duplica.
+        var quoted = new StringBuilder(value.Length + 2).Append('\'');
+        foreach (var character in value)
+        {
+            if (character > 127)
+            {
+                quoted.Append("' + [char]").Append((int)character).Append(" + '");
+            }
+            else
+            {
+                quoted.Append(character);
+                if (character == '\'')
+                {
+                    quoted.Append(character);
+                }
+            }
+        }
+
+        return quoted.Append('\'').ToString();
+    }
 }

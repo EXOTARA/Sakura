@@ -1601,6 +1601,18 @@ public partial class SettingsView : UserControl
     }
 
     /// <summary>
+    /// Enseña u oculta el aviso de que la última actualización no se pudo aplicar. Va en su propia
+    /// línea y no en <see cref="SetUpdateStatus"/>, que la comprobación en segundo plano sobrescribe.
+    /// </summary>
+    public void SetLastUpdateProblem(string? message)
+    {
+        LastUpdateProblemText.Text = message ?? string.Empty;
+        LastUpdateProblemText.Visibility = string.IsNullOrWhiteSpace(message)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
+    /// <summary>
     /// Enseña la versión encontrada, o esconde la tarjeta si no hay ninguna.
     ///
     /// Las notas de la publicación se enseñan tal cual las escribió quien publicó: son la única
@@ -1654,6 +1666,8 @@ public partial class SettingsView : UserControl
     {
         UpdateStatusText.Text = "Esta copia se instaló desde Microsoft Store, y las versiones nuevas las instala la Store.";
         UpdateOfferPanel.Visibility = Visibility.Collapsed;
+        // En la Store no hay ayudante, y un registro viejo de otra instalación no puede hablar por él.
+        LastUpdateProblemText.Visibility = Visibility.Collapsed;
         AutomaticUpdateCheckBox.Visibility = Visibility.Collapsed;
         AutomaticUpdateHintText.Visibility = Visibility.Collapsed;
         UpdateCheckPanel.Visibility = Visibility.Collapsed;

@@ -53,6 +53,60 @@ public sealed class GitHubReleaseReaderTests
         Assert.DoesNotContain(".sha256", release.PackageUrl, StringComparison.Ordinal);
     }
 
+    // Los cuatro adjuntos reales de una publicación (medido contra la API con v0.30.34-beta).
+    private const string Installer = """{ "name": "Sakura-0.30.34-beta-Setup.exe", "size": 67695548, "browser_download_url": "https://x.invalid/Setup.exe" }""";
+    private const string InstallerHash = """{ "name": "Sakura-0.30.34-beta-Setup.exe.sha256", "size": 100, "browser_download_url": "https://x.invalid/Setup.exe.sha256" }""";
+    private const string Portable = """{ "name": "Sakura-0.30.34-beta-win-x64-portable.zip", "size": 100788001, "browser_download_url": "https://x.invalid/portable.zip" }""";
+    private const string PortableHash = """{ "name": "Sakura-0.30.34-beta-win-x64-portable.zip.sha256", "size": 100, "browser_download_url": "https://x.invalid/portable.zip.sha256" }""";
+
+    private static string ReleaseWith(params string[] assets) =>
+        "{ \"tag_name\": \"v0.30.34-beta\", \"assets\": [" + string.Join(",", assets) + "] }";
+
+    [Theory]
+    [InlineData(0)] // el orden que devuelve GitHub hoy
+    [InlineData(1)] // instalador al final
+    [InlineData(2)] // huellas antes que archivos
+    public void ThePackageIsPairedWithItsOwnChecksum_InAnyOrder(int order)
+    {
+        // Antes se tomaba «el último .zip» y «el último .sha256» por separado: acertaba solo porque
+        // «Setup» ordena antes que «win». Con otro orden se bajaban cien megas y se rechazaban.
+        string[] assets = order switch
+        {
+            0 => [Installer, InstallerHash, Portable, PortableHash],
+            1 => [Portable, PortableHash, Installer, InstallerHash],
+            _ => [PortableHash, InstallerHash, Portable, Installer],
+        };
+
+        var release = GitHubReleaseReader.Read(ReleaseWith(assets));
+
+        Assert.True(release.IsUsable, release.Problem);
+        Assert.Equal("https://x.invalid/portable.zip", release.PackageUrl);
+        Assert.Equal("https://x.invalid/portable.zip.sha256", release.ChecksumUrl);
+        Assert.Equal(100788001, release.PackageSize);
+    }
+
+    [Fact]
+    public void ASmallerSecondZipDoesNotWin()
+    {
+        // Un adjunto extra (símbolos, por ejemplo) no puede acabar instalado en lugar de Sakura.
+        const string symbols = """{ "name": "Sakura-0.30.34-beta-symbols.zip", "size": 5000000, "browser_download_url": "https://x.invalid/symbols.zip" }""";
+
+        var release = GitHubReleaseReader.Read(ReleaseWith(Installer, InstallerHash, Portable, PortableHash, symbols));
+
+        Assert.Equal("https://x.invalid/portable.zip", release.PackageUrl);
+        Assert.Equal("https://x.invalid/portable.zip.sha256", release.ChecksumUrl);
+    }
+
+    [Fact]
+    public void APackageWhoseOwnChecksumIsMissingIsRefused_EvenIfAnotherFileHasOne()
+    {
+        // La huella del instalador no vale para el zip: se rechaza en vez de comparar con la de otro.
+        var release = GitHubReleaseReader.Read(ReleaseWith(Installer, InstallerHash, Portable));
+
+        Assert.False(release.IsUsable);
+        Assert.Equal("La publicación no trae la huella para comprobarla.", release.Problem);
+    }
+
     [Fact]
     public void ADraftIsNotOffered()
     {

@@ -417,7 +417,7 @@
                               Checked="VisionEnabledCheckBox_Changed"
                               Unchecked="VisionEnabledCheckBox_Changed" />
                     <TextBlock Margin="24,5,0,0"
-                               Text="Sakura solo captura después de que eliges una ventana o monitor y confirmas la vista previa. La imagen no se guarda en el historial."
+                               Text="Sakura solo mira la pantalla cuando se lo pides. Según la función (por ejemplo, explicar una ventana o preguntar por lo que tienes delante) no te enseña la imagen antes de usarla. Si el permiso de Lens está en «Preguntar», te pide permiso antes de cada captura. La imagen no se guarda en el historial."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
@@ -1110,6 +1110,19 @@
                                Text="No se ha comprobado todavía."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
+
+                    <!--
+                        Bloque de instalación y actualización (0.30.36) — línea propia y no
+                        UpdateStatusText: la comprobación en segundo plano sobrescribe ese texto a
+                        los 45 segundos y el aviso de que la última actualización falló
+                        desaparecería solo.
+                    -->
+                    <TextBlock x:Name="LastUpdateProblemText"
+                               Margin="0,4,0,0"
+                               Visibility="Collapsed"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource BrushWarning}"
+                               AutomationProperties.Name="Aviso sobre la última actualización" />
 
                     <!--
                         Diseño D65 — la tarjeta de la versión encontrada solo aparece cuando hay algo
