@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.37-beta]
+
+### Corregido
+
+- **El panel principal y el de volumen/brillo ya se cierran solos aunque los hayas tocado, en cuanto el ratón sale.** Antes, escribir, hacer clic o dejar el foco de teclado dentro de cualquiera de los dos los dejaba pegados hasta cerrarlos a mano, aunque el ratón ya estuviera lejos. Ahora se cierran igual se haya tocado algo o no: solo importa si el ratón está encima.
+  - El panel principal sigue dando 2,5 segundos de gracia desde que el ratón sale antes de retirarse; el de volumen/brillo sigue dando sus 4 segundos.
+  - Lo abierto a propósito (Alt + A, el icono de la bandeja) sigue quedándose hasta que lo cierres a propósito: eso no cambió.
+  - Arrastrar la barra de volumen o brillo sigue manteniendo el panel abierto aunque el cursor se salga un instante.
+
+### Lo que este cambio NO cubre
+
+- No se ha visto en pantalla; la lógica de cuándo retirarse está cubierta por pruebas automáticas, pero el comportamiento real de foco y ratón en Windows no tiene prueba automática.
+
 ## [0.30.35-beta]
 
 ### Corregido

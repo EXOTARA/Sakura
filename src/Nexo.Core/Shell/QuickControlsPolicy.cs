@@ -33,12 +33,14 @@ public static class QuickControlsPolicy
     /// <summary>
     /// 2026-09-16 — si el panel sigue puesto al cumplirse la espera (Adler, en la 0.30.17: «sigue sin
     /// desaparecer»). El panel vive en el borde, justo donde descansa el ratón que lo abrió, así que
-    /// «ratón encima» solo cuenta si el ratón se mueve: parado encima dos vueltas, se va. El teclado
-    /// solo cuenta si la ventana está de verdad delante; si no, el foco que WPF recuerda es viejo.
+    /// «ratón encima» solo cuenta si el ratón se mueve: parado encima dos vueltas, se va.
+    ///
+    /// 2026-10 — Adler pidió quitar la excepción del foco de teclado: antes, tener el foco dentro
+    /// del panel lo dejaba pegado aunque el ratón ya estuviera lejos. Ahora solo cuenta el arrastre
+    /// activo o el ratón encima.
     /// </summary>
-    public static bool ShouldStay(bool dragging, bool keyboardInsideForeground, bool cursorOver, int stillTicks) =>
+    public static bool ShouldStay(bool dragging, bool cursorOver, int stillTicks) =>
         dragging ||
-        keyboardInsideForeground ||
         (cursorOver && stillTicks < MaximumStillTicks);
 
     /// <summary>

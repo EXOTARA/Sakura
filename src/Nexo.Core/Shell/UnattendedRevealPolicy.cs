@@ -9,11 +9,10 @@ namespace Nexo.Core.Shell;
 /// cada roce deja una ventana encima del trabajo que hay que cerrar a mano, y eso es exactamente lo
 /// que se siente como invasivo.
 ///
-/// La regla no es «no hay ratón encima» sino «no hay ratón encima **y** no ha pasado nada». Ese
-/// «nada» es la parte que importa: leer una respuesta larga sin tocar el ratón no es abandono, y
-/// una ventana que se cierra mientras la lees es peor que una que se queda. Por eso cuenta como
-/// actividad cualquier señal de que alguien está ahí —teclear, escribir, tener el foco— y no solo
-/// el puntero.
+/// 2026-10 — Adler pidió quitar la excepción por «atención»: antes, teclear o tener el foco dentro
+/// del shell cancelaba la retirada aunque el puntero ya estuviera fuera, y eso dejaba el panel
+/// pegado hasta cerrarlo a mano. Ahora la regla es solo «no hay ratón encima», sin excepciones: el
+/// puntero fuera durante la gracia retira el shell, se haya tocado algo o no.
 ///
 /// Solo se aplica a lo que se abrió por roce. Lo que se abre a propósito —el atajo, el icono de la
 /// bandeja— se queda hasta que se cierre a propósito: retirar algo que se acaba de pedir es
@@ -35,16 +34,14 @@ public static class UnattendedRevealPolicy
     /// Si toca retirarse, dadas las señales de ahora.
     ///
     /// <paramref name="outsideSince"/> es desde cuándo el puntero está fuera, o <c>null</c> si está
-    /// dentro. <paramref name="hasUserAttention"/> recoge el resto de señales de presencia: foco de
-    /// teclado, texto a medio escribir, o cualquier cosa que diga que hay alguien delante.
+    /// dentro.
     /// </summary>
     public static bool ShouldRetract(
         bool openedByHover,
         DateTimeOffset? outsideSince,
-        DateTimeOffset now,
-        bool hasUserAttention)
+        DateTimeOffset now)
     {
-        if (!openedByHover || hasUserAttention || outsideSince is not { } since)
+        if (!openedByHover || outsideSince is not { } since)
         {
             return false;
         }
