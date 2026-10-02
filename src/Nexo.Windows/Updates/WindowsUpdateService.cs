@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using Nexo.Core.Updates;
 
 using Nexo.Core.Branding;
@@ -187,7 +188,17 @@ public sealed class WindowsUpdateService(HttpClient? client = null)
                     paths,
                     Environment.ProcessId,
                     Path.Combine(paths.Install, Path.GetFileName(staged)),
-                    download.PackagePath),
+                    // Es el ejecutable que corre ahora, dentro de la carpeta que la vuelta atrás
+                    // devuelve a su sitio: tras un fallo, el ayudante abre este. Cadena vacía =
+                    // «no hay candidato» (no ocurre en un proceso normal).
+                    Environment.ProcessPath ?? string.Empty,
+                    download.PackagePath,
+                    manifest.Version.ToString()),
+                // Con BOM a propósito: powershell.exe 5.1 lee un guion UTF-8 sin BOM como ANSI, y con
+                // «José» en la ruta del perfil las rutas llegaban mal escritas, el ayudante no
+                // encontraba la carpeta preparada y la actualización no funcionaba nunca (medido
+                // ejecutando el guion de verdad).
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true),
                 cancellationToken);
 
             return (true, helperPath, string.Empty);

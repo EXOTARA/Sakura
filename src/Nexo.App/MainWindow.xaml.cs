@@ -1350,6 +1350,7 @@ public partial class MainWindow : Window
         _settingsView.UpdateInstallRequested += () => _ = UpdateFlow.InstallOfferedAsync(_lifetimeCancellation.Token);
         _settingsView.UpdateSkipRequested += UpdateFlow.SkipOffered;
         _settingsView.SetCurrentVersion(CurrentVersionText);
+        _settingsView.SetLastUpdateProblem(ReadLastUpdateProblem());
 
         _settingsView.AiModelChanged += model =>
         {
@@ -6214,6 +6215,25 @@ public partial class MainWindow : Window
 
     private string UpdateWorkFolder =>
         Path.Combine(NexoDataPaths.RootDirectory, "actualizaciones");
+
+    /// <summary>
+    /// Bloque de instalación y actualización (0.30.36) — lo que dejó el ayudante en su último
+    /// intento, traducido a un aviso. Se repite en cada arranque mientras la última actualización no
+    /// haya salido bien: no se guarda ningún «ya avisé», porque mientras el fallo siga ahí la frase
+    /// sigue siendo verdad. No poder leer un registro de diagnóstico no puede estorbar al arranque.
+    /// </summary>
+    private string? ReadLastUpdateProblem()
+    {
+        try
+        {
+            var log = Path.Combine(UpdateWorkFolder, "ultima-actualizacion.log");
+            return File.Exists(log) ? UpdateHelperLog.Describe(File.ReadAllText(log), CurrentVersion) : null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// L2 — el flujo de actualizaciones vive en <see cref="UpdateFlowCoordinator"/>, con pruebas. La

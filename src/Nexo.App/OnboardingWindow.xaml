@@ -128,7 +128,7 @@
                 <StackPanel x:Name="AiPanel" Visibility="Collapsed">
                     <TextBlock Margin="0,0,0,16"
                                ToolTip="Consejo: si tu equipo no tiene tarjeta gráfica o va justo de memoria, Groq responde muy rápido desde la nube y su clave es gratuita (Personalizar → IA)."
-                               Text="Opcional. Sakura por sí sola ocupa unos 250 MB; la IA local (Ollama y el modelo) ocupa unos 5 GB y descarga cerca de 4,8 GB, así que puede tardar según tu conexión. Todo se queda en tu equipo. Si prefieres no descargarla, puedes usar un proveedor en la nube con tu clave (Personalizar → IA) o seguir sin IA: Sakura sigue entendiendo órdenes, tareas y dictado."
+                               Text="Opcional. Sakura por sí sola ocupa unos 250 MB; la IA local (Ollama y el modelo) descarga cerca de 4,8 GB, así que puede tardar según tu conexión. Mientras se instala necesita unos 9 GB libres (4 GB si el motor ya está), porque durante la descompresión conviven el archivo comprimido y el descomprimido; al terminar ocupa unos 5 GB. Todo se queda en tu equipo. Si prefieres no descargarla, puedes usar un proveedor en la nube con tu clave (Personalizar → IA) o seguir sin IA: Sakura sigue entendiendo órdenes, tareas y dictado."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
 
@@ -207,7 +207,7 @@
 
                 <StackPanel x:Name="PrivacyPanel" Visibility="Collapsed">
                     <TextBlock Margin="0,0,0,18"
-                               Text="Elige qué funciones quedan activas. Las capturas siempre requieren una acción explícita y una vista previa."
+                               Text="Elige qué funciones quedan activas. Sakura solo mira la pantalla cuando se lo pides (con un atajo, un botón o una pregunta sobre lo que tienes delante) y, mientras el permiso de Lens esté en «Preguntar» (así viene), te pide permiso antes de cada captura. Qué se permite lo decides en Personalizar → Permisos."
                                TextWrapping="Wrap"
                                Style="{StaticResource MutedTextStyle}" />
                     <CheckBox x:Name="VisionCheckBox"

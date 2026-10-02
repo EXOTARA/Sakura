@@ -13,6 +13,31 @@
 
 - No se ha visto en pantalla; la lógica de cuándo retirarse está cubierta por pruebas automáticas, pero el comportamiento real de foco y ratón en Windows no tiene prueba automática.
 
+## [0.30.36-beta]
+
+### Corregido
+
+- **Si una actualización no se puede aplicar, Sakura vuelve a abrirse sola.** Antes se cerraba para instalarse y, si algo fallaba, ya no volvía: la versión que tenías seguía entera en el disco, pero la aplicación no arrancaba hasta que la abrías a mano.
+- **Y ahora te lo dice.** Personalizar → Actualizaciones avisa de que la última actualización no se pudo aplicar y de que sigues en la versión de antes, sin enseñar rutas ni mensajes de Windows. El aviso sale en cada arranque mientras la versión que tienes sea más antigua que la que se intentó instalar: si después te actualizas con el instalador o a mano, desaparece solo. Si el ayudante no pudo confirmar que tu instalación quedó entera, el aviso lo dice en vez de prometerlo.
+- **Una actualización que falla a mitad ya no deja la instalación partida.** Con un archivo de Sakura abierto por otro programa (un antivirus, por ejemplo), la carpeta se movía archivo a archivo y se quedaba a medias entre la carpeta y su copia de seguridad, sin vuelta atrás. Ahora la carpeta se mueve entera o no se mueve.
+- **La actualización ya funciona si tu nombre de usuario de Windows lleva acentos o una comilla tipográfica** («José», «D’Angelo»). Antes el ayudante leía mal la ruta y salía sin instalar nada, siempre.
+- **Se comprueba que la huella sea la del archivo que se descargó.** Antes se cogía la última huella de la publicación; funcionaba por el orden en que GitHub devuelve los archivos, y con cualquier archivo nuevo habría dejado de funcionar para todo el mundo a la vez. Ahora el paquete es el `.zip` más grande de la publicación y su huella es la que se llama exactamente como él más `.sha256`; si esa no está, no se instala.
+- **La bienvenida y Personalizar ya no prometen una vista previa de cada captura.** Sakura solo mira cuando se lo pides y, mientras el permiso de Lens esté en «Preguntar» (así viene), te pide permiso antes de cada captura; pero según la función —explicar una ventana, preguntar por lo que tienes delante— no te enseña la imagen antes de usarla. Qué se permite lo decides en Personalizar → Permisos.
+- **La bienvenida dice el espacio que hace falta de verdad para la IA local:** unos 9 GB libres mientras se instala (4 GB si el motor ya está), aunque al final ocupe unos 5.
+- **Desinstalar se lleva también lo que dejó una actualización a medias.**
+- Al arrancar, Sakura se asegura de ser la única copia abierta antes de mover carpetas de datos pesadas (modelos de voz, runtime), en vez de después.
+
+### Lo que este cambio NO cubre
+
+- **La copia de Microsoft Store** se actualiza sola por la Store y nada de esto la afecta; esa ruta no se ha ejercitado nunca y queda fuera.
+- El aviso de actualización fallida sale en cada arranque mientras tu versión sea más antigua que la intentada, a propósito; no se guarda un «ya avisé».
+- La oferta de actualización sigue sin decir cuánto pesa la descarga ni enseñar la huella; la huella se comprueba, pero no se ve. Y la huella sale de la misma publicación que el paquete: protege contra una descarga corrupta o cortada, no contra una cuenta de GitHub comprometida. Sin firma de código no hay defensa contra eso; la documentación de seguridad ya no dice que la persona vea la huella.
+- Si el equipo se apaga a mitad del intercambio, puede quedar la carpeta a medias y ahí no hay reapertura que valga. Y si la vuelta atrás no pudiera devolver la instalación anterior, el siguiente intento borra la copia de seguridad al empezar: no se ha cambiado.
+- Que dos arranques simultáneos dejaran carpetas a medias es una hipótesis que no se reprodujo; mover el candado es una precaución barata, no la corrección de una pérdida vista.
+- Un `settings.json` escrito a mano sin `SchemaVersion` sigue enseñando la bienvenida otra vez, a propósito: es lo correcto para un archivo antiguo, y ninguno escrito por Sakura queda así.
+- El ayudante se ejecutó de verdad con PowerShell 5.1 sobre una instalación de mentira (archivo bloqueado, ruta con acentos, comilla tipográfica); no se probó la app ni una actualización real de una versión a otra. Esa prueba, y el ciclo instalar → actualizar → desinstalar en Windows Sandbox, quedan pendientes.
+- No se ha comprobado con el Narrador que el texto nuevo de la bienvenida ni la línea nueva de Actualizaciones se anuncien.
+
 ## [0.30.35-beta]
 
 ### Corregido

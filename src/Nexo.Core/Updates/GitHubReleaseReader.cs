@@ -111,8 +111,17 @@ public static class GitHubReleaseReader
             return ReleaseAssets.Rejected("La publicación no trae ningún archivo.");
         }
 
+        // Lo que importa no es el orden en que GitHub devuelva los adjuntos, es el emparejamiento:
+        // cada publicación lleva cuatro (instalador, zip portable y la huella de cada uno), y antes
+        // se tomaba «el último .zip» y «el último .sha256» por separado. Acertaba solo porque
+        // «Setup» ordena antes que «win»; con otro orden, o con un segundo .zip, se habría bajado el
+        // paquete equivocado o comprobado con la huella de otro archivo, y nadie habría podido
+        // actualizarse (con un mensaje que hasta sugería que alguien manipuló la descarga).
+        //
+        // Primera pasada: el paquete es el .zip más grande. El de Sakura son cien megas y
+        // cualquier otro zip que llegue será menor; con un empate se queda el primero.
         var packageUrl = string.Empty;
-        var checksumUrl = string.Empty;
+        var packageName = string.Empty;
         long packageSize = 0;
 
         foreach (var asset in assets.EnumerateArray())
@@ -120,30 +129,44 @@ public static class GitHubReleaseReader
             var name = ReadString(asset, "name");
             var url = ReadString(asset, "browser_download_url");
 
-            if (name.Length == 0 || url.Length == 0)
+            if (name.Length == 0 || url.Length == 0 ||
+                !name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            // El orden importa: «.zip.sha256» también termina en «.sha256», así que se mira
-            // primero la huella. Al revés, la huella se tomaría por el paquete.
-            if (name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
-            {
-                checksumUrl = url;
-            }
-            else if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            var bytes = asset.TryGetProperty("size", out var size) && size.TryGetInt64(out var value)
+                ? value
+                : 0;
+
+            if (packageUrl.Length == 0 || bytes > packageSize)
             {
                 packageUrl = url;
-                packageSize = asset.TryGetProperty("size", out var size) &&
-                              size.TryGetInt64(out var bytes)
-                    ? bytes
-                    : 0;
+                packageName = name;
+                packageSize = bytes;
             }
         }
 
         if (packageUrl.Length == 0)
         {
             return ReleaseAssets.Rejected("La publicación no trae el paquete de Sakura.");
+        }
+
+        // Segunda pasada: la huella es la que se llama exactamente como el paquete más «.sha256».
+        // Nada de «termina en .sha256»: eso es lo que dejaba pasar la huella de otro archivo.
+        var checksumUrl = string.Empty;
+        var checksumName = packageName + ".sha256";
+
+        foreach (var asset in assets.EnumerateArray())
+        {
+            if (string.Equals(ReadString(asset, "name"), checksumName, StringComparison.OrdinalIgnoreCase))
+            {
+                checksumUrl = ReadString(asset, "browser_download_url");
+                if (checksumUrl.Length > 0)
+                {
+                    break;
+                }
+            }
         }
 
         if (checksumUrl.Length == 0)

@@ -82,6 +82,35 @@ public sealed class JsonSettingsStoreFirstRunTests : IDisposable
     }
 
     [Fact]
+    public void AHandWrittenFileWithoutSchemaVersion_ShowsTheWelcomeAgain()
+    {
+        // Congela algo medido, y que NO es un defecto: un archivo sin `SchemaVersion` es, para la
+        // migración 10, una instalación anterior a esa versión del esquema, que no ha visto ninguna
+        // de las pantallas actuales; volver a enseñar la bienvenida es lo correcto para un archivo
+        // viejo de verdad.
+        //
+        // Lo que no puede pasar es que esto le ocurra a una instalación real: `Save` normaliza siempre
+        // antes de escribir, así que todo `settings.json` que haya escrito Sakura declara el esquema
+        // actual. El único modo de tener uno sin `SchemaVersion` es escribirlo a mano —como se hizo al
+        // montar un perfil de prueba— y por eso «descubre» fallos que no existen.
+        File.WriteAllText(SettingsPath, """{"HasCompletedOnboarding": true}""");
+
+        Assert.False(new JsonSettingsStore(SettingsPath).Load().HasCompletedOnboarding);
+    }
+
+    [Fact]
+    public void AFileSavedBySakura_DeclaresTheCurrentSchema_AndKeepsTheWelcomeDone()
+    {
+        var store = new JsonSettingsStore(SettingsPath);
+        var preferences = store.Load();
+        preferences.HasCompletedOnboarding = true;
+        store.Save(preferences);
+
+        Assert.Contains($"\"SchemaVersion\": {ShellPreferences.CurrentSchemaVersion}", File.ReadAllText(SettingsPath), StringComparison.Ordinal);
+        Assert.True(new JsonSettingsStore(SettingsPath).Load().HasCompletedOnboarding);
+    }
+
+    [Fact]
     public void AnOldFile_StillGetsItsMigrationsApplied()
     {
         File.WriteAllText(SettingsPath, """{"SchemaVersion": 1}""");
