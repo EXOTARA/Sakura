@@ -77,8 +77,12 @@ public partial class CommandCenterWindow : Window
         HideStatus();
         Refresh();
 
-        var opening = !IsVisible;
-        if (opening)
+        // Reabrir mientras se está yendo cuenta como abrir: la entrada sigue desde donde está.
+        var resumingFromHide = _isClosing;
+        var opening = !IsVisible || _isClosing;
+        _isClosing = false;
+        IsHitTestVisible = true;
+        if (!IsVisible)
         {
             Show();
         }
@@ -87,7 +91,7 @@ public partial class CommandCenterWindow : Window
 
         if (opening)
         {
-            PlayEntrance();
+            PlayEntrance(resumingFromHide);
         }
 
         // El foco debe entrar en la búsqueda al abrir. Se hace en prioridad Input para que el
@@ -106,26 +110,32 @@ public partial class CommandCenterWindow : Window
     /// corto y las primeras filas llegan una detrás de otra. Solo al abrir; al escribir la lista se
     /// rehace a cada tecla y animarla sería un parpadeo.
     /// </summary>
-    private void PlayEntrance()
+    private void PlayEntrance(bool resumingFromHide)
     {
-        Surface.BeginAnimation(OpacityProperty, null);
-        SurfaceScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-        SurfaceScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-        SurfaceTranslate.BeginAnimation(TranslateTransform.YProperty, null);
-
         if (!SakuraMotion.AnimationsEnabled)
         {
+            Surface.BeginAnimation(OpacityProperty, null);
+            SurfaceScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            SurfaceScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            SurfaceTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+            SurfaceScale.ScaleX = 1;
+            SurfaceScale.ScaleY = 1;
+            SurfaceTranslate.Y = 0;
             Surface.Opacity = 1;
             return;
         }
 
-        var reveal = TimeSpan.FromMilliseconds(170);
-        var settle = TimeSpan.FromMilliseconds(280);
-        Surface.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, reveal) { EasingFunction = SakuraMotion.DecelerateCurve });
-        SurfaceTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-8, 0, reveal) { EasingFunction = SakuraMotion.DecelerateCurve });
-        SurfaceScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, settle) { EasingFunction = SakuraMotion.SubtleSpringCurve });
-        SurfaceScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.96, 1, settle) { EasingFunction = SakuraMotion.SubtleSpringCurve });
-        SearchIconRotation.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(-90, 0, settle) { EasingFunction = SakuraMotion.DecelerateCurve });
+        // «Entrar desde»: si se reabre a mitad de salida, sigue desde donde está en vez de saltar.
+        // El giro del icono no se mueve al salir, así que solo se reinicia con la ventana quieta.
+        var reveal = new Duration(TimeSpan.FromMilliseconds(170));
+        var settle = new Duration(TimeSpan.FromMilliseconds(280));
+        Surface.EnterTo(OpacityProperty, 0, 1, reveal, SakuraMotion.DecelerateCurve);
+        // La salida baja (+8) y la entrada viene de arriba (-8): a mitad de salida se parte de donde está.
+        SurfaceTranslate.EnterTo(
+            TranslateTransform.YProperty, resumingFromHide ? SurfaceTranslate.Y : -8, 0, reveal, SakuraMotion.DecelerateCurve);
+        SurfaceScale.EnterTo(ScaleTransform.ScaleXProperty, 0.96, 1, settle, SakuraMotion.SubtleSpringCurve);
+        SurfaceScale.EnterTo(ScaleTransform.ScaleYProperty, 0.96, 1, settle, SakuraMotion.SubtleSpringCurve);
+        SearchIconRotation.EnterTo(RotateTransform.AngleProperty, resumingFromHide ? 0 : -90, 0, settle, SakuraMotion.DecelerateCurve);
 
         ResultsList.UpdateLayout();
         for (var i = 0; i < Math.Min(6, ResultsList.Items.Count); i++)
@@ -260,6 +270,13 @@ public partial class CommandCenterWindow : Window
 
     private async void ExecuteSelected()
     {
+        // Mientras se está yendo (118 ms) la ventana sigue viva: un segundo Enter ejecutaría el
+        // comando otra vez.
+        if (_isClosing)
+        {
+            return;
+        }
+
         if (ResultsList.SelectedItem is not CommandCenterRow row)
         {
             return;
@@ -289,9 +306,60 @@ public partial class CommandCenterWindow : Window
             new CommandCenterFailureEventArgs(row.Command, result));
     }
 
+    private bool _isClosing;
+    private int _closeGeneration;
+
+    /// <summary>
+    /// Se va como la paleta, su hermana (Fluido: 118 ms, baja ocho puntos, se encoge a 0,97 y se
+    /// desvanece con la curva que acelera). Antes hacía <c>Hide()</c> de golpe mientras la paleta
+    /// salía animada; con «sin animaciones» sigue siendo inmediato. La ventana deja de aceptar clics
+    /// en cuanto empieza a irse, y se oculta aunque la animación no llegue a terminar bien.
+    /// </summary>
+    private void HideAnimated()
+    {
+        if (_isClosing)
+        {
+            return;
+        }
+
+        if (!IsVisible || !SakuraMotion.AnimationsEnabled)
+        {
+            Hide();
+            return;
+        }
+
+        _isClosing = true;
+        var generation = ++_closeGeneration;
+        IsHitTestVisible = false;
+
+        var duration = new Duration(TimeSpan.FromMilliseconds(118));
+        var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
+
+        SurfaceTranslate.AnimateTransform(TranslateTransform.YProperty, 8, duration, easing);
+        SurfaceScale.AnimateTransform(ScaleTransform.ScaleXProperty, 0.97, duration, easing);
+        SurfaceScale.AnimateTransform(ScaleTransform.ScaleYProperty, 0.97, duration, easing);
+        Surface.Animate(
+            OpacityProperty,
+            0,
+            duration,
+            easing,
+            completed: () =>
+            {
+                // Si se reabrió a mitad de salida (o se cerró otra vez), esta ya no es la salida
+                // vigente: el Completed de una animación reemplazada se dispara igual.
+                if (!_isClosing || generation != _closeGeneration)
+                {
+                    return;
+                }
+
+                _isClosing = false;
+                Hide();
+            });
+    }
+
     private void CloseAndRestoreFocus()
     {
-        Hide();
+        HideAnimated();
 
         var target = _focusToRestore;
         _focusToRestore = null;
@@ -308,7 +376,7 @@ public partial class CommandCenterWindow : Window
 
     private void Window_Deactivated(object? sender, EventArgs e)
     {
-        if (IsVisible)
+        if (IsVisible && !_isClosing)
         {
             CloseAndRestoreFocus();
         }
@@ -384,6 +452,17 @@ public partial class CommandCenterWindow : Window
     /// (contraste alto, Windows antiguo) se vuelve al marco de DWM de siempre.
     /// </summary>
     private void Window_SourceInitialized(object? sender, EventArgs e)
+    {
+        ApplyChrome();
+
+        // Efectos de transparencia / contraste alto cambiados con el Command Center ya creado.
+        SakuraWindowChrome.AppearanceChanged += OnAppearanceChanged;
+        Closed += (_, _) => SakuraWindowChrome.AppearanceChanged -= OnAppearanceChanged;
+    }
+
+    private void OnAppearanceChanged(object? sender, EventArgs e) => ApplyChrome();
+
+    private void ApplyChrome()
     {
         if (SakuraWindowChrome.TryApplyRoundedGlass(this, Surface, 26))
         {

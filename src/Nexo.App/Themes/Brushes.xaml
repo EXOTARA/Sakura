@@ -22,6 +22,16 @@
         <GradientStop Color="#F2151B27" Offset="0.64" />
         <GradientStop Color="#F21B1826" Offset="1" />
     </LinearGradientBrush>
+    <!--
+        Gemelo opaco del anterior para cuando Windows tiene apagados los efectos de transparencia
+        (SakuraWindowChrome.TryApplyRoundedGlass): mismo degradado, alfa FF. Es un recurso y no una
+        copia hecha en código para que siga al tema si éste cambia.
+    -->
+    <LinearGradientBrush x:Key="BrushCommandSurfaceBackgroundOpaque" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FF111620" Offset="0" />
+        <GradientStop Color="#FF151B27" Offset="0.64" />
+        <GradientStop Color="#FF1B1826" Offset="1" />
+    </LinearGradientBrush>
     <LinearGradientBrush x:Key="BrushCommandSurfaceBorder" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#70FFFFFF" Offset="0" />
         <GradientStop Color="#1FFFFFFF" Offset="0.42" />

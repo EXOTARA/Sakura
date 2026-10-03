@@ -67,6 +67,12 @@ public partial class DashboardView : UserControl
     public DashboardView()
     {
         InitializeComponent();
+
+        // Los bucles de esta vista (giro de la portada, GIF del hueco, onda de la barra) solo miraban
+        // «sin animaciones» al arrancar: apagarlo con la app abierta los dejaba moviéndose.
+        Loaded += (_, _) => SakuraMotion.AnimationsEnabledChanged += OnAnimationsEnabledChanged;
+        Unloaded += (_, _) => SakuraMotion.AnimationsEnabledChanged -= OnAnimationsEnabledChanged;
+
         CalendarDayItems.ItemsSource = _calendarCells;
         VoiceExampleItems.ItemsSource = VoiceCommandExamples.Groups
             .Select(group => new VoiceExampleRow(group.Title, group.Phrases))
@@ -144,6 +150,7 @@ public partial class DashboardView : UserControl
     /// </summary>
     public void SetPanelImage(string? path)
     {
+        _panelImagePath = path;
         var animated = IsAnimatedGif(path) && SakuraMotion.AnimationsEnabled;
 
         // Se limpian SIEMPRE los dos caminos antes de poner nada: cambiar de un GIF a una imagen
@@ -732,7 +739,8 @@ public partial class DashboardView : UserControl
     /// dejaba la barra clavada y luego pegando un salto. La lectura sigue siendo la única fuente
     /// de verdad; lo que se hace aquí es contar el tiempo que ha pasado desde ella.
     /// </summary>
-    private void RefreshMediaPosition()
+    /// <summary>El tiempo y la barra, sin mover el anillo ni la onda (movimiento reducido).</summary>
+    public void RefreshMediaPosition()
     {
         var position = MediaProgress.Resolve(
             _media.Position,
@@ -745,7 +753,7 @@ public partial class DashboardView : UserControl
 
         var fraction = MediaProgress.Fraction(position, _media.Duration);
         MediaProgressBar.Progress = fraction ?? 0;
-        MediaProgressBar.IsWaving = _media.IsPlaying;
+        MediaProgressBar.IsWaving = _media.IsPlaying && SakuraMotion.AnimationsEnabled;
     }
 
     private void RefreshMediaUi()
@@ -796,14 +804,23 @@ public partial class DashboardView : UserControl
         RefreshMediaPosition();
     }
 
+    private string? _panelImagePath;
+
+    private void OnAnimationsEnabledChanged(object? sender, EventArgs e)
+    {
+        ApplyCoverSpin(_coverSpinning, force: true);
+        SetPanelImage(_panelImagePath);
+        RefreshMediaPosition();
+    }
+
     /// <summary>
     /// Arranca o detiene el giro. Al detenerse se conserva el ángulo en el que iba: reiniciarlo a
     /// cero haría que la carátula pegara un salto al pausar, que es justo el momento en el que uno
     /// está mirándola.
     /// </summary>
-    private void ApplyCoverSpin(bool spinning)
+    private void ApplyCoverSpin(bool spinning, bool force = false)
     {
-        if (spinning == _coverSpinning)
+        if (spinning == _coverSpinning && !force)
         {
             return;
         }

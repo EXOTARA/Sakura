@@ -59,6 +59,7 @@ public partial class DashboardWindow : Window
     private double _wavePhase;
     private DateTimeOffset? _outsideSince;
     private bool _isShown;
+    private int _dismissGeneration;
     private bool _isClosing;
     private bool _coverageRaised;
 
@@ -77,6 +78,11 @@ public partial class DashboardWindow : Window
             Interval = FrameInterval
         };
         _audioFrames.Tick += (_, _) => RenderAudioFrame();
+
+        // Con «sin animaciones» el anillo y la onda se quedan quietos; si el ajuste cambia con el
+        // cajón abierto, el reloj de fotogramas se vuelve a armar en el modo que toque.
+        SakuraMotion.AnimationsEnabledChanged += OnAnimationsEnabledChanged;
+        Closed += (_, _) => SakuraMotion.AnimationsEnabledChanged -= OnAnimationsEnabledChanged;
 
         // La altura la decide el contenido: cambiar de pestaña con el cajón abierto lo alarga o lo
         // acorta, y el shell tiene que seguirlo.
@@ -105,6 +111,14 @@ public partial class DashboardWindow : Window
             return;
         }
 
+        if (!SakuraMotion.AnimationsEnabled)
+        {
+            // Movimiento reducido: el anillo y la onda no se mueven, pero el tiempo transcurrido
+            // sigue contando (una vez por segundo), que no es decoración.
+            Dashboard.RefreshMediaPosition();
+            return;
+        }
+
         if (!_spectrumSource.Fill(_spectrum))
         {
             // Sin bloque nuevo todavía: se deja caer lo que hay en vez de repetir el anterior, que
@@ -130,9 +144,27 @@ public partial class DashboardWindow : Window
 
         if (!_audioFrames.IsEnabled)
         {
-            _spectrumSource.Start();
+            var animated = SakuraMotion.AnimationsEnabled;
+
+            // Sin animaciones no se escucha la salida del sistema ni se repinta treinta veces por
+            // segundo: basta un tic por segundo para que corra el tiempo de la canción.
+            _audioFrames.Interval = animated ? FrameInterval : TimeSpan.FromSeconds(1);
+            if (animated)
+            {
+                _spectrumSource.Start();
+            }
+
             _audioFrames.Start();
         }
+    }
+
+    private void OnAnimationsEnabledChanged(object? sender, EventArgs e)
+    {
+        StopAudioFrames();
+
+        // Anillo en reposo: el espectro ya está a cero tras Stop, y es lo último que debe quedar a la vista.
+        Dashboard.RenderAudioFrame(_spectrum.Levels, 0);
+        EnsureAudioFrames();
     }
 
     private void StopAudioFrames()
@@ -200,6 +232,9 @@ public partial class DashboardWindow : Window
             return;
         }
 
+        // Visible pero sin _isShown: se está yendo (ver PlayRevealAnimation).
+        var resumingFromDismiss = IsVisible;
+
         _isShown = true;
         IsHitTestVisible = true;
         Show();
@@ -211,7 +246,7 @@ public partial class DashboardWindow : Window
         UpdateLayout();
 
         RaiseCoverage();
-        PlayRevealAnimation();
+        PlayRevealAnimation(resumingFromDismiss);
         Dashboard.PlayRevealStagger();
 
         _outsideSince = null;
@@ -224,14 +259,16 @@ public partial class DashboardWindow : Window
     ///
     /// El rebote es proporcional al recorrido, y ahí estuvo el error de la primera versión: con la
     /// curva <c>MotionSpring</c>, que sobrepasa un 10%, un cajón de casi seiscientos píxeles se
-    /// pasaba de largo sesenta. En un botón eso son tres píxeles y se lee como vida; en una ventana
-    /// entera es una sacudida. Con <c>MotionSpringSubtle</c> el exceso queda en unos quince
-    /// píxeles: se nota que se asienta y no que salta.
+    /// pasaba de largo sesenta. Con <c>MotionSpringSubtle</c> el exceso seguía en unos once píxeles.
     ///
-    /// La escala ya no rebota, solo frena. Dos muelles a la vez sobre la misma pieza se leen como
-    /// un temblor, porque no llegan al reposo en el mismo instante.
+    /// Auditoría de movimiento (2026-10) — ya no rebota nada: el cajón baja por un gesto de borde, que
+    /// no lleva impulso, y un rebote sin impulso se lee como que algo tembló. Cae con la curva de
+    /// llegada sin rebote (amortiguación crítica) y se asienta sin pasarse.
+    ///
+    /// Si se reabre mientras todavía se está yendo (<paramref name="resumingFromDismiss"/>), la
+    /// entrada sigue desde donde el cajón está: antes saltaba arriba del todo y volvía a caer.
     /// </summary>
-    private void PlayRevealAnimation()
+    private void PlayRevealAnimation(bool resumingFromDismiss)
     {
         var travel = PanelBorder.ActualHeight > 0 ? PanelBorder.ActualHeight : Height;
 
@@ -246,28 +283,26 @@ public partial class DashboardWindow : Window
             return;
         }
 
-        PanelTranslate.BeginAnimation(TranslateTransform.YProperty, null);
-        PanelTranslate.Y = -travel;
-        PanelScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-        PanelScale.ScaleY = 0.94;
-        PanelBorder.Opacity = 0;
-
-        PanelTranslate.AnimateTransform(
+        // La salida no toca la escala: a mitad de salida ya vale 1 y no se devuelve a 0,94.
+        PanelTranslate.EnterTo(
             TranslateTransform.YProperty,
+            -travel,
             0,
             SakuraMotion.Emphasized,
-            SakuraMotion.SubtleSpringCurve);
+            SakuraMotion.EmphasizedCurve);
 
-        PanelScale.AnimateTransform(
+        PanelScale.EnterTo(
             ScaleTransform.ScaleYProperty,
+            resumingFromDismiss ? 1 : 0.94,
             1,
             SakuraMotion.Emphasized,
             SakuraMotion.DecelerateCurve);
 
-        // La opacidad entra antes que el movimiento y con su propia curva: si durase lo mismo, el
-        // cajón terminaría de aparecer justo cuando rebota y el rebote no se vería.
-        PanelBorder.Animate(
+        // La opacidad entra antes que el movimiento y con su propia curva: se lee la tarjeta
+        // mientras todavía baja.
+        PanelBorder.EnterTo(
             OpacityProperty,
+            0,
             1,
             SakuraMotion.Reveal,
             SakuraMotion.DecelerateCurve);
@@ -281,6 +316,7 @@ public partial class DashboardWindow : Window
         }
 
         _isShown = false;
+        var generation = ++_dismissGeneration;
         _mouseWatch.Stop();
         StopAudioFrames();
         _outsideSince = null;
@@ -288,10 +324,10 @@ public partial class DashboardWindow : Window
         // Diseño D56 — deja de aceptar clics en cuanto se decide que se va, no cuando termina de
         // irse.
         //
-        // El cajón se oculta al acabar la animación de salida, y una animación puede no acabar
-        // nunca: basta con que algo la reemplace a mitad de camino para que su Completed no llegue
-        // y la ventana se quede mostrada con opacidad cero. Invisible y clicable es el peor estado
-        // posible de una ventana, así que no puede depender de que una animación termine bien.
+        // El cajón se oculta al acabar la animación de salida, y una animación puede acabar mal o a
+        // destiempo: la ventana se quedaría mostrada con opacidad cero. Invisible y clicable es el
+        // peor estado posible de una ventana, así que no puede depender de que una animación termine
+        // bien.
         IsHitTestVisible = false;
 
         if (!SakuraMotion.AnimationsEnabled)
@@ -324,6 +360,14 @@ public partial class DashboardWindow : Window
             SakuraMotion.AccelerateCurve,
             completed: () =>
             {
+                // El Completed de una animación reemplazada NO se cancela (medido): se dispara al
+                // cumplirse su duración original. Si el cajón se reabrió o se recogió otra vez, esta
+                // ya no es la salida vigente: ni se oculta ni se avisa de un cierre que no ocurrió.
+                if (_isShown || generation != _dismissGeneration)
+                {
+                    return;
+                }
+
                 HideImmediately();
                 Dismissed?.Invoke(this, EventArgs.Empty);
             });

@@ -129,4 +129,15 @@ public sealed class WindowBackdropPolicyTests
         Assert.Equal(WindowCorner.Round, decision.Corner);
         Assert.True(decision.PaintOwnBackground);
     }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(true, true, true)]
+    [InlineData(false, true, true)]
+    public void GlassWindowsGoOpaqueWithoutTransparencyOrWithHighContrast(
+        bool transparency, bool highContrast, bool expected) =>
+        Assert.Equal(
+            expected,
+            WindowBackdropPolicy.RequiresOpaqueSurface(Probe(transparency: transparency, highContrast: highContrast)));
 }

@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.30.38-beta]
+
+### Corregido
+
+- **Sakura respeta «Efectos de animación» y «Efectos de transparencia» de Windows también cuando los cambias con la app abierta.** Antes solo se leían al arrancar (y la paleta ni siquiera miraba el ajuste de Windows, solo el de Sakura). Ahora, al apagar las animaciones, lo que se mueve en bucle se queda quieto en el momento: el punto de «Mirando» de Lens, el cargador de «pensando», la portada que gira y el anillo y la onda del cajón de música, el punto rojo de la grabación y la barra de descarga de modelos. Al apagar las transparencias, el shell, la paleta (Ctrl + Espacio), el Command Center y Peek pasan a fondo opaco, con el mismo aspecto, sin ver a través. Al volver a encenderlos, regresan solos.
+  - La paleta ya no tiene su propia casilla «Reducir movimiento»: era un segundo interruptor que podía contradecir al de Sakura y al de Windows. Los preajustes de movimiento de la paleta (Fluido, Rápido, Calmo, Sin movimiento) siguen igual y ahora obedecen el ajuste general. Quien la tuviera marcada conserva su elección: la paleta pasa sola al preajuste «Sin movimiento».
+  - Con las animaciones apagadas, el cajón de música sigue contando el tiempo de la canción (una vez por segundo); solo se detienen el anillo y la onda.
+- **El foco del teclado se ve.** El borde que marca el botón o la tarjeta enfocados con Tab era el color de acento a medio opacar y se confundía con el fondo (contraste 2,1:1; el mínimo recomendado es 3:1). Ahora es el color de acento entero y, si algún acento no llegara a 3:1 contra alguna superficie del tema, se aclara lo justo.
+- **Los paneles ya no pegan saltos al abrir y cerrar rápido.** Si reabrías el shell, el cajón de arriba, la paleta, el Command Center, los controles de volumen y brillo o la captura rápida mientras todavía se estaban yendo, saltaban de golpe al punto de partida y volvían a entrar; ahora siguen desde donde estaban. Además, varias entradas solo se movían la primera vez (los botones de «Ahora», la búsqueda de archivos, los pasos de la bienvenida, la tarjeta de captura rápida): ahora se mueven siempre.
+- **Los controles de volumen y brillo ya no se quedan fuera de su sitio.** Con las animaciones apagadas después de haberlos usado, el panel podía quedarse a un lado, invisible pero recogiendo clics.
+- **La barra de iconos del shell ya no se anima en cada apertura.** Los botones entran escalonados solo la primera vez de la sesión, igual que el saludo del asistente: repetirlo cada vez hacía esperar a quien ya sabe lo que hay.
+- **El cajón de arriba y la burbuja «Ahora» ya no rebotan al abrirse.** Los abre un toque o el cursor en el borde, sin gesto de impulso, y un rebote sin impulso se leía como un temblor.
+- **El Command Center se cierra con la misma salida suave que la paleta** (y de golpe si tienes las animaciones apagadas), en vez de desaparecer de golpe.
+- **Sakura responde antes.** «¿Qué ventana tengo activa?» ya no espera casi medio segundo fingiendo que piensa, y «Texto seleccionado» espera a que la paleta se haya cerrado de verdad en vez de un tiempo fijo.
+
+### Lo que este cambio NO cubre
+
+- **No se ha visto en pantalla.** Los saltos al reabrir, la salida del Command Center y el comportamiento de los bucles al cambiar el ajuste están razonados y, en lo que se puede, cubiertos por pruebas (el «entrar desde» tiene una prueba WPF que interrumpe una animación a medias y comprueba que no hay salto); lo demás hay que mirarlo con la app.
+- El anillo de foco sigue siendo de 1 px: engrosarlo a 2 px movería el contenido de los botones y no se ha podido comprobar sin pantalla.
+- El **contraste alto** completo (colores de sistema en toda la interfaz) sigue siendo un bloque aparte. Al activarlo con la app ya abierta, las esquinas redondeadas del shell pueden quedar con un borde negro hasta reiniciarla.
+- La ventana de historial ambiental no vuelve a aplicar su fondo al cambiar los efectos de transparencia con ella abierta; lo toma al abrirla de nuevo.
+- La tipografía no se ha tocado.
+
 ## [0.30.35-beta]
 
 ### Corregido
