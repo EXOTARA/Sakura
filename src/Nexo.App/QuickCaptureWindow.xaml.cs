@@ -11,6 +11,7 @@ namespace Nexo.App;
 public partial class QuickCaptureWindow : Window
 {
     private bool _closing;
+    private int _closeGeneration;
 
     public QuickCaptureWindow()
     {
@@ -23,6 +24,8 @@ public partial class QuickCaptureWindow : Window
 
     public void ShowAtTop()
     {
+        // La salida solo atenúa la tarjeta: a mitad de salida la escala ya vale 1 y no se devuelve a 0,96.
+        var resumingFromDismiss = _closing;
         _closing = false;
         LineTextBox.Clear();
         var area = SystemParameters.WorkArea;
@@ -34,14 +37,13 @@ public partial class QuickCaptureWindow : Window
         LineTextBox.Focus();
         Keyboard.Focus(LineTextBox);
 
-        if (SakuraMotion.AnimationsEnabled)
-        {
-            Card.Opacity = 0;
-            CardScale.ScaleX = CardScale.ScaleY = 0.96;
-            Card.Animate(OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
-            CardScale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
-            CardScale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
-        }
+        // «Entrar desde» (auditoría de movimiento, 2026-10): antes se escribía el punto de partida a
+        // mano, y una animación terminada se queda sujetando su valor final, así que la escala solo
+        // se veía la primera vez; y con «sin animaciones» activado después, la opacidad retenida en 0
+        // dejaba la tarjeta invisible. EnterTo suelta lo retenido y decide desde dónde sale.
+        Card.EnterTo(OpacityProperty, 0, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
+        CardScale.EnterTo(ScaleTransform.ScaleXProperty, resumingFromDismiss ? 1 : 0.96, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
+        CardScale.EnterTo(ScaleTransform.ScaleYProperty, resumingFromDismiss ? 1 : 0.96, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
     }
 
     private void LineTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -87,12 +89,32 @@ public partial class QuickCaptureWindow : Window
         }
 
         _closing = true;
+        var generation = ++_closeGeneration;
         if (!SakuraMotion.AnimationsEnabled)
         {
             Hide();
+            _closing = false;
             return;
         }
 
-        Card.Animate(OpacityProperty, 0, SakuraMotion.Exit, SakuraMotion.AccelerateCurve, completed: Hide);
+        Card.Animate(
+            OpacityProperty,
+            0,
+            SakuraMotion.Exit,
+            SakuraMotion.AccelerateCurve,
+            completed: () =>
+            {
+                // Si se reabrió a mitad de salida (o se cerró otra vez), esta ya no es la salida
+                // vigente: el Completed de una animación reemplazada se dispara igual.
+                if (_closing && generation == _closeGeneration)
+                {
+                    Hide();
+
+                    // Salida terminada: la próxima apertura es una apertura limpia, con su inflado
+                    // desde 0,96. Si _closing se quedaba en true, ShowAtTop la tomaba por una
+                    // reapertura a mitad de salida y la escala arrancaba ya en 1, sin gesto.
+                    _closing = false;
+                }
+            });
     }
 }

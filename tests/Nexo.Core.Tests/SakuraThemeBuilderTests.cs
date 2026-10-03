@@ -145,4 +145,49 @@ public sealed class SakuraThemeBuilderTests
         Assert.NotEqual(green.Surface, pink.Surface);
         Assert.NotEqual(green.Background, pink.Background);
     }
+
+    [Fact]
+    public void TheFocusRingStaysAboveThreeToOneOnEverySurfaceForAnyAccent()
+    {
+        // Antes el anillo era el acento con alfa 112 y medía 2,1-2,2:1. Se comprueba con los colores
+        // reales del tema —no con el acento suelto— porque lo que importa es contra qué se apoya.
+        var random = new Random(20261001);
+        var accents = new List<RgbColor>
+        {
+            RgbColor.FromHex("#8B6CFF"), RgbColor.FromHex("#35C58A"), RgbColor.FromHex("#E08020"),
+            RgbColor.FromHex("#4D8DFF"), RgbColor.FromHex("#F06CA8"), new(0, 0, 0), new(255, 255, 255)
+        };
+        for (var i = 0; i < 1000; i++)
+        {
+            accents.Add(new RgbColor((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256)));
+        }
+
+        foreach (var accent in accents)
+        {
+            var theme = SakuraThemeBuilder.FromAccent(accent);
+            var ring = SakuraThemeBuilder.FocusRing(theme);
+
+            foreach (var (name, surface) in new[]
+                     {
+                         ("fondo", theme.Background), ("superficie", theme.Surface),
+                         ("superficie elevada", theme.SurfaceRaised), ("superficie bajo el ratón", theme.SurfaceHover),
+                         ("franja de navegación", theme.SidebarSurface), ("campo", theme.Input)
+                     })
+            {
+                Assert.True(
+                    ColorMath.ContrastRatio(ring, surface) >= SakuraThemeBuilder.MinimumFocusContrast,
+                    $"Con el acento {accent.ToHex()}, el anillo {ring.ToHex()} sobre la {name} " +
+                    $"({surface.ToHex()}) bajó a {ColorMath.ContrastRatio(ring, surface):F2}:1.");
+            }
+        }
+    }
+
+    [Fact]
+    public void TheFocusRingIsTheAccentItselfWhenTheAccentAlreadyStandsOut()
+    {
+        // El aspecto elegido no cambia: solo se aclara cuando el acento no llega al 3:1.
+        var theme = SakuraThemeBuilder.FromAccent(RgbColor.FromHex("#8B6CFF"));
+
+        Assert.Equal(theme.Accent, SakuraThemeBuilder.FocusRing(theme));
+    }
 }

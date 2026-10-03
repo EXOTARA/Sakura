@@ -440,12 +440,6 @@
                                        Margin="0,3,0,0"
                                        Style="{StaticResource MutedTextStyle}" />
                         </StackPanel>
-                        <CheckBox AutomationProperties.Name="Reducir movimiento" Grid.Column="1"
-                                  x:Name="ReduceMotionCheckBox"
-                                  Content="Reducir movimiento"
-                                  VerticalAlignment="Center"
-                                  Checked="ReduceMotionCheckBox_Changed"
-                                  Unchecked="ReduceMotionCheckBox_Changed" />
                     </Grid>
 
                     <WrapPanel Grid.Row="1" Margin="0,13,0,0">

@@ -133,6 +133,21 @@ public static class WindowBackdropPolicy
             requested == WindowBackdrop.Acrylic ? "Acrílico del sistema." : "Mica del sistema.");
     }
 
+    /// <summary>
+    /// Cierto cuando la superficie de una ventana no debe dejar ver nada a través: contraste alto o
+    /// «Efectos de transparencia» apagados en Windows.
+    ///
+    /// <see cref="Decide"/> ya lo tenía en cuenta para las ventanas con fondo del sistema, pero las de
+    /// cristal transparente (el shell, la paleta, el Command Center, Peek) no pasan por ahí: pintan
+    /// un color translúcido encima de un cristal sin desenfoque, y miraban solo el contraste alto.
+    /// Apagar los efectos de transparencia no les hacía nada. Aquí queda la regla en un solo sitio.
+    /// </summary>
+    public static bool RequiresOpaqueSurface(WindowBackdropProbe probe)
+    {
+        ArgumentNullException.ThrowIfNull(probe);
+        return probe.HighContrast || !probe.TransparencyEnabled;
+    }
+
     private static WindowBackdropDecision Solid(WindowCorner corner, string reason) =>
         new(WindowBackdrop.None, corner, PaintOwnBackground: true, reason);
 }

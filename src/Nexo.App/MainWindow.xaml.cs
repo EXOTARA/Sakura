@@ -438,6 +438,7 @@ public partial class MainWindow : Window
     private SystemSnapshot _latestSnapshot = SystemSnapshot.Empty;
     private ResourceGovernorDecision _resourceDecision = ResourceGovernorDecision.Normal;
     private bool _isHiding;
+    private int _hideGeneration;
 
     // Diseño D58 — lo que se abre por roce tiene que saber retirarse solo.
     private readonly DispatcherTimer _ambientStallWatch = new()
@@ -779,6 +780,7 @@ public partial class MainWindow : Window
         // "Color de acento automático" activo) debe verse en Sakura sin reabrirla. UserPreferenceChanged
         // es el evento que ya usa el propio Windows para avisar de esto — nadie más lo dispara.
         Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnSystemUserPreferenceChanged;
+        SakuraMotion.AnimationsEnabledChanged += OnMotionSettingChanged;
 
         UpdateResourceModeIndicator(ResourceGovernorDecision.Normal);
         RefreshRuntimeDashboard();
@@ -1973,7 +1975,7 @@ public partial class MainWindow : Window
         }
 
         RememberForegroundWindow();
-        _commandPaletteWindow.ShowPalette(_preferences.AnimationsEnabled);
+        _commandPaletteWindow.ShowPalette();
     }
 
     private void CommandCenterButton_Click(object sender, RoutedEventArgs e)
@@ -4593,7 +4595,7 @@ public partial class MainWindow : Window
             async _ =>
             {
                 // La paleta se cierra primero: así la ventana de delante vuelve a ser la de la selección.
-                await Task.Delay(300);
+                await WaitForCommandWindowsHiddenAsync();
                 await OnSelectionHotkeyAsync();
                 return CommandExecutionResult.Success();
             },
@@ -5129,7 +5131,18 @@ public partial class MainWindow : Window
         object sender,
         Microsoft.Win32.UserPreferenceChangedEventArgs e)
     {
-        if (_isClosed || _preferences.AccentSource == AccentSource.Manual)
+        if (_isClosed)
+        {
+            return;
+        }
+
+        // Auditoría de movimiento y accesibilidad (2026-10) — este manejador solo refrescaba el acento
+        // y salía antes si el acento era manual. «Efectos de animación», «Efectos de transparencia» y
+        // contraste alto cambiados en Windows con Sakura abierta no se recogían hasta reiniciarla.
+        // Se comprueba siempre, sin depender del acento.
+        Dispatcher.BeginInvoke(RefreshSystemAppearance);
+
+        if (_preferences.AccentSource == AccentSource.Manual)
         {
             return;
         }
@@ -5147,11 +5160,46 @@ public partial class MainWindow : Window
         }
     }
 
+    private (bool Transparency, bool HighContrast, bool Animations)? _lastSystemAppearance;
+
+    /// <summary>
+    /// Vuelve a leer lo que Windows dice sobre animaciones, transparencia y contraste alto, y solo si
+    /// algo cambió lo reaplica: el evento de preferencias llega por muchas razones y volver a pedirle
+    /// el fondo a DWM cada vez sería trabajo y parpadeo para nada.
+    /// </summary>
+    private void RefreshSystemAppearance()
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        var probe = Nexo.Windows.Shell.WindowsDwmChrome.ReadProbe(_preferences.HardwarePerformanceMode);
+        var state = (probe.TransparencyEnabled, probe.HighContrast, SystemParameters.ClientAreaAnimation);
+        if (state == _lastSystemAppearance)
+        {
+            return;
+        }
+
+        _lastSystemAppearance = state;
+
+        // Lo que se publica cambia por el evento estático: los bucles en marcha se paran solos.
+        SakuraMotion.AnimationsEnabled = ShellAnimationsAllowed;
+
+        if (_backdropDecision is not null)
+        {
+            ApplySystemBackdrop(IntPtr.Zero);
+        }
+
+        SakuraWindowChrome.NotifyAppearanceChanged();
+    }
+
     private void Window_Closed(object? sender, EventArgs e)
     {
         StopRecordingOnExit();
         _isClosed = true;
         Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnSystemUserPreferenceChanged;
+        SakuraMotion.AnimationsEnabledChanged -= OnMotionSettingChanged;
         _clockTimer.Stop();
         _metricsTimer.Stop();
         _taskReminderTimer.Stop();
@@ -5544,6 +5592,10 @@ public partial class MainWindow : Window
     private void ShowAnimated()
     {
         OfferMorningReview();
+
+        // Reabrir mientras la salida sigue en curso: la entrada tiene que seguir desde donde el
+        // panel está, no saltar al punto de partida (ver SakuraMotion.EnterTo).
+        var resumingFromHide = _isHiding;
         _isHiding = false;
         _pointerOutsideSince = null;
         _unattendedWatch.IsEnabled = _openedByHover;
@@ -5560,13 +5612,12 @@ public partial class MainWindow : Window
         Topmost = true;
         AcquireEscapeHotkey();
 
-        ShellBorder.BeginAnimation(OpacityProperty, null);
-        ShellTranslate.BeginAnimation(TranslateTransform.XProperty, null);
-        ShellScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-        ShellScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-
         if (!ShellAnimationsAllowed)
         {
+            ShellBorder.BeginAnimation(OpacityProperty, null);
+            ShellTranslate.BeginAnimation(TranslateTransform.XProperty, null);
+            ShellScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            ShellScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
             ShellTranslate.X = 0;
             ShellScale.ScaleX = 1;
             ShellScale.ScaleY = 1;
@@ -5580,18 +5631,18 @@ public partial class MainWindow : Window
         // una curva que cubre casi todo el recorrido pronto: con el desplazamiento corto el gesto
         // se perdía antes de poder leerse.
         var offset = _preferences.Position == SidebarPosition.Right ? 48d : -48d;
-        ShellTranslate.X = offset;
-        ShellScale.ScaleX = 0.985;
-        ShellScale.ScaleY = 0.985;
-        ShellBorder.Opacity = 0;
 
-        ShellBorder.Animate(OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
-        ShellTranslate.AnimateTransform(
-            TranslateTransform.XProperty, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve);
-        ShellScale.AnimateTransform(
-            ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
-        ShellScale.AnimateTransform(
-            ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
+        // La escala no se anima al salir: si se reabre a mitad de salida ya vale 1 y no hay que
+        // devolverla a 0,985 (un tirón de seis a trece píxeles en el borde).
+        var scaleFrom = resumingFromHide ? 1d : 0.985;
+
+        ShellBorder.EnterTo(OpacityProperty, 0, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
+        ShellTranslate.EnterTo(
+            TranslateTransform.XProperty, offset, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve);
+        ShellScale.EnterTo(
+            ScaleTransform.ScaleXProperty, scaleFrom, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
+        ShellScale.EnterTo(
+            ScaleTransform.ScaleYProperty, scaleFrom, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve);
 
         StaggerNavigationEntrance();
         PlayFirstOpenEntrance();
@@ -5599,6 +5650,7 @@ public partial class MainWindow : Window
     }
 
     private bool _firstOpenEntrancePlayed;
+    private bool _railEntrancePlayed;
 
     /// <summary>
     /// La primera vez que se abre el shell en la sesión, el asistente se organiza solo: bloques que
@@ -5625,10 +5677,16 @@ public partial class MainWindow : Window
     /// </summary>
     private void StaggerNavigationEntrance()
     {
-        if (!ShellAnimationsAllowed)
+        // Auditoría de movimiento (2026-10) — se escalonaba en CADA apertura, contradiciendo la regla
+        // de EntranceChoreography: la coreografía es un recibimiento la primera vez de la sesión; en
+        // las siguientes hace esperar a quien ya sabe lo que hay. Misma regla aquí, con su propia
+        // marca porque la del asistente solo se consume si el destino abierto es el asistente.
+        if (!EntranceChoreography.PlaysFull(!_railEntrancePlayed, ShellAnimationsAllowed))
         {
             return;
         }
+
+        _railEntrancePlayed = true;
 
         var fromOffset = RailIsOnLeft ? -14d : 14d;
         var index = 0;
@@ -5684,8 +5742,18 @@ public partial class MainWindow : Window
             EasingFunction = easing
         };
 
+        // El Completed de una animación reemplazada NO se cancela: se dispara al cumplirse su duración
+        // original aunque el shell ya se haya reabierto (medido en otras ventanas). Solo la salida
+        // vigente puede ocultarlo; si no, reabrir con la tecla de acceso rápido a los pocos
+        // milisegundos de cerrar lo volvería a ocultar solo.
+        var generation = ++_hideGeneration;
         opacityAnimation.Completed += (_, _) =>
         {
+            if (!_isHiding || generation != _hideGeneration)
+            {
+                return;
+            }
+
             Hide();
             SetMetricsCadence(isShellVisible: false);
             _isHiding = false;
@@ -7061,6 +7129,55 @@ public partial class MainWindow : Window
         _assistantView.ClearVisionAttachment();
     }
 
+    /// <summary>
+    /// Espera a que la paleta y el Command Center estén ocultos de verdad, con un tope.
+    ///
+    /// Antes «Texto seleccionado» esperaba 300 ms fijos para que la ventana de delante volviera a ser
+    /// la de la selección: de más cuando la paleta salía en 120 ms, y de menos con el preajuste Calmo
+    /// (180 ms de salida más lo que tarde Windows). Ahora se espera al hecho —que dejen de estar
+    /// visibles— y, tras él, a que se procesen los mensajes de activación pendientes. El tope evita
+    /// quedarse esperando si una animación no llega a terminar.
+    /// </summary>
+    private async Task WaitForCommandWindowsHiddenAsync()
+    {
+        var open = new Window?[] { _commandPaletteWindow, _commandCenterWindow }
+            .OfType<Window>()
+            .Where(window => window.IsVisible)
+            .ToArray();
+
+        if (open.Length > 0)
+        {
+            var hidden = new TaskCompletionSource();
+            void CheckHidden(object? sender, DependencyPropertyChangedEventArgs e)
+            {
+                if (open.All(window => !window.IsVisible))
+                {
+                    hidden.TrySetResult();
+                }
+            }
+
+            foreach (var window in open)
+            {
+                window.IsVisibleChanged += CheckHidden;
+            }
+
+            try
+            {
+                CheckHidden(null, default);
+                await Task.WhenAny(hidden.Task, Task.Delay(TimeSpan.FromMilliseconds(600)));
+            }
+            finally
+            {
+                foreach (var window in open)
+                {
+                    window.IsVisibleChanged -= CheckHidden;
+                }
+            }
+        }
+
+        await Dispatcher.Yield(DispatcherPriority.Background);
+    }
+
     private void RememberForegroundWindow()
     {
         var foreground = GetForegroundWindow();
@@ -8387,8 +8504,6 @@ public partial class MainWindow : Window
         _ambientRequestManager.BeginThinking(DateTimeOffset.Now);
         CheckAmbientRequest();
 
-        await Task.Delay(TimeSpan.FromMilliseconds(450));
-
         if (context is null || string.IsNullOrWhiteSpace(context.WindowTitle))
         {
             var message = context is { IsSensitive: true }
@@ -8427,7 +8542,12 @@ public partial class MainWindow : Window
     /// 2026-09-15 — el punto de «Mirando» late mientras Lens observa, para que se note que está
     /// activo. Solo mientras se ve: una animación sin fin en un elemento oculto seguiría gastando.
     /// </summary>
-    private void LensIndicator_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    private void OnMotionSettingChanged(object? sender, EventArgs e) => UpdateLensIndicatorBeat();
+
+    private void LensIndicator_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) =>
+        UpdateLensIndicatorBeat();
+
+    private void UpdateLensIndicatorBeat()
     {
         LensIndicatorDot.BeginAnimation(OpacityProperty, null);
         LensIndicatorDotScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
@@ -9953,8 +10073,9 @@ public partial class MainWindow : Window
         resources["BrushSidebarSurface"] = ToBrush(theme.SidebarSurface);
         resources["BrushInput"] = ToBrush(theme.Input);
         resources["BrushBorder"] = ToBrush(theme.Border);
-        resources["BrushFocusRing"] = new SolidColorBrush(
-            Color.FromArgb(112, theme.Accent.R, theme.Accent.G, theme.Accent.B));
+        // Opaco y, si el acento no llega a 3:1 contra alguna superficie, aclarado (WCAG 1.4.11). Con
+        // el alfa de antes el anillo medía 2,1-2,2:1 y el foco del teclado apenas se veía.
+        resources["BrushFocusRing"] = ToBrush(SakuraThemeBuilder.FocusRing(theme));
 
         // Rastro del tema original: era un rosa fijo, y con cualquier otro tema aparecía como una
         // mancha de un color que no pertenecía a nada.

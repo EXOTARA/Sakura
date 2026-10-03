@@ -15,6 +15,10 @@ public partial class CaptureView : UserControl
     {
         InitializeComponent();
 
+        // El punto rojo late en bucle: si «sin animaciones» cambia grabando, se para en el momento.
+        Loaded += (_, _) => SakuraMotion.AnimationsEnabledChanged += OnAnimationsEnabledChanged;
+        Unloaded += (_, _) => SakuraMotion.AnimationsEnabledChanged -= OnAnimationsEnabledChanged;
+
         foreach (var seconds in DelayOptions)
         {
             var chip = new Button
@@ -76,8 +80,18 @@ public partial class CaptureView : UserControl
             : "Se guarda en Vídeos › Sakura");
         RecordingOptions.IsEnabled = !recording;
 
+        _recording = recording;
+        UpdateRecordingPulse();
+    }
+
+    private bool _recording;
+
+    private void OnAnimationsEnabledChanged(object? sender, EventArgs e) => UpdateRecordingPulse();
+
+    private void UpdateRecordingPulse()
+    {
         var pulsing = RecordDotScale.HasAnimatedProperties;
-        if (recording && !pulsing && SakuraMotion.AnimationsEnabled)
+        if (_recording && !pulsing && SakuraMotion.AnimationsEnabled)
         {
             var pulse = new DoubleAnimation(1, 0.7, TimeSpan.FromMilliseconds(700))
             {
@@ -87,7 +101,7 @@ public partial class CaptureView : UserControl
             RecordDotScale.BeginAnimation(ScaleTransform.ScaleXProperty, pulse);
             RecordDotScale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse);
         }
-        else if (!recording && pulsing)
+        else if (pulsing && (!_recording || !SakuraMotion.AnimationsEnabled))
         {
             RecordDotScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             RecordDotScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);

@@ -132,7 +132,7 @@ public partial class CommandPaletteWindow : Window
     private bool _isExpanded;
     private bool _customizationVisible;
     private bool _isHiding;
-    private bool _shellAnimationsEnabled = true;
+    private int _hideGeneration;
     private bool _isApplyingCompletion;
     private bool _selectionExplicit;
     private CommandPaletteSuggestion? _activeCompletionSuggestion;
@@ -142,7 +142,6 @@ public partial class CommandPaletteWindow : Window
         InitializeComponent();
         _state = _stateStore.Load();
         NormalizeRecentHistory();
-        ReduceMotionCheckBox.IsChecked = _state.ReduceMotion;
         UpdateMotionSelection();
         KeyHintItems.ItemsSource = KeyHints;
         RefreshSuggestions(string.Empty);
@@ -163,9 +162,9 @@ public partial class CommandPaletteWindow : Window
 
     public event EventHandler? WorkspaceRequested;
 
-    public void ShowPalette(bool shellAnimationsEnabled)
+    public void ShowPalette()
     {
-        _shellAnimationsEnabled = shellAnimationsEnabled;
+        var resumingFromHide = _isHiding;
         _isHiding = false;
         _customizationVisible = false;
         CustomizationSurface.Visibility = Visibility.Collapsed;
@@ -189,7 +188,7 @@ public partial class CommandPaletteWindow : Window
         PromptTextBox.Focus();
         Keyboard.Focus(PromptTextBox);
 
-        ApplyShowMotion();
+        ApplyShowMotion(resumingFromHide);
         Dispatcher.BeginInvoke(
             DispatcherPriority.ContextIdle,
             new Action(() =>
@@ -214,6 +213,11 @@ public partial class CommandPaletteWindow : Window
         }
 
         _isHiding = true;
+
+        // Un Completed no se cancela al reemplazar la animación: sigue disparándose al cumplirse su
+        // duración original aunque la paleta ya se haya reabierto. Cada salida lleva su número y solo
+        // la vigente puede ocultar la ventana.
+        var generation = ++_hideGeneration;
         var settings = ResolveMotionSettings(isHiding: true);
         var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
         var duration = TimeSpan.FromMilliseconds(settings.DurationMilliseconds);
@@ -222,7 +226,15 @@ public partial class CommandPaletteWindow : Window
         {
             EasingFunction = easing
         };
-        opacityAnimation.Completed += (_, _) => HideImmediately();
+        opacityAnimation.Completed += (_, _) =>
+        {
+            if (!_isHiding || generation != _hideGeneration)
+            {
+                return;
+            }
+
+            HideImmediately();
+        };
 
         RootBorder.BeginAnimation(OpacityProperty, opacityAnimation);
         PaletteTranslate.BeginAnimation(
@@ -249,16 +261,14 @@ public partial class CommandPaletteWindow : Window
         Hide();
     }
 
-    private void ApplyShowMotion()
+    private void ApplyShowMotion(bool resuming = false)
     {
-        RootBorder.BeginAnimation(OpacityProperty, null);
-        PaletteTranslate.BeginAnimation(TranslateTransform.YProperty, null);
-
-        PaletteScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-        PaletteScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-
         if (!ShouldAnimate())
         {
+            RootBorder.BeginAnimation(OpacityProperty, null);
+            PaletteTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+            PaletteScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            PaletteScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
             RootBorder.Opacity = 1;
             PaletteTranslate.Y = 0;
             PaletteScale.ScaleX = 1;
@@ -267,36 +277,30 @@ public partial class CommandPaletteWindow : Window
         }
 
         var settings = ResolveMotionSettings(isHiding: false);
-        var duration = TimeSpan.FromMilliseconds(settings.DurationMilliseconds);
+        var duration = new Duration(TimeSpan.FromMilliseconds(settings.DurationMilliseconds));
         var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
 
         // 2026-09-14 — además de bajar, se infla un poco desde el borde de arriba, como las burbujas;
         // la flor da un cuarto de vuelta mientras aparece. La duración sigue siendo la del preset
         // elegido (Fluido, Rápido, Calmo).
-        PaletteScale.ScaleX = 0.96;
-        PaletteScale.ScaleY = 0.96;
+        //
+        // Auditoría de movimiento (2026-10) — «entrar desde» en vez de escribir el punto de partida a
+        // mano: si se vuelve a abrir mientras todavía se está cerrando, sigue desde donde está en
+        // lugar de saltar a 0,96 / opacidad 0 y empezar otra vez. El giro de la flor no se mueve al
+        // cerrar (vale 0 a mitad de salida), así que solo se reinicia a -90 con la paleta quieta.
         var spring = SakuraMotion.SubtleSpringCurve;
-        var scaleDuration = TimeSpan.FromMilliseconds(settings.DurationMilliseconds * 1.6);
-        PaletteScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, scaleDuration) { EasingFunction = spring });
-        PaletteScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, scaleDuration) { EasingFunction = spring });
-        PaletteMarkRotation.BeginAnimation(
-            RotateTransform.AngleProperty,
-            new DoubleAnimation(-90, 0, scaleDuration) { EasingFunction = SakuraMotion.DecelerateCurve });
+        var scaleDuration = new Duration(TimeSpan.FromMilliseconds(settings.DurationMilliseconds * 1.6));
+        PaletteScale.EnterTo(ScaleTransform.ScaleXProperty, 0.96, 1, scaleDuration, spring);
+        PaletteScale.EnterTo(ScaleTransform.ScaleYProperty, 0.96, 1, scaleDuration, spring);
+        PaletteMarkRotation.EnterTo(
+            RotateTransform.AngleProperty, resuming ? 0 : -90, 0, scaleDuration, SakuraMotion.DecelerateCurve);
 
-        RootBorder.Opacity = 0;
-        PaletteTranslate.Y = -settings.Offset;
-        RootBorder.BeginAnimation(
-            OpacityProperty,
-            new DoubleAnimation(1, duration)
-            {
-                EasingFunction = easing
-            });
-        PaletteTranslate.BeginAnimation(
-            TranslateTransform.YProperty,
-            new DoubleAnimation(0, duration)
-            {
-                EasingFunction = easing
-            });
+        RootBorder.EnterTo(OpacityProperty, 0, 1, duration, easing);
+
+        // La salida baja (+offset) y la entrada viene de arriba (-offset): a mitad de salida el valor
+        // queda fuera del recorrido de entrada, así que se parte de donde está, no del de arriba.
+        var yFrom = resuming ? PaletteTranslate.Y : -settings.Offset;
+        PaletteTranslate.EnterTo(TranslateTransform.YProperty, yFrom, 0, duration, easing);
     }
 
     private void PositionPalette()
@@ -878,20 +882,9 @@ public partial class CommandPaletteWindow : Window
         }
 
         _state.MotionPreset = preset;
-        _state.ReduceMotion = preset == ShellMotionPreset.None ||
-            ReduceMotionCheckBox.IsChecked == true;
-        ReduceMotionCheckBox.IsChecked = _state.ReduceMotion;
         _stateStore.Save(_state);
         UpdateMotionSelection();
         ApplyShowMotion();
-        PromptTextBox.Focus();
-    }
-
-    private void ReduceMotionCheckBox_Changed(object sender, RoutedEventArgs e)
-    {
-        _state.ReduceMotion = ReduceMotionCheckBox.IsChecked == true;
-        _stateStore.Save(_state);
-        UpdateMotionSelection();
         PromptTextBox.Focus();
     }
 
@@ -927,9 +920,15 @@ public partial class CommandPaletteWindow : Window
         selected.Foreground = TryFindResource("BrushTextPrimary") as Brush;
     }
 
+    /// <summary>
+    /// Auditoría de movimiento (2026-10) — la paleta tenía su propia casilla «Reducir movimiento» y
+    /// recibía solo la preferencia de Sakura, no el ajuste de Windows: era un segundo interruptor que
+    /// podía contradecir al global. Ahora manda <see cref="SakuraMotion.AnimationsEnabled"/> (la
+    /// preferencia de Sakura Y «Efectos de animación» de Windows); lo que queda aquí es el preajuste
+    /// de la paleta, «Sin movimiento» incluido.
+    /// </summary>
     private bool ShouldAnimate() =>
-        _shellAnimationsEnabled &&
-        !_state.ReduceMotion &&
+        SakuraMotion.AnimationsEnabled &&
         _state.MotionPreset != ShellMotionPreset.None;
 
     private MotionSettings ResolveMotionSettings(bool isHiding)
@@ -979,6 +978,17 @@ public partial class CommandPaletteWindow : Window
     /// canto del color de acento arriba. Sin cristal disponible, se vuelve al fondo del sistema.
     /// </summary>
     private void Window_SourceInitialized(object? sender, EventArgs e)
+    {
+        ApplyChrome();
+
+        // Efectos de transparencia / contraste alto cambiados con la paleta ya creada.
+        SakuraWindowChrome.AppearanceChanged += OnAppearanceChanged;
+        Closed += (_, _) => SakuraWindowChrome.AppearanceChanged -= OnAppearanceChanged;
+    }
+
+    private void OnAppearanceChanged(object? sender, EventArgs e) => ApplyChrome();
+
+    private void ApplyChrome()
     {
         if (SakuraWindowChrome.TryApplyRoundedGlass(this, RootBorder, 26))
         {

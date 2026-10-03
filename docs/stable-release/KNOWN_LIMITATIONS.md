@@ -184,7 +184,7 @@ ningún temporizador.
 **Resuelto:** `RoutineMatchConfidence` + `PromptDispatchPolicy` (commit `667a873`).
 Verificado en la aplicación real.
 
-### L10 — Ejecución arbitraria sin confirmación vía `OpenApplication` ⚠️ (reabierta el 2026-09-28, 0.30.38)
+### L10 — Ejecución arbitraria sin confirmación vía `OpenApplication` ⚠️ (reabierta el 2026-09-28, 0.30.40)
 **Qué era:** `OpenApplication` reenviaba `Arguments` al proceso y estaba clasificada como
 `Reversible`. Una rutina con `powershell.exe -Command ...` se ejecutaba sin preguntar,
 incumpliendo el escenario 22 de `TEST_MATRIX`.
@@ -195,7 +195,7 @@ corta de intérpretes con argumentos. Seguían sin pedir confirmación `forfiles
 `msiexec /i https://… /qn`, `schtasks /create`, `reg add …\Run`, scripts sueltos (`.vbs`, `.js`,
 `.hta`), `x.bat` (al quitarle `.bat` dejaba de parecer un intérprete) y rutas de red `\\host\share\x`
 (que además entregan el hash NTLM). Se comprobó con `GetRisk`, no ejecutando nada.
-**Corregido en 0.30.38:** `OpenApplication` pide confirmación si el destino es una
+**Corregido en 0.30.40:** `OpenApplication` pide confirmación si el destino es una
 ruta de red o una URL (`http`, `https`, `ftp`, `ftps`, `file`, `ms-msdt`, `search-ms`,
 `ms-appinstaller`, `javascript`, `ms-officecmd`, `ms-word`, `ms-excel`, `ms-powerpoint`, `vbscript`,
 `shell`), si la extensión es de script, instalador o acceso directo (`.bat .cmd .ps1 .vbs .vbe .js
@@ -209,7 +209,7 @@ http/https/`www.`), así que `explorer.exe x.bat` pregunta. Los shells (`powersh
 terminal (decisión F). Un programa ordinario (Spotify, el Bloc de notas, `code .`, un esquema como
 `spotify:`) sigue sin preguntar aunque lleve argumentos: las rutinas solo las crea la persona (no hay
 importación ni creación desde la IA). Efecto lateral: `code build.bat` (abrir un script en un editor)
-pregunta. **Revisión adversarial (2026-10-03, mismo 0.30.38):** los argumentos se revisan también
+pregunta. **Revisión adversarial (2026-10-03, mismo 0.30.40):** los argumentos se revisan también
 partidos por «,», «;» y «=» (`explorer.exe /select,\\host\x.exe`, `--carpeta=\\host\share`) y
 partidos como los parte Windows, solo con comillas dobles (una comilla simple agrupaba y escondía una
 ruta de red o un intérprete); se añaden `msdt`, `hh`, `mmc`, las extensiones `.chm .msc .appinstaller
@@ -477,7 +477,7 @@ dice qué pasa de verdad con las capturas y los dos números de espacio de la IA
   actualización real de una versión a otra, el ciclo instalar → actualizar → desinstalar en Windows Sandbox y la lectura con
   Narrador del texto nuevo siguen pendientes.
 
-### L20 — Auditoría de seguridad: lo que 0.30.38 arregla y lo que deja abierto (2026-09-28)
+### L20 — Auditoría de seguridad: lo que 0.30.40 arregla y lo que deja abierto (2026-09-28)
 **Qué se cubre:** «Reemplazar selección» pasa por los permisos de Flow (Bloqueado y aplicaciones
 excluidas) y no escribe en una terminal si el texto de la IA tiene saltos de línea; las escrituras y
 borrados del proyecto rechazan uniones y enlaces simbólicos entre la raíz autorizada y el destino;
