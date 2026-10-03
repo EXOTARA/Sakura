@@ -452,7 +452,6 @@ public partial class MainWindow : Window
 
     private bool _openedByHover;
     private bool _escapeHotkeyHeld;
-    private bool _touchedSinceReveal;
     private DateTimeOffset? _pointerOutsideSince;
 
     private bool _isClosed;
@@ -824,13 +823,6 @@ public partial class MainWindow : Window
             }
         };
         _ambientStallWatch.Start();
-
-        // Cualquier señal de que hay alguien delante cancela la retirada. Se escuchan en modo
-        // Preview porque los controles hijos se quedan con los eventos normales: un clic dentro del
-        // chat nunca llegaría a la ventana.
-        PreviewMouseDown += (_, _) => _touchedSinceReveal = true;
-        PreviewKeyDown += (_, _) => _touchedSinceReveal = true;
-        PreviewTextInput += (_, _) => _touchedSinceReveal = true;
 
         _visualContextExpiryTimer.Interval = TimeSpan.FromMinutes(2);
         _visualContextExpiryTimer.Tick += (_, _) =>
@@ -1697,8 +1689,7 @@ public partial class MainWindow : Window
         if (UnattendedRevealPolicy.ShouldRetract(
                 _openedByHover,
                 _pointerOutsideSince,
-                DateTimeOffset.UtcNow,
-                hasUserAttention: _touchedSinceReveal))
+                DateTimeOffset.UtcNow))
         {
             HideAnimated();
         }
@@ -5554,7 +5545,6 @@ public partial class MainWindow : Window
     {
         OfferMorningReview();
         _isHiding = false;
-        _touchedSinceReveal = false;
         _pointerOutsideSince = null;
         _unattendedWatch.IsEnabled = _openedByHover;
         PositionWindow();

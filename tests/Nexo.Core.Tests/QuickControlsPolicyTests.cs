@@ -19,15 +19,22 @@ public sealed class QuickControlsPolicyTests
     }
 
     [Theory]
-    [InlineData(true, false, false, 5, true)]   // arrastrando una barra
-    [InlineData(false, true, false, 5, true)]   // con el teclado dentro y la ventana delante
-    [InlineData(false, false, true, 0, true)]   // el ratón acaba de moverse encima
-    [InlineData(false, false, true, 1, true)]
-    [InlineData(false, false, true, 2, false)]  // el ratón se quedó parado en el borde
-    [InlineData(false, false, false, 0, false)] // nadie lo usa
+    [InlineData(true, false, 5, true)]   // arrastrando una barra
+    [InlineData(false, true, 0, true)]   // el ratón acaba de moverse encima
+    [InlineData(false, true, 1, true)]
+    [InlineData(false, true, 2, false)]  // el ratón se quedó parado en el borde
+    [InlineData(false, false, 0, false)] // nadie lo usa
     public void ThePanelStaysOnlyWhileSomeoneIsUsingIt(
-        bool dragging, bool keyboard, bool cursorOver, int stillTicks, bool expected) =>
-        Assert.Equal(expected, QuickControlsPolicy.ShouldStay(dragging, keyboard, cursorOver, stillTicks));
+        bool dragging, bool cursorOver, int stillTicks, bool expected) =>
+        Assert.Equal(expected, QuickControlsPolicy.ShouldStay(dragging, cursorOver, stillTicks));
+
+    [Fact]
+    public void KeyboardFocusAloneNoLongerKeepsItOpen()
+    {
+        // 2026-10 — Adler pidió quitar la pegajosidad: tener el foco de teclado dentro ya no basta
+        // para quedarse si el ratón está fuera y no se está arrastrando nada.
+        Assert.False(QuickControlsPolicy.ShouldStay(dragging: false, cursorOver: false, stillTicks: 0));
+    }
 
     [Fact]
     public void MovingSakuraMovesTheControlsWithIt()
