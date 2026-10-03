@@ -12,7 +12,7 @@ Aplica **solo** cuando la petición viene directamente del usuario (voz, paleta 
 
 | Acción | Reversible | Nota |
 |---|---|---|
-| Abrir aplicaciones | Sí | Un programa ordinario, con o sin argumentos (`code .`). Scripts, instaladores, accesos directos, rutas de red, URL, o binarios que ejecutan cosas (`forfiles`, `msiexec`, `schtasks`, `reg`…), o un shell con argumentos → `Preguntar` (0.30.38). Los argumentos también pasan por las comprobaciones de extensión, UNC y esquema |
+| Abrir aplicaciones | Sí | Un programa ordinario, con o sin argumentos (`code .`). Scripts, instaladores, accesos directos, rutas de red, URL, o binarios que ejecutan cosas (`forfiles`, `msiexec`, `schtasks`, `reg`…), o un shell con argumentos → `Preguntar` (0.30.38). Los argumentos también pasan por las comprobaciones de extensión, UNC y esquema (también lo que va tras «,», «;» o «=»), y una carpeta de trabajo de red también pregunta |
 | Abrir carpetas conocidas | Sí | Lista blanca; rutas arbitrarias → `Preguntar` |
 | Mostrar configuraciones | Sí | |
 | Cambiar volumen general | Sí | |

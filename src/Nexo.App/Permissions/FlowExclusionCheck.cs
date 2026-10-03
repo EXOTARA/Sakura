@@ -49,7 +49,8 @@ public static class FlowExclusionCheck
     public static string? DenyAiReplacement(
         PermissionSettings settings,
         AmbientContextSnapshot? context,
-        string text)
+        string text,
+        string? windowClass = null)
     {
         var decision = Evaluate(settings, "Reemplazar el texto seleccionado", DescribeTarget(context));
         if (decision.IsDenied)
@@ -57,7 +58,7 @@ public static class FlowExclusionCheck
             return decision.Reason;
         }
 
-        return TerminalWindowPolicy.WouldRunCommands(context?.ProcessName, text)
+        return TerminalWindowPolicy.WouldRunCommands(context?.ProcessName, windowClass, text)
             ? "Esa ventana es una terminal (o no pude saber cuál es) y el texto tiene varias líneas: escribirlo podría ejecutar órdenes sin que las revises."
             : null;
     }

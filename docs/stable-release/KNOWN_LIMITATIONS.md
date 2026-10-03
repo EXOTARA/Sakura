@@ -209,7 +209,14 @@ http/https/`www.`), así que `explorer.exe x.bat` pregunta. Los shells (`powersh
 terminal (decisión F). Un programa ordinario (Spotify, el Bloc de notas, `code .`, un esquema como
 `spotify:`) sigue sin preguntar aunque lleve argumentos: las rutinas solo las crea la persona (no hay
 importación ni creación desde la IA). Efecto lateral: `code build.bat` (abrir un script en un editor)
-pregunta. Pendiente de lo que quede: ver L20.
+pregunta. **Revisión adversarial (2026-10-03, mismo 0.30.38):** los argumentos se revisan también
+partidos por «,», «;» y «=» (`explorer.exe /select,\\host\x.exe`, `--carpeta=\\host\share`) y
+partidos como los parte Windows, solo con comillas dobles (una comilla simple agrupaba y escondía una
+ruta de red o un intérprete); se añaden `msdt`, `hh`, `mmc`, las extensiones `.chm .msc .appinstaller
+.msix .msixbundle .appx .appxbundle .library-ms .searchconnector-ms` y los esquemas `search`, `its`,
+`ms-its`, `mk`; un intérprete escrito como variable de entorno (`%ComSpec% /c …`) se reconoce
+expandido; y la **carpeta de trabajo** de `OpenApplication` pregunta si es una ruta de red o un
+esquema peligroso (antes `code .` en `\\host\share` no preguntaba). Pendiente de lo que quede: ver L20.
 
 ### ~~L11 — `Dispose` no idempotente~~ ✅
 **Qué era:** el segundo `Dispose` de `SingleInstanceCoordinator` lanzaba
@@ -480,7 +487,10 @@ confirmación en los casos de L10.
 - **La lectura de la selección sigue sin pasar por Lens** (es lo anotado en L15, decidido para otro
   bloque). Solo se protegió la escritura del resultado.
 - **Flow «Preguntar» sigue sin preguntar** también al reemplazar la selección (mismo motivo que L15).
-- **La terminal se detecta por el nombre del proceso** (WindowsTerminal, cmd, powershell, pwsh, conhost,
+- **La terminal se detecta por el nombre del proceso y, desde la revisión del 2026-10-03, por la clase
+  de ventana** (`ConsoleWindowClass`, `CASCADIA_HOSTING_WINDOW_CLASS`, `PseudoConsoleWindow`,
+  `VirtualConsoleClass`, `mintty`, `PuTTY`): en la consola clásica Windows atribuye la ventana al primer
+  programa que corre dentro (python, ssh, ubuntu…), no a conhost. Lista de procesos (WindowsTerminal, cmd, powershell, pwsh, conhost,
   OpenConsole, wsl, bash, mintty, alacritty, wezterm-gui, putty, kitty, ConEmu64, ConEmuC64, Hyper,
   Tabby, ttermpro, MobaXterm, Terminus, cmder). Si el nombre del proceso no se puede leer, con texto de
   varias líneas tampoco se escribe (fallo cerrado). **El terminal integrado de un IDE (VS Code,
@@ -497,7 +507,7 @@ confirmación en los casos de L10.
   se ha probado con un archivo real de OneDrive** (no se puede crear en una prueba). Leer uno descarga
   el archivo, como lo haría abrirlo.
 - **`OpenApplication` sigue siendo una lista de casos conocidos.** Abrir un `.exe` por su ruta sin
-  argumentos, o extensiones fuera de la lista (`.msix`, `.docm`…), no pide confirmación; y un
+  argumentos, o extensiones fuera de la lista (`.docm`, `.xll`…), no pide confirmación; y un
   ejecutable ordinario sigue sin pedirla por llevar argumentos. Los esquemas peligrosos también son
   una lista corta. El nombre corto 8.3 se detecta por «`~` y un dígito» en el destino (no en los
   argumentos), sin resolver el nombre real.
@@ -506,6 +516,14 @@ confirmación en los casos de L10.
 - Los avisos del ejecutor de rutinas («Abrí …», «No encontré …») ya solo nombran la carpeta final,
   no la ruta completa. La descripción «Abrir {destino}» que arma `MainWindow` para la confirmación de
   una rutina no se revisó.
+- **Búsqueda del programa en la carpeta de trabajo (sin comprobar en Windows).** `OpenApplication`
+  (`code .` en la carpeta del proyecto) y «Abrir terminal» (`powershell.exe`) lanzan un nombre sin
+  ruta con `UseShellExecute` y una carpeta de trabajo. Si ShellExecute busca primero en esa carpeta, un
+  `code.bat` o `powershell.exe` dentro de un proyecto descargado se ejecutaría en su lugar. No se pudo
+  reproducir sin Windows y no se cambió: hay que comprobarlo antes de dar la rutina «modo
+  programación» por segura con proyectos ajenos.
+- «Abrir carpeta» con una ruta de red sigue sin preguntar, y `Directory.Exists` ya la toca (hash NTLM)
+  antes de abrirla. Solo se cubrió la carpeta de trabajo de `OpenApplication`.
 - **Nada de esto se probó ejecutando la app**: hay pruebas automáticas (incluida una unión real en una
   carpeta temporal), no una prueba en vivo.
 

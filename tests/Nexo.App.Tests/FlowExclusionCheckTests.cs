@@ -69,6 +69,20 @@ public sealed class FlowExclusionCheckTests
     }
 
     [Fact]
+    public void AiReplacement_IsDenied_InAClassicConsole_WhateverProgramRunsInside()
+    {
+        // Revisión adversarial 2026-10-03: python abierto con Win + R vive en una consola clásica que
+        // Windows atribuye a python, no a conhost; Enter ahí ejecuta código igual.
+        var python = new AmbientContextSnapshot("Python 3.13", "python", false);
+        var settings = Flow(PermissionLevel.Permitido);
+
+        Assert.NotNull(FlowExclusionCheck.DenyAiReplacement(settings, python, "import os\nos.remove('x')", "ConsoleWindowClass"));
+        Assert.Null(FlowExclusionCheck.DenyAiReplacement(settings, python, "una sola línea", "ConsoleWindowClass"));
+        Assert.Null(FlowExclusionCheck.DenyAiReplacement(
+            settings, new AmbientContextSnapshot("Notas", "notepad", false), "uno\ndos", "Notepad"));
+    }
+
+    [Fact]
     public void Preguntar_IsNotDenied_BecauseAskingIsNotResolvedInFlow()
     {
         // Un diálogo robaría el foco a la aplicación destino; por eso «Preguntar» no detiene el

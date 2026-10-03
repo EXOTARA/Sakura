@@ -177,7 +177,8 @@ public partial class MainWindow
         var denial = FlowExclusionCheck.DenyAiReplacement(
             _preferences.Permissions,
             _ambientContextProvider.Capture(_selectionTargetWindow),
-            result);
+            result,
+            ReadWindowClass(new IntPtr(_selectionTargetWindow)));
         if (denial is not null)
         {
             RecordAudit(
@@ -323,4 +324,18 @@ public partial class MainWindow
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr window);
+
+    // Revisión adversarial 2026-10-03: la clase de ventana distingue una consola aunque el proceso que
+    // Windows le atribuye sea python, ssh o cualquier otro programa de consola (TerminalWindowPolicy).
+    // Si no se puede leer queda vacía y manda el nombre del proceso, como antes.
+    private static string? ReadWindowClass(IntPtr window)
+    {
+        var builder = new StringBuilder(256);
+        return window != IntPtr.Zero && GetClassName(window, builder, builder.Capacity) > 0
+            ? builder.ToString()
+            : null;
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr window, StringBuilder className, int maxCount);
 }

@@ -32,6 +32,23 @@ public static class TerminalWindowPolicy
         return TerminalProcesses.Contains(name);
     }
 
+    // Revisión adversarial 2026-10-03: en la consola clásica (conhost), Windows atribuye la ventana al
+    // primer programa que la usa, no a conhost. Abrir python, ssh, node o ubuntu directamente (Win + R,
+    // doble clic) da una consola cuyo proceso no está en la lista de arriba, y ahí Enter ejecuta igual.
+    // La clase de ventana no depende de qué programa corra dentro.
+    private static readonly HashSet<string> TerminalWindowClasses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ConsoleWindowClass",              // conhost, la consola clásica
+        "CASCADIA_HOSTING_WINDOW_CLASS",   // Windows Terminal
+        "PseudoConsoleWindow",             // ventana oculta de una pseudoconsola
+        "VirtualConsoleClass",             // ConEmu
+        "mintty",                          // Git Bash, Cygwin, MSYS2
+        "PuTTY"
+    };
+
+    public static bool IsTerminalWindowClass(string? windowClass) =>
+        !string.IsNullOrWhiteSpace(windowClass) && TerminalWindowClasses.Contains(windowClass.Trim());
+
     /// <summary>
     /// True si escribir <paramref name="text"/> en esa ventana pulsaría Enter en una terminal. Si el
     /// nombre del proceso no se pudo leer, se trata como terminal (fallo cerrado). Limitación: el
@@ -39,6 +56,13 @@ public static class TerminalWindowPolicy
     /// distingue (L20).
     /// </summary>
     public static bool WouldRunCommands(string? processName, string? text) =>
-        (string.IsNullOrWhiteSpace(processName) || IsTerminal(processName)) &&
+        WouldRunCommands(processName, windowClass: null, text);
+
+    /// <summary>
+    /// Igual, pero también cuenta como terminal una ventana cuya clase es de consola, sea cual sea el
+    /// programa que corre dentro.
+    /// </summary>
+    public static bool WouldRunCommands(string? processName, string? windowClass, string? text) =>
+        (string.IsNullOrWhiteSpace(processName) || IsTerminal(processName) || IsTerminalWindowClass(windowClass)) &&
         text is not null && text.AsSpan().IndexOfAny('\r', '\n') >= 0;
 }

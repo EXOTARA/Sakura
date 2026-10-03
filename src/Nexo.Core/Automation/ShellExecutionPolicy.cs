@@ -85,7 +85,16 @@ public static class ShellExecutionPolicy
     /// ¿El ejecutable indicado es un intérprete capaz de ejecutar código arbitrario?
     /// </summary>
     public static bool IsInterpreter(string? target) =>
-        Interpreters.Contains(NormalizeExecutableName(target));
+        Interpreters.Contains(NormalizeExecutableName(target)) ||
+        Interpreters.Contains(NormalizeExecutableName(Expand(target)));
+
+    // Revisión adversarial 2026-10-03: «%ComSpec%» a secas no tiene ruta que recortar, así que
+    // NormalizeExecutableName devolvía «%comspec%» y «%ComSpec% /c calc» no parecía un intérprete,
+    // aunque el resto de la política ya trata el destino como si se expandiera.
+    private static string Expand(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : Environment.ExpandEnvironmentVariables(value.Trim().Trim('"', '\'').Trim());
 
     /// <summary>
     /// ¿Esta combinación de ejecutable y argumentos constituye ejecución de un comando
@@ -114,7 +123,10 @@ public static class ShellExecutionPolicy
     private static readonly HashSet<string> SystemExecutors = new(StringComparer.OrdinalIgnoreCase)
     {
         "forfiles", "msiexec", "schtasks", "reg", "rundll32", "regsvr32", "mshta", "wscript",
-        "cscript", "certutil", "bitsadmin", "cmstp", "installutil"
+        "cscript", "certutil", "bitsadmin", "cmstp", "installutil",
+        // Revisión adversarial 2026-10-03: el esquema ms-msdt ya preguntaba, pero msdt.exe con los
+        // mismos parámetros (Follina) no; hh.exe ejecuta lo que traiga un .chm y mmc.exe un .msc.
+        "msdt", "hh", "mmc"
     };
 
     /// <summary>
@@ -126,7 +138,11 @@ public static class ShellExecutionPolicy
     [
         ".bat", ".cmd", ".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".hta", ".msi", ".scr",
         ".lnk", ".url", ".reg", ".cpl", ".pif", ".application", ".appref-ms", ".jar", ".py", ".pyw",
-        ".wsh", ".sct", ".msp", ".settingcontent-ms", ".diagcab"
+        ".wsh", ".sct", ".msp", ".settingcontent-ms", ".diagcab",
+        // Revisión adversarial 2026-10-03: ms-appinstaller y search-ms ya preguntaban como esquema,
+        // pero sus archivos equivalentes no; .chm y .msc ejecutan script al abrirse.
+        ".chm", ".msc", ".appinstaller", ".msix", ".msixbundle", ".appx", ".appxbundle",
+        ".library-ms", ".searchconnector-ms"
     ];
 
     // ponytail: lista de esquemas conocidos por lanzar o descargar cosas; los esquemas de aplicaciones
@@ -135,7 +151,10 @@ public static class ShellExecutionPolicy
     private static readonly HashSet<string> RiskySchemes = new(StringComparer.OrdinalIgnoreCase)
     {
         "http", "https", "ftp", "ftps", "file", "ms-msdt", "search-ms", "ms-appinstaller", "javascript",
-        "ms-officecmd", "ms-word", "ms-excel", "ms-powerpoint", "vbscript", "shell"
+        "ms-officecmd", "ms-word", "ms-excel", "ms-powerpoint", "vbscript", "shell",
+        // Revisión adversarial 2026-10-03: «search:» es el alias de search-ms; its/ms-its/mk abren
+        // el contenido de un .chm.
+        "search", "its", "ms-its", "mk"
     };
 
     /// <summary>
@@ -158,7 +177,7 @@ public static class ShellExecutionPolicy
         }
 
         if (!string.IsNullOrWhiteSpace(arguments) &&
-            Tokenize(arguments).Any(fragment => IsRiskyReference(fragment, isArgument: true)))
+            ArgumentFragments(arguments).Any(fragment => IsRiskyReference(fragment, isArgument: true)))
         {
             return true;
         }
@@ -173,8 +192,60 @@ public static class ShellExecutionPolicy
             return true;
         }
 
-        var expanded = Environment.ExpandEnvironmentVariables(target.Trim()).Trim('"', '\'').Trim();
+        var expanded = Expand(target);
         return HasShortName(expanded) || SystemExecutors.Contains(NormalizeExecutableName(expanded));
+    }
+
+    /// <summary>
+    /// Revisión adversarial 2026-10-03 — la carpeta de trabajo de <c>OpenApplication</c> no pasaba por
+    /// ninguna comprobación: una rutina «Abrir VS Code» (<c>code .</c>) con la carpeta
+    /// <c>\\servidor\recurso</c> abría la ruta de red sin preguntar (y Sakura ya la toca al comprobar
+    /// que existe, lo que entrega el hash NTLM). Pregunta igual que una ruta de red en el destino.
+    /// </summary>
+    public static bool RequiresConfirmationForWorkingDirectory(string? workingDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(workingDirectory) ||
+            workingDirectory.Trim().Equals("{project}", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var name = Expand(workingDirectory);
+        return name.StartsWith(@"\\", StringComparison.Ordinal) ||
+               name.StartsWith("//", StringComparison.Ordinal) ||
+               HasRiskyScheme(name, allowWeb: false);
+    }
+
+    /// <summary>
+    /// Revisión adversarial 2026-10-03 — los trozos de los argumentos que se revisan. Dos rodeos:
+    /// <list type="bullet">
+    ///   <item>Windows (CommandLineToArgvW) solo entiende comillas dobles; el tokenizador también
+    ///     agrupaba con comillas simples, así que <c>it's \\host\share\x</c> se juntaba en un solo
+    ///     trozo que no empezaba por <c>\\</c>. Se revisan los trozos de ambas formas.</item>
+    ///   <item><c>explorer.exe /select,\\host\share\x.exe</c> o <c>--carpeta=\\host\share</c>:
+    ///     la ruta va pegada a un interruptor, así que se revisa también lo que va tras «,», «;» o
+    ///     «=». Una dirección web entera (http, https, www) se deja tal cual, como antes.</item>
+    /// </list>
+    /// </summary>
+    private static IEnumerable<string> ArgumentFragments(string arguments)
+    {
+        foreach (var token in Tokenize(arguments).Concat(Tokenize(arguments, singleQuotes: false)))
+        {
+            yield return token;
+
+            var trimmed = token.Trim().Trim('"', '\'').Trim();
+            if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var piece in token.Split(new[] { ',', ';', '=' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                yield return piece;
+            }
+        }
     }
 
     private static bool IsRiskyReference(string value, bool isArgument)
@@ -250,7 +321,7 @@ public static class ShellExecutionPolicy
             return false;
         }
 
-        foreach (var token in Tokenize(arguments))
+        foreach (var token in ArgumentFragments(arguments))
         {
             if (Interpreters.Contains(NormalizeExecutableName(token)))
             {
@@ -305,7 +376,7 @@ public static class ShellExecutionPolicy
     /// <summary>
     /// Separa una línea de argumentos respetando comillas, para no partir rutas con espacios.
     /// </summary>
-    private static IEnumerable<string> Tokenize(string arguments)
+    private static IEnumerable<string> Tokenize(string arguments, bool singleQuotes = true)
     {
         var current = new System.Text.StringBuilder();
         var quote = '\0';
@@ -326,7 +397,7 @@ public static class ShellExecutionPolicy
                 continue;
             }
 
-            if (character is '"' or '\'')
+            if (character == '"' || (singleQuotes && character == '\''))
             {
                 quote = character;
                 continue;
