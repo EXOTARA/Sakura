@@ -166,9 +166,11 @@ public sealed class MotionAdversarialTests(StaWpfFixture wpf) : IDisposable
 
                 window.Reveal(area);
 
-                // 600 ms: la entrada dura 450, y el cajón se recoge solo a los ~770 ms si el cursor
-                // real no está dentro (vigilante del ratón), lo que con 1000 ms lo hacía intermitente.
-                Pump(600);
+                // 500 ms: la entrada dura 450, y sin cursor real encima el vigilante del ratón recoge el
+                // cajón a partir de los 650 ms (gracia) + hasta 120 ms de tic. Con 1000 ms la prueba
+                // medía la recogida automática; con 600 quedaban solo ~50 ms de margen en un ejecutor
+                // cargado. Con 500 hay 50 ms sobre el final de la entrada y 150 antes de la recogida.
+                Pump(500);
 
                 var panel = (FrameworkElement)window.FindName("PanelBorder")!;
                 var translate = (TranslateTransform)window.FindName("PanelTranslate")!;
@@ -251,6 +253,26 @@ public sealed class MotionAdversarialTests(StaWpfFixture wpf) : IDisposable
         });
     }
 
+    [Fact]
+    public void QuickCaptureReopenedAfterFullDismissPlaysTheInflateAgain()
+    {
+        WithMotion(true, () =>
+        {
+            var window = new QuickCaptureWindow();
+            try
+            {
+                var dismiss = typeof(QuickCaptureWindow).GetMethod("Dismiss", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                window.ShowAtTop();
+                Pump(400);
+                dismiss.Invoke(window, null);
+                Pump(500);
+                var closing = (bool)typeof(QuickCaptureWindow).GetField("_closing", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+                Assert.False(closing, "tras acabar la salida, la ventana no debe seguir marcada como cerrándose");
+            }
+            finally { window.Close(); }
+        });
+    }
+
     // ---- 2. animaciones apagadas a mitad ----
 
     [Fact]
@@ -260,6 +282,15 @@ public sealed class MotionAdversarialTests(StaWpfFixture wpf) : IDisposable
         WithMotion(true, () =>
         {
             var palette = new CommandPaletteWindow();
+
+            // La paleta se oculta sola al perder la activación (comportamiento buscado). En un
+            // ejecutor de CI otra ventana puede quitarle el foco a mitad de la prueba y dejarla a
+            // opacidad 0, que es lo que esta prueba NO mide: se desengancha ese manejador.
+            var onDeactivated = (EventHandler)Delegate.CreateDelegate(
+                typeof(EventHandler),
+                palette,
+                typeof(CommandPaletteWindow).GetMethod("Window_Deactivated", BindingFlags.Instance | BindingFlags.NonPublic)!);
+            palette.Deactivated -= onDeactivated;
             try
             {
                 palette.ShowPalette();

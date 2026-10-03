@@ -93,6 +93,7 @@ public partial class QuickCaptureWindow : Window
         if (!SakuraMotion.AnimationsEnabled)
         {
             Hide();
+            _closing = false;
             return;
         }
 
@@ -108,6 +109,11 @@ public partial class QuickCaptureWindow : Window
                 if (_closing && generation == _closeGeneration)
                 {
                     Hide();
+
+                    // Salida terminada: la próxima apertura es una apertura limpia, con su inflado
+                    // desde 0,96. Si _closing se quedaba en true, ShowAtTop la tomaba por una
+                    // reapertura a mitad de salida y la escala arrancaba ya en 1, sin gesto.
+                    _closing = false;
                 }
             });
     }
