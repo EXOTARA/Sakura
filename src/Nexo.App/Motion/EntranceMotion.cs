@@ -25,24 +25,28 @@ public static class EntranceMotion
     {
         var (scale, translate) = EnsureTransforms(block, new Point(0.5, 1));
 
-        scale.ScaleX = 0.96;
-        scale.ScaleY = 0.86;
-        translate.Y = 22;
-
         FadeIn(block, begin);
-        scale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
-        scale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve, begin);
-        translate.AnimateTransform(TranslateTransform.YProperty, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
+        scale.EnterTo(ScaleTransform.ScaleXProperty, 0.96, 1, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
+        scale.EnterTo(ScaleTransform.ScaleYProperty, 0.86, 1, SakuraMotion.Emphasized, SakuraMotion.SubtleSpringCurve, begin);
+        translate.EnterTo(TranslateTransform.YProperty, 22, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
     }
 
-    /// <summary>El contenido de un bloque: sube un poco mientras aparece.</summary>
+    /// <summary>
+    /// El contenido de un bloque: sube un poco mientras aparece.
+    ///
+    /// Auditoría de movimiento (2026-10) — antes escribía el desplazamiento de partida a mano
+    /// (<c>translate.Y = offset</c>) y luego animaba. Una animación terminada se queda sujetando su
+    /// valor final, así que esa escritura no se veía: la segunda vez la pieza "subía" de 0 a 0 y solo
+    /// aparecía. Por eso la búsqueda de archivos y los pasos repetidos de la bienvenida solo se movían
+    /// la primera vez. <see cref="SakuraMotion.EnterTo(Transform, DependencyProperty, double, double, Duration, IEasingFunction, TimeSpan?, Action?)"/>
+    /// suelta la animación retenida antes de decidir desde dónde sale.
+    /// </summary>
     public static void Rise(FrameworkElement element, TimeSpan begin, double offset = 10)
     {
         var (_, translate) = EnsureTransforms(element, new Point(0.5, 0.5));
 
-        translate.Y = offset;
         FadeIn(element, begin);
-        translate.AnimateTransform(TranslateTransform.YProperty, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
+        translate.EnterTo(TranslateTransform.YProperty, offset, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve, begin);
     }
 
     /// <summary>Una burbuja: se infla desde más pequeña y se asienta con un rebote corto.</summary>
@@ -50,11 +54,9 @@ public static class EntranceMotion
     {
         var (scale, _) = EnsureTransforms(element, new Point(0.5, 0.5));
 
-        scale.ScaleX = from;
-        scale.ScaleY = from;
         FadeIn(element, begin);
-        scale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
-        scale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
+        scale.EnterTo(ScaleTransform.ScaleXProperty, from, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
+        scale.EnterTo(ScaleTransform.ScaleYProperty, from, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
     }
 
     /// <summary>

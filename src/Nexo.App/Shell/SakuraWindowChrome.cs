@@ -109,11 +109,13 @@ public static class SakuraWindowChrome
 
         surface.CornerRadius = radius;
 
-        // Sin fondo del sistema pero con composición transparente: PaintSurface pinta el alfa pedido.
+        // Sin fondo del sistema pero con composición transparente: PaintSurface pinta el alfa pedido,
+        // salvo que Windows tenga apagados los efectos de transparencia: entonces, opaca (el cristal
+        // y las esquinas se quedan, que es el aspecto elegido; lo que deja de verse es a través).
         var decision = new WindowBackdropDecision(
             WindowBackdrop.None,
             WindowCorner.Square,
-            PaintOwnBackground: false,
+            PaintOwnBackground: WindowBackdropPolicy.RequiresOpaqueSurface(probe),
             "Cristal transparente con esquinas propias.");
 
         PaintSurface(window, surface, surfaceBrushKey, opacity, decision);
@@ -127,12 +129,17 @@ public static class SakuraWindowChrome
     /// Devuelve <c>false</c> si no se pudo (contraste alto, Windows sin soporte) para que la ventana
     /// vuelva a su marco de siempre.
     /// </summary>
-    public static bool TryApplyRoundedGlass(Window window, Border surface, double cornerRadius)
+    public static bool TryApplyRoundedGlass(
+        Window window,
+        Border surface,
+        double cornerRadius,
+        string surfaceBrushKey = "BrushCommandSurfaceBackground")
     {
         ArgumentNullException.ThrowIfNull(window);
         ArgumentNullException.ThrowIfNull(surface);
 
         var handle = new WindowInteropHelper(window).Handle;
+        var probe = WindowsDwmChrome.ReadProbe(PerformanceMode);
         if (SystemParameters.HighContrast || !WindowsDwmChrome.TryApplyClearGlass(handle))
         {
             return false;
@@ -144,8 +151,37 @@ public static class SakuraWindowChrome
         }
 
         surface.CornerRadius = new CornerRadius(cornerRadius);
+
+        // Auditoría de movimiento y accesibilidad (2026-10): con los «Efectos de transparencia» de
+        // Windows apagados, esta superficie seguía al 95 % de opacidad. Opaca, con el mismo degradado.
+        SetSurfaceOpaque(surface, surfaceBrushKey, WindowBackdropPolicy.RequiresOpaqueSurface(probe));
         return true;
     }
+
+    /// <summary>
+    /// Se dispara cuando Windows cambia un ajuste que afecta al fondo de las ventanas (efectos de
+    /// transparencia, contraste alto). Las ventanas con cristal propio se suscriben para volver a
+    /// aplicar su fondo con la app abierta, en vez de esperar a la próxima vez que se creen.
+    /// </summary>
+    public static event EventHandler? AppearanceChanged;
+
+    public static void NotifyAppearanceChanged() => AppearanceChanged?.Invoke(null, EventArgs.Empty);
+
+    /// <summary>
+    /// «Efectos de transparencia» apagados o contraste alto, para las ventanas que pintan su propio
+    /// color (Peek). Lee el sistema en el momento: es una consulta barata al registro.
+    /// </summary>
+    public static bool SurfaceMustBeOpaque() =>
+        WindowBackdropPolicy.RequiresOpaqueSurface(WindowsDwmChrome.ReadProbe(PerformanceMode));
+
+    /// <summary>
+    /// La superficie sigue siempre un RECURSO, no una copia: el normal (<paramref name="brushKey"/>) o,
+    /// si hay que ir opaca, su gemelo «<paramref name="brushKey"/>Opaque» (mismos colores a alfa 255,
+    /// definido junto al original). Así, si el tema cambia con la superficie opaca, la brocha sigue
+    /// al recurso en vez de quedarse con el color viejo de una copia estática.
+    /// </summary>
+    private static void SetSurfaceOpaque(Border surface, string brushKey, bool opaque) =>
+        surface.SetResourceReference(Border.BackgroundProperty, opaque ? brushKey + "Opaque" : brushKey);
 
     /// <summary>
     /// La barra de título del color de la ventana y no del acento de Windows, para las ventanas con

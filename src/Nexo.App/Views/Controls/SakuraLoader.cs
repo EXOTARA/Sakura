@@ -45,8 +45,18 @@ public sealed class SakuraLoader : FrameworkElement
         }
 
         IsVisibleChanged += (_, _) => UpdateRunning();
-        Loaded += (_, _) => UpdateRunning();
-        Unloaded += (_, _) => BeginAnimation(PhaseProperty, null);
+        // También si el ajuste de animaciones cambia con el cargador a la vista: antes se quedaba
+        // girando con las animaciones apagadas hasta que se ocultaba y volvía a mostrarse.
+        Loaded += (_, _) =>
+        {
+            SakuraMotion.AnimationsEnabledChanged += OnAnimationsEnabledChanged;
+            UpdateRunning();
+        };
+        Unloaded += (_, _) =>
+        {
+            SakuraMotion.AnimationsEnabledChanged -= OnAnimationsEnabledChanged;
+            BeginAnimation(PhaseProperty, null);
+        };
     }
 
     public double Phase
@@ -99,6 +109,8 @@ public sealed class SakuraLoader : FrameworkElement
             InvalidateArrange();
         }
     }
+
+    private void OnAnimationsEnabledChanged(object? sender, EventArgs e) => UpdateRunning();
 
     private void UpdateRunning()
     {

@@ -1,4 +1,5 @@
 using System.Windows;
+using Nexo.App.Motion;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Nexo.Core.Commands.CommandCenter;
@@ -67,6 +68,11 @@ public sealed class CommandCenterWindowTests
             owner.UpdateLayout();
             Keyboard.Focus(ownerFocusTarget);
 
+            // La salida del Command Center ahora es animada y se oculta al terminar; estas pruebas
+            // comprueban cuándo se cierra, no cómo, así que van por la ruta sin animación.
+            var animations = SakuraMotion.AnimationsEnabled;
+            SakuraMotion.AnimationsEnabled = false;
+
             var window = new CommandCenterWindow(registry);
             try
             {
@@ -80,6 +86,7 @@ public sealed class CommandCenterWindowTests
             }
             finally
             {
+                SakuraMotion.AnimationsEnabled = animations;
                 window.Close();
                 owner.Close();
             }

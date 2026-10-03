@@ -27,6 +27,11 @@ public partial class ModelManagerWindow : Window
     public ModelManagerWindow(string baseUrl, string currentModel)
     {
         InitializeComponent();
+
+        // El giro del botón de refrescar y la barra indeterminada son bucles sin fin: se paran si
+        // «sin animaciones» cambia con la ventana abierta.
+        SakuraMotion.AnimationsEnabledChanged += OnAnimationsEnabledChanged;
+
         ContentRendered += (_, _) =>
         {
             ModelNameTextBox.Focus();
@@ -438,6 +443,12 @@ public partial class ModelManagerWindow : Window
         ApplyDownloadFill(animate: !wasIndeterminate);
     }
 
+    private void OnAnimationsEnabledChanged(object? sender, EventArgs e)
+    {
+        SetBusy(_isBusy);
+        ApplyDownloadFill(animate: false);
+    }
+
     private void DownloadTrack_SizeChanged(object sender, SizeChangedEventArgs e) =>
         ApplyDownloadFill(animate: false);
 
@@ -490,6 +501,7 @@ public partial class ModelManagerWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        SakuraMotion.AnimationsEnabledChanged -= OnAnimationsEnabledChanged;
         DownloadFillTranslate.BeginAnimation(TranslateTransform.XProperty, null);
         RefreshIconRotation.BeginAnimation(RotateTransform.AngleProperty, null);
         _lifetimeCancellation.Cancel();

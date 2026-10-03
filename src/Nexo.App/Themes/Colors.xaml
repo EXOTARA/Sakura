@@ -93,5 +93,6 @@
     -->
     <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextTertiary}" />
     <SolidColorBrush x:Key="BrushError" Color="{StaticResource ColorDanger}" />
-    <SolidColorBrush x:Key="BrushFocusRing" Color="{StaticResource ColorAccentBorder}" />
+    <!-- Opaco: con el alfa del borde de acento el anillo medía 2,1:1 (WCAG pide 3:1). MainWindow lo sustituye con el del tema. -->
+    <SolidColorBrush x:Key="BrushFocusRing" Color="{StaticResource ColorAccent}" />
 </ResourceDictionary>

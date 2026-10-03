@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Nexo.Core.Diagnostics;
 
 namespace Nexo.App;
@@ -16,9 +17,15 @@ public sealed class CommandPaletteState
 {
     public ShellMotionPreset MotionPreset { get; set; } = ShellMotionPreset.Fluid;
 
-    public bool ReduceMotion { get; set; }
-
     public List<string> RecentCommands { get; set; } = [];
+
+    /// <summary>
+    /// Solo para leer estados guardados antes de 0.30.38, cuando la paleta tenía su propia casilla
+    /// «Reducir movimiento». Al cargar se convierte en el preajuste «Sin movimiento» y se vacía, así
+    /// que ya no se vuelve a escribir.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ReduceMotion { get; set; }
 }
 
 public sealed class CommandPaletteStateStore
@@ -51,6 +58,14 @@ public sealed class CommandPaletteStateStore
             var state = JsonSerializer.Deserialize<CommandPaletteState>(json, JsonOptions)
                 ?? new CommandPaletteState();
             state.RecentCommands = NormalizeRecentCommands(state.RecentCommands);
+
+            // Quien tenía marcada la casilla antigua no debe volver a ver animaciones en la paleta.
+            if (state.ReduceMotion == true)
+            {
+                state.MotionPreset = ShellMotionPreset.None;
+            }
+
+            state.ReduceMotion = null;
             return state;
         }
         catch (Exception exception) when (

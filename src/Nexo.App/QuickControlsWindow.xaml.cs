@@ -39,6 +39,7 @@ public partial class QuickControlsWindow : Window
     private readonly Dictionary<QuickControlKind, Views.Controls.LiquidLevelGauge> _gauges = new();
 
     private bool _dismissing;
+    private int _dismissGeneration;
     private QuickControlKind? _dragging;
 
     /// <summary>
@@ -123,6 +124,8 @@ public partial class QuickControlsWindow : Window
             return;
         }
 
+        // Se reabre mientras todavía se está yendo: la entrada sigue desde donde el panel está.
+        var resumingFromDismiss = _dismissing;
         _dismissing = false;
         _dragging = null;
         _stillTicks = 0;
@@ -145,24 +148,33 @@ public partial class QuickControlsWindow : Window
             Position(edge);
         }
 
-        PanelBorder.BeginAnimation(OpacityProperty, null);
-
         // Entra desde su propio borde, como Sakura desde el suyo: el movimiento dice de dónde viene.
         var offset = edge == SidebarPosition.Left ? -28d : 28d;
         _edgeOffset = offset;
 
         if (!SakuraMotion.AnimationsEnabled)
         {
+            // Se suelta la animación retenida ANTES de fijar el valor: una animación terminada se
+            // queda sujetando su valor final y tapa lo que se escriba a mano. Con «sin animaciones»
+            // activado después de usar el panel, escribir X = 0 no hacía nada y el panel se quedaba
+            // fuera de su ventana —invisible pero clicable—, justo lo que D56/D57 evitan.
+            PanelBorder.BeginAnimation(OpacityProperty, null);
+            PanelTranslate.BeginAnimation(TranslateTransform.XProperty, null);
             PanelBorder.Opacity = 1;
             PanelTranslate.X = 0;
         }
         else
         {
-            PanelBorder.Opacity = 0;
-            PanelTranslate.X = offset;
-            PanelBorder.Animate(OpacityProperty, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
-            PanelTranslate.AnimateTransform(
-                TranslateTransform.XProperty, 0, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve);
+            // «Entrar desde»: la salida deja el valor retenido en el extremo (una escritura a mano
+            // no se veía y la entrada partía de ahí, el salto desde la segunda vez), y a mitad de
+            // salida el valor queda fuera del recorrido de entrada: se parte de donde está.
+            PanelBorder.EnterTo(OpacityProperty, 0, 1, SakuraMotion.Reveal, SakuraMotion.DecelerateCurve);
+            PanelTranslate.EnterTo(
+                TranslateTransform.XProperty,
+                resumingFromDismiss ? PanelTranslate.X : offset,
+                0,
+                SakuraMotion.Emphasized,
+                SakuraMotion.EmphasizedCurve);
         }
 
         RestartIdle();
@@ -510,15 +522,15 @@ public partial class QuickControlsWindow : Window
         }
 
         _dismissing = true;
+        var generation = ++_dismissGeneration;
         _idleTimer.Stop();
         _dragging = null;
 
         // Diseño D57 — deja de aceptar clics en cuanto se decide que se va, no cuando termina
         // de irse. Es la misma protección que D56 le puso al cajón, y esta ventana se oculta
-        // igual: al acabar la animación de salida. Una animación puede no acabar nunca —basta
-        // con que algo la reemplace a mitad de camino para que su Completed no llegue— y lo que
-        // queda entonces es una ventana mostrada con opacidad cero que sigue quedándose con los
-        // clics de su trozo de pantalla. Invisible y clicable es el peor estado posible de una
+        // igual: al acabar la animación de salida. Una animación puede acabar mal —o a destiempo—:
+        // lo que queda entonces es una ventana mostrada con opacidad cero que sigue quedándose con
+        // los clics de su trozo de pantalla. Invisible y clicable es el peor estado posible de una
         // ventana: desde fuera se siente como que el ratón dejó de responder ahí, sin nada que
         // lo explique.
         IsHitTestVisible = false;
@@ -549,7 +561,6 @@ public partial class QuickControlsWindow : Window
         var retreat = PanelBorder.ActualWidth > 0 ? PanelBorder.ActualWidth : 260;
         var away = _edgeOffset < 0 ? -retreat : retreat;
 
-        PanelTranslate.BeginAnimation(TranslateTransform.XProperty, null);
         PanelTranslate.AnimateTransform(
             TranslateTransform.XProperty,
             away,
@@ -563,6 +574,14 @@ public partial class QuickControlsWindow : Window
             SakuraMotion.AccelerateCurve,
             completed: () =>
             {
+                // El Completed de una animación reemplazada NO se cancela: se dispara igual al cumplirse
+                // su duración original (medido). Si el panel se reabrió o se cerró de nuevo mientras
+                // tanto, esta ya no es la salida vigente y ocultarlo lo borraría recién abierto.
+                if (!_dismissing || generation != _dismissGeneration)
+                {
+                    return;
+                }
+
                 Hide();
                 _dismissing = false;
             });
