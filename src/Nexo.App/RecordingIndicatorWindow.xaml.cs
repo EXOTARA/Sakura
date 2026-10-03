@@ -25,6 +25,38 @@ public partial class RecordingIndicatorWindow : Window
             SetWindowLong(handle, GwlExStyle, GetWindowLong(handle, GwlExStyle) | WsExNoActivate | WsExToolWindow);
             SetWindowDisplayAffinity(handle, WdaExcludeFromCapture);
         };
+
+        // El latido es un bucle sin fin: si «sin animaciones» cambia con el indicador a la vista,
+        // se para (o se arranca) en el momento, no la próxima vez que se muestre.
+        SakuraMotion.AnimationsEnabledChanged += OnAnimationsEnabledChanged;
+        Closed += (_, _) => SakuraMotion.AnimationsEnabledChanged -= OnAnimationsEnabledChanged;
+    }
+
+    private void OnAnimationsEnabledChanged(object? sender, EventArgs e)
+    {
+        if (IsVisible)
+        {
+            UpdatePulse();
+        }
+    }
+
+    private void UpdatePulse()
+    {
+        DotScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        DotScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+
+        if (!SakuraMotion.AnimationsEnabled)
+        {
+            return;
+        }
+
+        var pulse = new DoubleAnimation(1, 0.65, TimeSpan.FromMilliseconds(700))
+        {
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+        DotScale.BeginAnimation(ScaleTransform.ScaleXProperty, pulse);
+        DotScale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse);
     }
 
     public event EventHandler? StopRequested;
@@ -45,14 +77,9 @@ public partial class RecordingIndicatorWindow : Window
         if (SakuraMotion.AnimationsEnabled)
         {
             EntranceMotion.Pop(Body, TimeSpan.Zero, from: 0.85);
-            var pulse = new DoubleAnimation(1, 0.65, TimeSpan.FromMilliseconds(700))
-            {
-                AutoReverse = true,
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-            DotScale.BeginAnimation(ScaleTransform.ScaleXProperty, pulse);
-            DotScale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse);
         }
+
+        UpdatePulse();
     }
 
     public void UpdateElapsed(TimeSpan elapsed) =>

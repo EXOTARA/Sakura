@@ -251,7 +251,9 @@ public partial class HomeView : UserControl
         if (open)
         {
             NowActions.Visibility = Visibility.Visible;
-            NowActions.Animate(HeightProperty, ActionsHeight, SakuraMotion.Emphasized, SakuraMotion.SpringCurve);
+            // Sin rebote (auditoría de movimiento, 2026-10): se abre por un toque, sin gesto de impulso,
+            // y un muelle sin impulso se lee como un temblor. Amortiguación crítica.
+            NowActions.Animate(HeightProperty, ActionsHeight, SakuraMotion.Emphasized, SakuraMotion.EmphasizedCurve);
             Inflate(NowPrimaryButton, TimeSpan.FromMilliseconds(40));
             Inflate(NowSecondaryButton, TimeSpan.FromMilliseconds(90));
             return;
@@ -273,12 +275,18 @@ public partial class HomeView : UserControl
 
     private static void Inflate(FrameworkElement button, TimeSpan begin)
     {
-        var scale = new ScaleTransform(0.6, 0.6);
-        button.RenderTransform = scale;
-        button.Opacity = 0;
-        button.Animate(OpacityProperty, 1, SakuraMotion.Fast, SakuraMotion.DecelerateCurve, begin);
-        scale.AnimateTransform(ScaleTransform.ScaleXProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
-        scale.AnimateTransform(ScaleTransform.ScaleYProperty, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
+        // «Entrar desde»: antes se escribía Opacity = 0 a mano, y una animación terminada se queda
+        // sujetando su valor final, así que a partir de la segunda vez los botones solo escalaban y
+        // no aparecían. La transformación se conserva entre aperturas para poder soltarla.
+        if (button.RenderTransform is not ScaleTransform { IsFrozen: false } scale)
+        {
+            scale = new ScaleTransform(1, 1);
+            button.RenderTransform = scale;
+        }
+
+        button.EnterTo(OpacityProperty, 0, 1, SakuraMotion.Fast, SakuraMotion.DecelerateCurve, begin);
+        scale.EnterTo(ScaleTransform.ScaleXProperty, 0.6, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
+        scale.EnterTo(ScaleTransform.ScaleYProperty, 0.6, 1, SakuraMotion.Emphasized, SakuraMotion.SpringCurve, begin);
     }
 
     private void NowPrimaryButton_Click(object sender, RoutedEventArgs e)

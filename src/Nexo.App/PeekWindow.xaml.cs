@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Nexo.App.Motion;
+using Nexo.App.Shell;
 using Nexo.App.Views.Controls;
 using Nexo.Core.Metrics;
 using Nexo.Core.Settings;
@@ -107,7 +108,11 @@ public partial class PeekWindow : Window
         PeekMetricsGrid.Columns = Math.Max(1, visibleMetricCount);
 
         var baseColor = (Color)ColorConverter.ConvertFromString("#11131A");
-        var alpha = (byte)Math.Round(preferences.Opacity * 255);
+        // Con «Efectos de transparencia» apagados en Windows (o contraste alto) la superficie va
+        // opaca; la opacidad elegida solo vale si de verdad se puede ver a través.
+        var alpha = SakuraWindowChrome.SurfaceMustBeOpaque()
+            ? (byte)255
+            : (byte)Math.Round(preferences.Opacity * 255);
         PeekBorder.Background = new SolidColorBrush(Color.FromArgb(
             alpha,
             baseColor.R,

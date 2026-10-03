@@ -88,6 +88,41 @@ public static class SakuraThemeBuilder
             Border: ColorMath.FromHsl(hue, BorderLayer.Saturation, BorderLayer.Lightness));
     }
 
+    /// <summary>Umbral de WCAG 1.4.11 para elementos gráficos y componentes de interfaz.</summary>
+    public const double MinimumFocusContrast = 3.0;
+
+    /// <summary>
+    /// El color del anillo de foco del teclado: el acento OPACO, y más claro solo si hiciera falta.
+    ///
+    /// Auditoría de movimiento y accesibilidad (2026-10): el anillo era el acento con alfa 112 sobre
+    /// un borde de 1 px, y compuesto sobre las superficies medía 2,1–2,2:1, por debajo del 3:1 que
+    /// pide WCAG para saber dónde está el foco. El acento sólido da 6,7:1 con el acento de siempre,
+    /// pero un acento sacado de una foto o de Windows puede quedarse corto contra la superficie más
+    /// clara (la de pasar el ratón), así que se aclara en pasos hasta cumplirlo contra todas.
+    /// </summary>
+    public static RgbColor FocusRing(SakuraThemePalette theme)
+    {
+        ArgumentNullException.ThrowIfNull(theme);
+
+        RgbColor[] surfaces =
+        [
+            theme.Background, theme.Surface, theme.SurfaceRaised,
+            theme.SurfaceHover, theme.SidebarSurface, theme.Input
+        ];
+        var white = new RgbColor(255, 255, 255);
+
+        for (var amount = 0.0; amount <= 1.0; amount += 0.1)
+        {
+            var candidate = ColorMath.Mix(theme.Accent, white, amount);
+            if (surfaces.All(surface => ColorMath.ContrastRatio(candidate, surface) >= MinimumFocusContrast))
+            {
+                return candidate;
+            }
+        }
+
+        return white;
+    }
+
     /// <summary>
     /// Construye la capa y le baja la saturación en pasos si el texto deja de cumplir el contraste
     /// mínimo. Se cede saturación y no luminosidad porque la luminosidad es la que sostiene la
