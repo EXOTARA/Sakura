@@ -93,6 +93,65 @@ public sealed class FileSystemWorkspaceWriterTests : IDisposable
         Assert.Empty(Directory.GetFiles(_root, "*.kohana-tmp"));
     }
 
+    // Auditoría 2026-09-28: una unión dentro del proyecto pasa la comparación de texto y escribe fuera.
+    // «mklink /J» no pide administrador.
+    private string CreateJunctionToOutsideFolder(out string outside)
+    {
+        outside = Path.Combine(Path.GetTempPath(), "kohana-writer-tests", Guid.NewGuid().ToString("N") + "-fuera");
+        Directory.CreateDirectory(outside);
+        var junction = Path.Combine(_root, "docs");
+
+        var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            "cmd.exe", $"/c mklink /J \"{junction}\" \"{outside}\"")
+        {
+            CreateNoWindow = true,
+            UseShellExecute = false
+        })!;
+        process.WaitForExit();
+        Assert.Equal(0, process.ExitCode);
+        return junction;
+    }
+
+    [Fact]
+    public void WritingThroughAJunction_IsRefused_AndNothingLandsOutside()
+    {
+        var junction = CreateJunctionToOutsideFolder(out var outside);
+        try
+        {
+            var result = _writer.WriteFile(_root, Path.Combine("docs", "x.txt"), "no debería salir");
+
+            Assert.False(result.Success);
+            Assert.Empty(Directory.GetFileSystemEntries(outside));
+            Assert.False(_writer.ReadForCheckpoint(_root, Path.Combine("docs", "x.txt")).Readable);
+        }
+        finally
+        {
+            Directory.Delete(junction); // solo quita la unión, no lo de fuera
+            Directory.Delete(outside, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DeletingThroughAJunction_IsRefused_AndTheOutsideFileSurvives()
+    {
+        var junction = CreateJunctionToOutsideFolder(out var outside);
+        try
+        {
+            var victim = Path.Combine(outside, "ajeno.txt");
+            File.WriteAllText(victim, "no me borres");
+
+            var result = _writer.DeleteFile(_root, Path.Combine("docs", "ajeno.txt"));
+
+            Assert.False(result.Success);
+            Assert.True(File.Exists(victim));
+        }
+        finally
+        {
+            Directory.Delete(junction);
+            Directory.Delete(outside, recursive: true);
+        }
+    }
+
     [Fact]
     public void DeletingInsideTheRoot_Works()
     {

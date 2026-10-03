@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.30.40-beta]
+
+### Corregido (auditoría de seguridad)
+
+- **«Reemplazar» el texto seleccionado ya respeta tus permisos de Flow.** Antes escribía aunque Flow estuviera en «Bloqueado» o la aplicación estuviera excluida. Ahora no escribe, te dice el motivo y deja constancia en el registro de actividad. El resultado no se copia al portapapeles, por si esa ventana era una que querías proteger.
+- **Sakura ya no escribe texto de varias líneas de la IA en una terminal.** Cada salto de línea se escribe como Enter, y en una terminal eso habría ejecutado órdenes sin que las leyeras. Si la ventana es una terminal (o Sakura no puede saber qué programa es) y el resultado tiene varias líneas, no se escribe y se explica por qué. Dictar con Flow no cambió. La consola clásica de Windows también cuenta aunque dentro corra Python, `ssh` u otro programa de consola abierto directamente, que antes no se reconocía como terminal.
+- **Los archivos de tu proyecto ya no se escriben ni se borran a través de enlaces.** Una carpeta del proyecto que en realidad apuntara a otro sitio (unión o enlace simbólico) dejaba escribir fuera de la carpeta que autorizaste. Ahora Sakura se niega si cualquier carpeta del camino, o el propio archivo, es un enlace. Los archivos de OneDrive «solo en la nube» no cuentan como enlace, así que un proyecto en Escritorio o Documentos sincronizados se sigue pudiendo leer y editar (el lector de proyectos también tenía ese problema y se corrigió).
+- **«Abrir terminal» ya no puede ejecutar código escondido en el nombre de una carpeta.** Una carpeta con comillas tipográficas en el nombre se coló en el comando de PowerShell. Ahora la carpeta solo se usa como lugar de trabajo y no se interpreta como texto.
+- **Las rutinas que abren programas piden confirmación en más casos.** Además de PowerShell con argumentos, ahora preguntan al abrir rutas de red, direcciones web, scripts, accesos directos e instaladores (`.bat`, `.vbs`, `.js`, `.hta`, `.lnk`, `.py`, `.jar`, `.cpl`…), esquemas que lanzan o descargan cosas, nombres cortos de archivo (`POWERS~1.EXE`) y programas del sistema que ejecutan o instalan cosas (`forfiles`, `msiexec`, `schtasks`, `reg`…). También miran los argumentos: `explorer.exe x.bat` o `explorer \\servidor\carpeta\x.exe` preguntan. `conhost` y `wt` con argumentos también. Abrir Spotify, el Bloc de notas, VS Code en una carpeta, un navegador con una dirección, o una terminal sin argumentos, sigue sin preguntar.
+  - **Cambio que se nota:** una rutina que abre un archivo de script o de Python en su editor (por ejemplo `code build.bat`) ahora pregunta, porque abrir el archivo y ejecutarlo no se distinguen por el nombre.
+  - Una segunda revisión, intentando saltarse estas comprobaciones, encontró más huecos y también preguntan ya: una ruta de red pegada a una opción (`explorer.exe /select,\\servidor\x.exe`, `--carpeta=\\servidor\…`), una comilla simple que escondía el resto de los argumentos, `msdt`, `hh` y `mmc`, los archivos `.chm`, `.msc`, `.msix`, `.appx`, `.appinstaller`, `.library-ms` y `.searchConnector-ms`, los esquemas `search:`, `its:`, `ms-its:` y `mk:`, y un shell escrito como variable (`%ComSpec% /c …`).
+  - **«Abrir VS Code» en una carpeta de red ahora pregunta.** Antes solo se miraba el programa, no la carpeta donde se abría.
+- **Los avisos de las rutinas ya no enseñan la ruta completa de tus carpetas.** «Abrí PowerShell en …» y similares solo nombran la carpeta final, porque esos mensajes pueden acabar en el historial del asistente. Y si un paso de una rutina falla con un error inesperado, el resumen ya no copia el mensaje técnico de Windows (que traía rutas): dice solo que no se pudo completar.
+
+### Lo que este cambio NO cubre
+
+- **No se probó con la app en marcha**: hay pruebas automáticas (incluida una unión real en una carpeta temporal), no una prueba en vivo.
+- La **lectura** del texto seleccionado sigue sin pasar por el permiso de Lens (L15, decidido para otro bloque). Y Flow en «Preguntar» sigue sin preguntar.
+- La terminal se reconoce por el nombre del programa y por el tipo de ventana. Un panel de terminal dentro de un editor (VS Code, JetBrains) es el mismo programa que el editor y no se reconoce.
+- Abrir un `.exe` por su ruta sin argumentos, o extensiones menos comunes que no estén en la lista (`.docm`, `.xll`…), sigue sin pedir confirmación, y un programa ordinario tampoco la pide por llevar argumentos: las listas son de casos conocidos. Los nombres cortos se detectan por un `~` seguido de un dígito, sin resolver el nombre real.
+- No se ha comprobado con archivos reales de OneDrive «solo en la nube» (no se pueden crear en una prueba); la comprobación se apoya en que Windows los marca distinto de un enlace.
+- Los enlaces se comprueban justo antes de escribir; no se cubre que alguien los cambie en ese instante, ni los enlaces duros.
+- La descripción «Abrir …» que se enseña al confirmar una rutina no se revisó en busca de rutas.
+- **Sin comprobar en Windows:** un programa escrito sin ruta (`code`, `powershell.exe`) que se abre en una carpeta de proyecto podría acabar ejecutando un archivo con ese nombre que esté dentro de esa carpeta, si Windows la busca ahí primero. No se pudo reproducir desde aquí y no se cambió; queda anotado en L20.
+- Abrir una carpeta de red con «Abrir carpeta» sigue sin preguntar (solo se cubrió la carpeta de trabajo de «Abrir aplicación»).
+- Detalle en `docs/stable-release/KNOWN_LIMITATIONS.md` (L10 reabierta, L20 nueva).
 ## [0.30.39-beta]
 
 ### Corregido

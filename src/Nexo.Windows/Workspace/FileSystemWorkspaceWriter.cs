@@ -58,6 +58,14 @@ public sealed class FileSystemWorkspaceWriter : IWorkspaceWriter
             // Escritura atómica, igual que el resto de stores del proyecto: si Sakura muere a media
             // escritura, el archivo original sigue entero en vez de quedar truncado.
             var temporaryPath = fullPath + ".kohana-tmp";
+
+            // Un «.kohana-tmp» que ya sea un enlace haría que WriteAllText escribiera en su destino.
+            if (CrossesReparsePoint(temporaryPath, authorizedRoot))
+            {
+                return WorkspaceStepResult.Failed(
+                    "Esa ruta cae fuera de la carpeta autorizada, así que no escribí nada.");
+            }
+
             File.WriteAllText(temporaryPath, content);
             File.Move(temporaryPath, fullPath, overwrite: true);
 
@@ -115,13 +123,81 @@ public sealed class FileSystemWorkspaceWriter : IWorkspaceWriter
                 return false;
             }
 
+            if (CrossesReparsePoint(candidate, authorizedRoot))
+            {
+                return false;
+            }
+
             fullPath = candidate;
             return true;
         }
         catch (Exception exception) when (
-            exception is ArgumentException or NotSupportedException or PathTooLongException)
+            exception is ArgumentException or NotSupportedException or PathTooLongException
+                or IOException or UnauthorizedAccessException)
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Auditoría 2026-09-28: <c>IsInside</c> compara texto, y una unión o enlace simbólico dentro del
+    /// proyecto (<c>proyecto\docs</c> que apunta a otra parte) pasa esa comparación y aun así escribe
+    /// fuera. El lector ya salta los reparse points; aquí se rechaza cada segmento EXISTENTE entre la
+    /// raíz y el destino (la raíz misma no cuenta: la persona la eligió) y el propio archivo si ya
+    /// existe y es un enlace. Si un atributo no se puede leer, se rechaza: fallar cerrado.
+    ///
+    /// Solo cuentan los enlaces REALES (<see cref="FileSystemInfo.LinkTarget"/> no nulo: simbólicos y
+    /// uniones). Los archivos «Files On-Demand» de OneDrive también llevan ReparsePoint, pero son
+    /// marcadores de nube y su LinkTarget es null: rechazarlos impediría editar un proyecto que viva
+    /// en Escritorio o Documentos sincronizados.
+    /// </summary>
+    private static bool CrossesReparsePoint(string candidate, string authorizedRoot)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(authorizedRoot));
+        var current = candidate;
+
+        while (!string.Equals(
+                   Path.TrimEndingDirectorySeparator(current), root, StringComparison.OrdinalIgnoreCase))
+        {
+            if (IsRealLink(current))
+            {
+                return true;
+            }
+
+            var parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current));
+            if (string.IsNullOrEmpty(parent))
+            {
+                return true;
+            }
+
+            current = parent;
+        }
+
+        return false;
+    }
+
+    private static bool IsRealLink(string path)
+    {
+        FileAttributes attributes;
+        try
+        {
+            attributes = File.GetAttributes(path);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Lo que no existe todavía no puede ser un enlace.
+            return false;
+        }
+
+        if ((attributes & FileAttributes.ReparsePoint) == 0)
+        {
+            return false;
+        }
+
+        // El tipo importa: LinkTarget de un directorio solo se lee con DirectoryInfo.
+        FileSystemInfo info = (attributes & FileAttributes.Directory) != 0
+            ? new DirectoryInfo(path)
+            : new FileInfo(path);
+        return info.LinkTarget is not null;
     }
 }

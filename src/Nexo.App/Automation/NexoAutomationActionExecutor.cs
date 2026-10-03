@@ -76,7 +76,7 @@ public sealed class NexoAutomationActionExecutor : IAutomationActionExecutor
         return AutomationActionResult.Completed(
             action,
             "Aplicación abierta",
-            $"Abrí {action.Target}.");
+            $"Abrí {DisplayName(action.Target, "la aplicación")}.");
     }
 
     private static AutomationActionResult OpenFolder(AutomationAction action)
@@ -87,7 +87,7 @@ public sealed class NexoAutomationActionExecutor : IAutomationActionExecutor
             return AutomationActionResult.Failed(
                 action,
                 "Carpeta no encontrada",
-                $"No encontré {directory}.");
+                $"No encontré {DisplayName(directory, "la carpeta")}.");
         }
 
         Process.Start(new ProcessStartInfo
@@ -99,7 +99,7 @@ public sealed class NexoAutomationActionExecutor : IAutomationActionExecutor
         return AutomationActionResult.Completed(
             action,
             "Carpeta abierta",
-            $"Abrí {directory}.");
+            $"Abrí {DisplayName(directory, "la carpeta")}.");
     }
 
     private static AutomationActionResult OpenTerminal(AutomationAction action)
@@ -110,22 +110,42 @@ public sealed class NexoAutomationActionExecutor : IAutomationActionExecutor
             return AutomationActionResult.Failed(
                 action,
                 "Carpeta no encontrada",
-                $"No encontré {directory}.");
+                $"No encontré {DisplayName(directory, "la carpeta")}.");
         }
 
-        var escaped = directory.Replace("'", "''", StringComparison.Ordinal);
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "powershell.exe",
-            Arguments = $"-NoExit -Command \"Set-Location -LiteralPath '{escaped}'\"",
-            WorkingDirectory = directory,
-            UseShellExecute = true
-        });
+        Process.Start(BuildTerminalStartInfo(directory));
         return AutomationActionResult.Completed(
             action,
             "Terminal abierta",
-            $"Abrí PowerShell en {directory}.");
+            $"Abrí PowerShell en {DisplayName(directory, "la carpeta")}.");
     }
+
+    /// <summary>
+    /// Estos resultados acaban en mensajes del asistente y en el Audit Log, y el historial del asistente
+    /// viaja al proveedor de IA si hay uno en la nube: solo el último tramo de la ruta, nunca la ruta
+    /// completa con el usuario de Windows (ni el host de una ruta de red).
+    /// </summary>
+    public static string DisplayName(string? pathOrName, string fallback)
+    {
+        var last = (pathOrName ?? string.Empty).Trim().Trim('"', '\'').TrimEnd('\\', '/', ' ')
+            .Split('\\', '/')[^1];
+        return string.IsNullOrWhiteSpace(last) || last.EndsWith(':') ? fallback : last;
+    }
+
+    /// <summary>
+    /// Auditoría 2026-09-28: antes la carpeta iba dentro de <c>-Command "Set-Location '...'"</c>
+    /// escapando solo la comilla simple, pero PowerShell también trata ‘ ’ ‚ ‛ como comilla simple:
+    /// una carpeta llamada <c>a’;Set-Content …;’</c> ejecutaba código. Ahora la carpeta va solo en
+    /// <c>WorkingDirectory</c> y no hay ningún texto que interpretar. Los argumentos de quien llama
+    /// siguen sin reenviarse.
+    /// </summary>
+    public static ProcessStartInfo BuildTerminalStartInfo(string directory) => new()
+    {
+        FileName = "powershell.exe",
+        Arguments = "-NoExit",
+        WorkingDirectory = directory,
+        UseShellExecute = true
+    };
 
     private static async Task<AutomationActionResult> RunAudioAsync(
         AutomationAction action,

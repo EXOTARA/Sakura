@@ -55,12 +55,14 @@ public sealed class RoutineRunner
             {
                 throw;
             }
-            catch (Exception exception)
+            catch (Exception)
             {
+                // Auditoría 2026-09-28: antes iba exception.Message, con rutas del equipo, a un resumen
+                // que llega al chat y, con un proveedor en la nube, sale del equipo.
                 results.Add(AutomationActionResult.Failed(
                     action,
                     "La acción falló",
-                    exception.Message));
+                    "No se pudo completar este paso."));
             }
         }
 

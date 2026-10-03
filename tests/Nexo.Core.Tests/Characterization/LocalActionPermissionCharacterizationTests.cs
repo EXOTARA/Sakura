@@ -178,7 +178,7 @@ public sealed class LocalActionPermissionCharacterizationTests
     public void OpenTerminalCarriesNoCallerSuppliedArguments()
     {
         // `NexoAutomationActionExecutor.OpenTerminal` ignora `action.Arguments` y construye
-        // siempre `-NoExit -Command "Set-Location ..."`. Esa es la barrera estructural que hoy
+        // siempre `-NoExit` con la carpeta en WorkingDirectory. Esa es la barrera estructural que hoy
         // separa "abrir la terminal" de "ejecutar en la terminal" en la ruta de rutinas.
         // Se congela como invariante: si alguien empieza a reenviar `Arguments` a la terminal,
         // se convierte en ejecución arbitraria y debe pasar por confirmación.

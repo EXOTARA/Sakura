@@ -44,6 +44,45 @@ public sealed class FlowExclusionCheckTests
     }
 
     [Fact]
+    public void AiReplacement_IsDenied_WhenFlowBlockedOrAppExcluded()
+    {
+        var word = new AmbientContextSnapshot("Carta", "winword", false);
+
+        Assert.NotNull(FlowExclusionCheck.DenyAiReplacement(Flow(PermissionLevel.Bloqueado), word, "hola"));
+        Assert.NotNull(FlowExclusionCheck.DenyAiReplacement(Flow(PermissionLevel.Permitido, "winword"), word, "hola"));
+        Assert.Null(FlowExclusionCheck.DenyAiReplacement(Flow(PermissionLevel.Permitido), word, "hola"));
+    }
+
+    [Fact]
+    public void AiReplacement_IsDenied_InTerminalOnlyWhenTextHasLineBreaks()
+    {
+        var terminal = new AmbientContextSnapshot("Administrador: PowerShell", "pwsh", false);
+        var settings = Flow(PermissionLevel.Permitido);
+
+        var reason = FlowExclusionCheck.DenyAiReplacement(settings, terminal, "uno\ndos");
+
+        Assert.NotNull(reason);
+        Assert.NotNull(FlowExclusionCheck.DenyAiReplacement(settings, terminal, "uno\r\ndos"));
+        Assert.Null(FlowExclusionCheck.DenyAiReplacement(settings, terminal, "una sola línea"));
+        Assert.Null(FlowExclusionCheck.DenyAiReplacement(
+            settings, new AmbientContextSnapshot("Notas", "notepad", false), "uno\ndos"));
+    }
+
+    [Fact]
+    public void AiReplacement_IsDenied_InAClassicConsole_WhateverProgramRunsInside()
+    {
+        // Revisión adversarial 2026-10-03: python abierto con Win + R vive en una consola clásica que
+        // Windows atribuye a python, no a conhost; Enter ahí ejecuta código igual.
+        var python = new AmbientContextSnapshot("Python 3.13", "python", false);
+        var settings = Flow(PermissionLevel.Permitido);
+
+        Assert.NotNull(FlowExclusionCheck.DenyAiReplacement(settings, python, "import os\nos.remove('x')", "ConsoleWindowClass"));
+        Assert.Null(FlowExclusionCheck.DenyAiReplacement(settings, python, "una sola línea", "ConsoleWindowClass"));
+        Assert.Null(FlowExclusionCheck.DenyAiReplacement(
+            settings, new AmbientContextSnapshot("Notas", "notepad", false), "uno\ndos", "Notepad"));
+    }
+
+    [Fact]
     public void Preguntar_IsNotDenied_BecauseAskingIsNotResolvedInFlow()
     {
         // Un diálogo robaría el foco a la aplicación destino; por eso «Preguntar» no detiene el
