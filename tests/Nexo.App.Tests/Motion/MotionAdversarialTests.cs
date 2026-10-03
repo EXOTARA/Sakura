@@ -153,6 +153,10 @@ public sealed class MotionAdversarialTests(StaWpfFixture wpf) : IDisposable
         WithMotion(true, () =>
         {
             var window = new DashboardWindow();
+            window.Deactivated -= (EventHandler)Delegate.CreateDelegate(
+                typeof(EventHandler),
+                window,
+                typeof(DashboardWindow).GetMethod("Window_Deactivated", BindingFlags.Instance | BindingFlags.NonPublic)!);
             try
             {
                 var area = new Nexo.Windows.Shell.TopRevealArea(0, 0, 1600);
@@ -166,11 +170,13 @@ public sealed class MotionAdversarialTests(StaWpfFixture wpf) : IDisposable
 
                 window.Reveal(area);
 
-                // 500 ms: la entrada dura 450, y sin cursor real encima el vigilante del ratón recoge el
-                // cajón a partir de los 650 ms (gracia) + hasta 120 ms de tic. Con 1000 ms la prueba
-                // medía la recogida automática; con 600 quedaban solo ~50 ms de margen en un ejecutor
-                // cargado. Con 500 hay 50 ms sobre el final de la entrada y 150 antes de la recogida.
-                Pump(500);
+                // Esta prueba mide la animación, no la recogida automática. Sin cursor real encima, el
+                // vigilante del ratón (gracia de 650 ms desde Reveal) y Deactivated recogen el cajón, y
+                // la entrada empieza tras el primer fotograma: en el CI, con 500 ms aún iba por Y=-0,4
+                // y con 1000 ms ya se había recogido. Se apagan ambos y se espera con holgura.
+                var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+                ((DispatcherTimer)typeof(DashboardWindow).GetField("_mouseWatch", flags)!.GetValue(window)!).Stop();
+                Pump(1000);
 
                 var panel = (FrameworkElement)window.FindName("PanelBorder")!;
                 var translate = (TranslateTransform)window.FindName("PanelTranslate")!;
